@@ -78,25 +78,38 @@
 
 ---
 
-### v0.5.0 — WebUI 集成 (预计 2-3 周)
+### v0.5.0 — WebUI 集成 (预计 3-4 周)
 
-**目标**：WebUI 多智能体可视化
+**目标**：WebUI 多智能体可视化（含 Vercel 风格监控仪表板）
 
 | 任务 | 模块 | 文件 | 优先级 | 状态 |
 |------|------|------|--------|------|
+| 智能体监控仪表板 API | api | `api/agent_dashboard.py` | P0 | 待开始 |
+| 时间线数据接口 | api | `api/timeline.py` | P0 | 待开始 |
+| 事件流接口 | api | `api/events.py` | P0 | 待开始 |
+| 监控仪表板页面 | webui | `templates/dashboard.html` | P0 | 待开始 |
+| 时间线 CSS 组件 | webui | `static/css/timeline.css` | P0 | 待开始 |
 | 任务编排 API | api | `api/task_orchestrator.py` | P0 | 待开始 |
-| 子代理监控 API | api | `api/agent_monitor.py` | P0 | 待开始 |
 | 团队记忆 API | api | `api/team_memory.py` | P0 | 待开始 |
-| 任务编排页面 | webui | `templates/tasks.html` | P0 | 待开始 |
-| 子代理监控页面 | webui | `templates/agent_monitor.html` | P0 | 待开始 |
+| 任务编排页面 | webui | `templates/tasks.html` | P1 | 待开始 |
 | 团队记忆页面 | webui | `templates/team_memory.html` | P1 | 待开始 |
 | DAG 可视化 | webui | `static/js/dag_view.js` | P1 | 待开始 |
 | 导航栏改造 | webui | `templates/index.html` | P1 | 待开始 |
 
 **里程碑**：
-- [ ] WebUI 可查看 DAG 任务图
-- [ ] 实时显示子智能体状态
-- [ ] 可交互的团队记忆管理
+- [ ] WebUI 新增"监控"菜单项
+- [ ] 深色主题仪表板（纯黑背景 #000）
+- [ ] 顶部状态栏：工作流名称 + 来源 + 状态圆点（参考 Vercel）
+- [ ] 元数据行：开始时间/完成时间/耗时/Token 用量（参考 Vercel Created/Completed/Duration）
+- [ ] Trace/Events 标签页（参考 Vercel）
+- [ ] 搜索框 + 时间轴刻度（参考 Vercel Search spans）
+- [ ] 时间线视图（水平刻度 + 彩色任务条）
+- [ ] 嵌套任务层级（竖线连接，最多 3 层，参考 Vercel 缩进树）
+- [ ] 工具调用子跨度条（深蓝色 #1e3a5f，参考 Vercel hook/span）
+- [ ] 右侧持续时间标签（参考 Vercel 1m 48s 标签）
+- [ ] 缩放控制 +/-（参考 Vercel 右下角按钮）
+- [ ] 实时数据刷新（SSE 或 5 秒轮询）
+- [ ] 工具异常高亮显示（红色 #ef4444）
 
 ---
 
