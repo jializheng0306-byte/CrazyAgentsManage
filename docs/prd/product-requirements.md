@@ -1,0 +1,383 @@
+# CrazyAgentsManage PRD (Product Requirements Document)
+
+## 版本信息
+
+| 字段 | 内容 |
+|------|------|
+| 产品名称 | CrazyAgentsManage — 多智能体协作管理平台 |
+| 版本号 | v0.1.0 |
+| 状态 | 草稿 |
+| 创建日期 | 2026-04-19 |
+| 基于 | Hermes-Agent 多智能体协作架构设计 |
+| GitHub | https://github.com/jializheng0306-byte/CrazyAgentsManage |
+
+---
+
+## 一、产品概述
+
+### 1.1 产品定位
+
+CrazyAgentsManage 是一个**多智能体协作管理平台**，在 Hermes-Agent 现有能力基础上，引入角色化智能体、任务编排、团队记忆、共享上下文等核心能力，实现从"单个 AI 助手"到"智能体团队"的升级。
+
+### 1.2 目标用户
+
+- **开发者**：需要多智能体协作完成复杂开发任务
+- **项目经理**：需要跟踪多智能体任务执行进度
+- **运维工程师**：需要定时任务管理和系统监控
+- **团队成员**：需要共享知识沉淀和经验复用
+
+### 1.3 核心价值
+
+| 维度 | 现状 (Hermes-Agent) | 目标 (CrazyAgentsManage) |
+|------|---------------------|--------------------------|
+| 智能体数量 | 1 个主智能体 + 通用子智能体 | 6 种专业角色智能体 |
+| 任务编排 | 手动 delegate_task | DAG 任务图 + 3 状态协议 |
+| 记忆系统 | MEMORY.md 文本文件 | 五层分层记忆 + 团队记忆 |
+| 协作模式 | 父子智能体线性委派 | 共享上下文文件协作 |
+| 定时任务 | Cron 调度 + 本地执行 | Cron + 团队绑定 + 记忆沉淀 |
+| 可视化 | 基础会话画像 | 任务编排/DAG/实时监控 |
+
+---
+
+## 二、功能需求
+
+### 2.1 核心功能模块
+
+#### 2.1.1 角色化智能体系统 (Agent Factory)
+
+**需求描述**：
+- 支持 6 种预定义角色：Expert/Research/Code/Ops/Cron/Team
+- 每个角色有专属工具集和系统提示词模板
+- 支持通过 config.yaml 自定义角色配置
+- 支持运行时动态切换角色
+
+**用户故事**：
+```
+作为一个用户
+我希望能够指定 delegate_task 使用特定角色（如 "research"）
+这样智能体会自动加载对应的工具集和提示词，提高任务执行效率
+```
+
+**验收标准**：
+- [ ] 通过 `role` 参数创建角色化子智能体
+- [ ] 子智能体自动获得角色专属工具集
+- [ ] 子智能体使用角色专属系统提示词
+- [ ] 角色配置可通过 config.yaml 覆盖
+- [ ] 支持中文角色别名（如"研究" → research）
+
+#### 2.1.2 任务编排系统 (Task Orchestrator)
+
+**需求描述**：
+- 支持 3 状态协议：pending → running → done
+- 支持任务依赖关系（DAG）
+- 支持通过 shared-context/ 目录进行任务状态持久化
+- 支持并行执行无依赖任务
+
+**用户故事**：
+```
+作为一个开发者
+我希望能够创建一组有依赖关系的任务（研究→编码→测试）
+这样系统可以自动按依赖顺序执行，并在 WebUI 中展示任务图
+```
+
+**验收标准**：
+- [ ] 任务状态机：pending/running/done/failed
+- [ ] 任务依赖图（DAG）定义和执行
+- [ ] 任务状态持久化到 shared-context/task-*.json
+- [ ] 无依赖任务并行执行
+- [ ] 任务失败可重试
+
+#### 2.1.3 共享上下文系统 (Shared Context)
+
+**需求描述**：
+- 通过文件系统实现跨智能体通信
+- 支持任务上下文文件（task-*-context.md）
+- 支持任务输出文件（task-*-output.md）
+- 支持任务产物目录（task-*-artifacts/）
+
+**用户故事**：
+```
+作为一个智能体
+我希望能够读取其他智能体的输出文件
+这样我可以基于前序任务的成果继续工作，无需重复执行
+```
+
+**验收标准**：
+- [ ] shared-context/ 目录自动创建
+- [ ] 任务执行时自动写入 context 和 output 文件
+- [ ] 后续任务可读取前序任务的 output
+- [ ] 文件路径对智能体可见（通过工具描述）
+
+#### 2.1.4 团队记忆系统 (Team Memory)
+
+**需求描述**：
+- 支持多团队组织（如"阿里达摩院"、"奥学教育"）
+- 每个团队有独立的记忆目录结构
+- 支持团队共享记忆和角色专属记忆
+- 支持记忆文件自动更新（自我改进循环）
+
+**用户故事**：
+```
+作为一个项目经理
+我希望为团队配置角色记忆（pm.md, dev.md, test.md）
+这样不同角色的智能体执行任务时能加载对应的经验和规范
+```
+
+**验收标准**：
+- [ ] ~/.hermes/teams/ 目录结构
+- [ ] 团队记忆文件（team-memory.md）
+- [ ] 角色记忆文件（roles/pm.md 等）
+- [ ] 团队文档目录（docs/）
+- [ ] 记忆文件支持追加和更新操作
+- [ ] Prompt Builder 自动加载相关记忆
+
+#### 2.1.5 五层记忆系统
+
+**需求描述**：
+- L1 瞬时记忆：当前对话窗口（SessionDB）
+- L2 工作记忆：当前任务相关文件
+- L3 参考记忆：项目文档、技术规范
+- L4 经验记忆：历史教训、常见问题
+- L5 身份记忆：角色定义、行为准则
+
+**验收标准**：
+- [ ] 五层记忆目录结构创建
+- [ ] 分层加载策略实现
+- [ ] 自我改进循环（会话后更新 L4）
+- [ ] 记忆检索按相关性排序
+
+#### 2.1.6 Cron 定时任务增强
+
+**需求描述**：
+- 支持 Cron 任务绑定团队和角色
+- 支持 Cron 输出自动沉淀到团队记忆
+- 支持定时任务使用特定技能
+
+**验收标准**：
+- [ ] jobs.json 支持 team/role/skills 字段
+- [ ] 定时任务执行后自动更新团队记忆
+- [ ] 支持 output_template 配置
+
+#### 2.1.7 WebUI 改造
+
+**需求描述**：
+基于现有 hermes-webui 架构，新增以下页面：
+
+| 页面 | 功能 | 优先级 |
+|------|------|--------|
+| 任务编排 | DAG 任务图 + 3 状态展示 | P0 |
+| 子代理监控 | 实时子智能体状态 | P0 |
+| 团队记忆管理 | 团队/角色层次结构 | P1 |
+| Cron 增强 | 团队绑定任务管理 | P1 |
+| 技能中心增强 | 团队/角色感知 | P2 |
+
+**验收标准**：
+- [ ] 新增 API 路由（tasks, agents, teams）
+- [ ] 新增前端页面（tasks.html, agent_monitor.html, team_memory.html）
+- [ ] 导航栏新增菜单项
+- [ ] 实时数据刷新（SSE 或轮询）
+
+---
+
+## 三、非功能需求
+
+### 3.1 性能需求
+
+| 指标 | 要求 |
+|------|------|
+| 并发子智能体 | 最多 5 个 |
+| 任务状态查询延迟 | < 500ms |
+| WebUI 页面加载时间 | < 2s |
+| Cron 任务调度精度 | ± 60s |
+
+### 3.2 兼容性需求
+
+| 需求 | 说明 |
+|------|------|
+| 向后兼容 | 所有新功能可选，不影响现有 Hermes-Agent 用户 |
+| Python 版本 | 3.11+ |
+| 操作系统 | Linux / Windows / macOS |
+
+### 3.3 安全需求
+
+| 需求 | 说明 |
+|------|------|
+| 凭据隔离 | 子智能体不暴露父智能体 API Key |
+| 工具权限 | 角色化工具集自动过滤危险工具 |
+| 文件权限 | shared-context 仅允许任务相关智能体访问 |
+
+---
+
+## 四、技术架构
+
+详见 [架构设计文档](architecture.md)
+
+### 4.1 核心组件
+
+| 组件 | 路径 | 状态 |
+|------|------|------|
+| Agent Factory | `src/agent/agent_factory.py` | 规划中 |
+| Task Orchestrator | `src/agent/task_orchestrator.py` | 规划中 |
+| Shared Context | `src/agent/shared_context.py` | 规划中 |
+| Team Memory | `src/memory/team_memory.py` | 规划中 |
+| Memory Loader | `src/memory/memory_loader.py` | 规划中 |
+| Harness Manager | `src/context/harness.py` | 规划中 |
+| Task Watcher | `src/monitoring/task_watcher.py` | 规划中 |
+| Health Monitor | `src/monitoring/health_monitor.py` | 规划中 |
+
+### 4.2 目录结构
+
+```
+CrazyAgentsManage/
+├── docs/                       # 文档
+│   ├── architecture.md         # 架构设计
+│   ├── prd/                    # 产品需求
+│   └── roadmap/                # 路线图
+├── src/                        # 源代码
+│   ├── core/                   # 核心组件
+│   ├── agent/                  # 智能体相关
+│   ├── tools/                  # 工具扩展
+│   ├── memory/                 # 记忆系统
+│   ├── context/                # 上下文管理
+│   ├── scheduler/              # 调度器
+│   ├── monitoring/             # 监控组件
+│   ├── webui/                  # WebUI 扩展
+│   ├── cli/                    # CLI 扩展
+│   ├── gateway/                # Gateway 扩展
+│   └── api/                    # API 扩展
+├── tests/                      # 测试
+├── config/                     # 配置示例
+└── scripts/                    # 工具脚本
+```
+
+---
+
+## 五、里程碑
+
+详见 [路线图](roadmap/)
+
+### 5.1 Phase 1: 基础架构
+
+- Agent Factory
+- Task Orchestrator
+- Shared Context
+- Delegate Tool 增强
+- SessionDB tasks 表
+
+### 5.2 Phase 2: 记忆系统
+
+- 团队记忆目录
+- 五层记忆加载
+- 自我改进循环
+- 团队记忆工具
+
+### 5.3 Phase 3: Cron 增强
+
+- Cron-Team 绑定
+- 输出沉淀
+- Cron Agent 角色
+
+### 5.4 Phase 4: 上下文管理
+
+- Harness Manager
+- Task Watcher
+- Health Monitor
+
+### 5.5 Phase 5: WebUI 集成
+
+- 任务编排视图
+- 子代理监控
+- 团队记忆管理
+- CLI/WebUI 命令
+
+---
+
+## 六、风险与依赖
+
+### 6.1 技术风险
+
+| 风险 | 影响 | 缓解措施 |
+|------|------|----------|
+| 文件轮询延迟 | 任务状态同步延迟 | 使用文件系统事件监听替代轮询 |
+| 上下文超限 | 多智能体 token 消耗过快 | Harness 自动压缩 + 分层记忆加载 |
+| 并发冲突 | 多个智能体同时写文件 | 文件锁机制 |
+
+### 6.2 外部依赖
+
+| 依赖 | 说明 |
+|------|------|
+| Hermes-Agent | 核心依赖，所有功能基于现有 Hermes 架构 |
+| OpenClaw | 参考框架，借鉴其模式和最佳实践 |
+| hermes-webui | 前端依赖，WebUI 改造基于现有 Flask 架构 |
+
+---
+
+## 七、配置示例
+
+### 7.1 config.yaml
+
+```yaml
+multi_agent:
+  enabled: true
+  max_concurrent_agents: 5
+  max_depth: 3
+
+  roles:
+    expert:
+      toolsets: [terminal, file, web, mcp]
+      model: "anthropic/claude-sonnet-4-20250514"
+
+    research:
+      toolsets: [web, file]
+      model: "openrouter/deepseek-chat-v3"
+
+    code:
+      toolsets: [terminal, file, code_execution]
+      model: "anthropic/claude-opus-4.6"
+
+    ops:
+      toolsets: [terminal, file]
+      model: "openrouter/claude-sonnet-4-20250514"
+
+    cron:
+      toolsets: [terminal, file, web, memory]
+      model: "openrouter/claude-sonnet-4-20250514"
+
+    team:
+      toolsets: [file, memory, send_message]
+      model: "openrouter/claude-sonnet-4-20250514"
+
+  watcher:
+    poll_interval: 5
+    timeout: 3600
+
+  health:
+    interval: 30
+    auto_recover: true
+
+  memory:
+    identity_file: "~/.hermes/identity.md"
+    experience_dir: "~/.hermes/experiences/"
+    reference_dir: "~/.hermes/references/"
+    team_dir: "~/.hermes/teams/"
+    auto_improve: true
+```
+
+---
+
+## 八、验收标准总结
+
+| 模块 | 核心验收标准 |
+|------|-------------|
+| Agent Factory | 6 种角色可创建、工具集自动分配、提示词自动注入 |
+| Task Orchestrator | 3 状态协议、DAG 执行、文件持久化 |
+| Shared Context | 跨智能体文件通信、context/output 自动写入 |
+| Team Memory | 团队/角色目录、记忆文件读写、自动更新 |
+| Five-Layer Memory | 分层加载、自我改进、相关性检索 |
+| Cron Enhancement | team/role 绑定、输出沉淀到团队记忆 |
+| WebUI | 5 个新页面、实时数据、DAG 可视化 |
+
+---
+
+*文档维护者：CrazyAgentsManage 团队*
+*最后更新：2026-04-19*
