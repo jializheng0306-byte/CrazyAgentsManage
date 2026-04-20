@@ -525,9 +525,7 @@ function formatTimeAgo(timestamp) {
   return `${days}d ago`;
 }
 
-function formatDuration(seconds) {
-  if (!seconds || seconds <= 0) return '0s';
-  if (seconds < 60) return `${Math.round(seconds)}s`;
+s`;
   if (seconds < 3600) {
     const m = Math.floor(seconds / 60);
     const s = Math.round(seconds % 60);
@@ -550,12 +548,6 @@ function formatTimelineTick(seconds) {
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
-function formatTokenCount(n) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-  return String(n);
-}
-
 function formatTimestamp(timestamp) {
   if (!timestamp) return '--';
   const d = new Date(typeof timestamp === 'number' ? timestamp * 1000 : timestamp);
@@ -563,14 +555,3 @@ function formatTimestamp(timestamp) {
   return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 2 });
 }
 
-function truncate(str, len) {
-  if (!str) return '';
-  return str.length > len ? str.substring(0, len) + '...' : str;
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}

@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadCronJobs() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/cron/list');
+    const resp = await fetch('/api/cron/list');
     const jobs = await resp.json();
 
     const statsGrid = document.querySelector('.stats-grid');
@@ -226,7 +226,7 @@ async function createJob() {
   }
 
   try {
-    const resp = await fetch(window.APP_BASE + '/api/cron/create', {
+    const resp = await fetch('/api/cron/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, schedule, prompt, deliver }),
@@ -244,9 +244,3 @@ async function createJob() {
   }
 }
 
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}

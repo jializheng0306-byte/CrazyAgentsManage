@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadAllTokenData() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/tokens/stats');
+    const resp = await fetch('/api/tokens/stats');
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     renderTokenStats(data);
@@ -24,7 +24,7 @@ async function loadAllTokenData() {
 
 async function loadTokenStats() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/tokens/stats');
+    const resp = await fetch('/api/tokens/stats');
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     renderTokenStats(data);
@@ -122,7 +122,7 @@ function renderAgentBreakdown(data) {
 
 async function loadRecentUsage() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/tokens/recent?limit=10');
+    const resp = await fetch('/api/tokens/recent?limit=10');
     const data = await resp.json();
 
     const container = document.getElementById('recentUsage') || document.querySelector('.recent-usage-tbody');
@@ -162,22 +162,6 @@ async function loadRecentUsage() {
   }
 }
 
-function formatTokenCount(n) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-  return String(n);
+);
 }
 
-function formatTime(timestamp) {
-  if (!timestamp) return '--';
-  const d = new Date(typeof timestamp === 'number' ? timestamp * 1000 : timestamp);
-  if (isNaN(d.getTime())) return '--';
-  return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
