@@ -22,7 +22,7 @@ async function loadGraphData() {
   } catch (e) {
     console.error('Failed to load graph data:', e);
     const container = document.querySelector('.graph-visualization') || document.querySelector('.graph-container');
-    if (container) container.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444;">加载失败，请刷新重试</div>';
+    if (container) container.innerHTML = '<div class="error-state">加载失败，请刷新重试</div>';
   }
 }
 
@@ -34,7 +34,7 @@ function renderGraph(data) {
   const edges = data.edges || [];
 
   if (nodes.length === 0) {
-    container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b;">暂无图谱数据</div>';
+    container.innerHTML = '<div class="empty-state">暂无图谱数据</div>';
     return;
   }
 
@@ -43,8 +43,6 @@ function renderGraph(data) {
   const agentNodes = nodes.filter(n => n.type === 'agent');
   const radius = Math.max(20, Math.min(40, 80 / Math.sqrt(agentNodes.length || 1)));
   const angleStep = (2 * Math.PI) / Math.max(agentNodes.length, 1);
-
-  let svgContent = '<svg viewBox="0 0 100 100" style="width:100%;height:100%;position:absolute;top:0;left:0;">';
 
   const edgeColorMap = { 'coordinator': '#3b82f6', 'dataflow': '#10b981' };
   const fallbackEdgeColors = ['#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
@@ -57,12 +55,13 @@ function renderGraph(data) {
     }
   });
 
+  let svgContent = '<svg viewBox="0 0 100 100" style="width:100%;height:100%;position:absolute;top:0;left:0;">';
   edges.forEach(edge => {
     const sourceNode = nodes.find(n => n.id === edge.source);
     const targetNode = nodes.find(n => n.id === edge.target);
     if (!sourceNode || !targetNode) return;
 
-    let sx, sy, tx, ty;
+    let sx, sy;
     if (sourceNode.type === 'coordinator') {
       sx = centerX; sy = centerY;
     } else {
@@ -74,42 +73,41 @@ function renderGraph(data) {
 
     const tIdx = agentNodes.findIndex(n => n.id === targetNode.id);
     const tAngle = -Math.PI / 2 + tIdx * angleStep;
-    tx = centerX + radius * Math.cos(tAngle);
-    ty = centerY + radius * Math.sin(tAngle);
+    const tx = centerX + radius * Math.cos(tAngle);
+    const ty = centerY + radius * Math.sin(tAngle);
 
     const edgeColor = dynamicEdgeColors[edge.type] || '#f59e0b';
-    svgContent += '<line x1="' + sx + '" y1="' + sy + '" x2="' + tx + '" y2="' + ty + '" stroke="' + edgeColor + '" stroke-width="0.3" stroke-dasharray="1,1" opacity="0.6"/>';
+    svgContent += `<line x1="${sx}" y1="${sy}" x2="${tx}" y2="${ty}" stroke="${edgeColor}" stroke-width="0.3" stroke-dasharray="1,1" opacity="0.6"/>`;
   });
-
   svgContent += '</svg>';
 
-  let html = '<div style="position:relative;width:100%;padding-top:100%;">' + svgContent;
+  let html = `<div style="position:relative;width:100%;padding-top:100%;">${svgContent}`;
 
   const centerNode = nodes.find(n => n.type === 'coordinator');
   if (centerNode) {
     const gradients = (centerNode.gradient || '#64748b,#475569').split(',');
-    html += '<div style="position:absolute;left:' + centerX + '%;top:' + centerY + '%;transform:translate(-50%,-50%);z-index:10;">' +
-      '<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,' + sanitizeColor(gradients[0]) + ',' + sanitizeColor(gradients[1] || gradients[0]) + ');display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 20px rgba(102,126,234,0.4);cursor:pointer;" title="' + escapeHtml(centerNode.name) + '" onclick="showNodeDetail(\'coordinator\')">' + escapeHtml(centerNode.icon || '') + '</div>' +
-      '<div style="text-align:center;margin-top:6px;font-size:11px;color:white;font-weight:600;">' + escapeHtml(centerNode.name) + '</div>' +
-      '<div style="text-align:center;font-size:10px;color:#94a3b8;">' + (centerNode.session_count || 0) + ' 会话</div>' +
-      '</div>';
+    html += `<div class="graph-node-wrapper graph-node-center" style="left:${centerX}%;top:${centerY}%;">
+      <div class="graph-node-circle" style="width:80px;height:80px;background:linear-gradient(135deg,${sanitizeColor(gradients[0])},${sanitizeColor(gradients[1] || gradients[0])});font-size:28px;box-shadow:0 0 20px rgba(102,126,234,0.4);" title="${escapeHtml(centerNode.name)}" onclick="showNodeDetail('coordinator')">${escapeHtml(centerNode.icon || '')}</div>
+      <div class="graph-node-label">${escapeHtml(centerNode.name)}</div>
+      <div class="graph-node-sublabel">${centerNode.session_count || 0} 会话</div>
+    </div>`;
   }
 
   agentNodes.forEach((node, idx) => {
     const angle = -Math.PI / 2 + idx * angleStep;
     const x = centerX + radius * Math.cos(angle);
     const y = centerY + radius * Math.sin(angle);
-
     const stateColor = node.platform_state === 'connected' ? '#10b981' :
                        node.platform_state === 'error' ? '#ef4444' : '#64748b';
-
     const gradients = (node.gradient || '#64748b,#475569').split(',');
-    html += '<div style="position:absolute;left:' + x + '%;top:' + y + '%;transform:translate(-50%,-50%);z-index:5;">' +
-      '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,' + sanitizeColor(gradients[0]) + ',' + sanitizeColor(gradients[1] || gradients[0]) + ');display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;position:relative;" title="' + escapeHtml(node.name) + '" onclick="showNodeDetail(\'' + escapeHtml(node.id) + '\')">' + escapeHtml(node.icon || '') +
-      '<div style="position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:' + stateColor + ';border:2px solid #0f172a;"></div></div>' +
-      '<div style="text-align:center;margin-top:4px;font-size:10px;color:white;font-weight:500;">' + escapeHtml(node.name.replace(' 智能体', '')) + '</div>' +
-      '<div style="text-align:center;font-size:9px;color:#94a3b8;">' + (node.session_count || 0) + ' 会话</div>' +
-      '</div>';
+
+    html += `<div class="graph-node-wrapper" style="left:${x}%;top:${y}%;">
+      <div class="graph-node-circle" style="width:56px;height:56px;background:linear-gradient(135deg,${sanitizeColor(gradients[0])},${sanitizeColor(gradients[1] || gradients[0])});font-size:22px;" title="${escapeHtml(node.name)}" onclick="showNodeDetail('${escapeHtml(node.id)}')">${escapeHtml(node.icon || '')}
+        <div class="graph-node-status-dot" style="background:${stateColor};"></div>
+      </div>
+      <div class="graph-node-label">${escapeHtml(node.name.replace(' 智能体', ''))}</div>
+      <div class="graph-node-sublabel">${node.session_count || 0} 会话</div>
+    </div>`;
   });
 
   html += '</div>';
@@ -138,37 +136,31 @@ function showNodeDetail(nodeId) {
 
   const modal = document.createElement('div');
   modal.id = 'nodeDetailModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+  modal.className = 'modal-overlay';
   modal.innerHTML = `
-    <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;max-width:400px;width:90%;position:relative;">
-      <button onclick="document.getElementById('nodeDetailModal').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;">&times;</button>
-      <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
-        <span style="font-size:48px;">${escapeHtml(node.icon || '')}</span>
+    <div class="modal-content">
+      <button class="modal-close" onclick="document.getElementById('nodeDetailModal').remove()">&times;</button>
+      <div class="modal-header">
+        <span class="modal-icon">${escapeHtml(node.icon || '')}</span>
         <div>
-          <h2 style="font-size:18px;font-weight:600;color:white;margin:0 0 4px;">${escapeHtml(node.name)}</h2>
-          <span style="font-size:12px;padding:4px 10px;border-radius:4px;background:${stateColor}22;color:${stateColor};">${stateText}</span>
-          <span style="font-size:12px;padding:4px 10px;border-radius:4px;background:#667eea22;color:#667eea;margin-left:4px;">${node.type === 'coordinator' ? '核心调度' : '平台节点'}</span>
+          <h2 class="modal-title">${escapeHtml(node.name)}</h2>
+          <span class="status-badge" style="background:${stateColor}22;color:${stateColor};">${stateText}</span>
+          <span class="status-badge status-badge-idle" style="margin-left:4px;">${node.type === 'coordinator' ? '核心调度' : '平台节点'}</span>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
-          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">会话数</div>
-          <div style="font-size:18px;font-weight:600;color:white;">${node.session_count || 0}</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
-          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">连接数</div>
-          <div style="font-size:18px;font-weight:600;color:white;">${nodeEdges.length}</div>
-        </div>
+      <div class="detail-grid" style="margin-bottom:16px;">
+        <div class="detail-cell"><div class="detail-label">会话数</div><div class="detail-value-lg">${node.session_count || 0}</div></div>
+        <div class="detail-cell"><div class="detail-label">连接数</div><div class="detail-value-lg">${nodeEdges.length}</div></div>
       </div>
       ${connectedTo.length > 0 ? `
         <div style="margin-bottom:12px;">
-          <div style="font-size:12px;color:#64748b;margin-bottom:8px;">关联节点</div>
+          <div class="detail-label" style="margin-bottom:8px;">关联节点</div>
           ${connectedTo.map(c => `<div style="font-size:13px;color:#cbd5e1;padding:4px 0;">${c}</div>`).join('')}
         </div>
       ` : ''}
       ${node.type === 'agent' ? `
         <div style="text-align:center;">
-          <a href="/agent" style="color:#667eea;font-size:13px;text-decoration:none;">查看智能体详情 →</a>
+          <a href="/agent" class="link-more">查看智能体详情 &rarr;</a>
         </div>
       ` : ''}
     </div>
@@ -183,11 +175,11 @@ function renderNodeTypes(data) {
 
   const nodes = data.nodes || [];
   container.innerHTML = nodes.map(node =>
-    '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">' +
-    '<span style="font-size:16px;">' + escapeHtml(node.icon || '') + '</span>' +
-    '<span style="font-size:13px;color:#cbd5e1;">' + escapeHtml(node.name) + '</span>' +
-    '<span style="font-size:11px;color:#64748b;margin-left:auto;">' + (node.type === 'coordinator' ? '核心调度' : '平台节点') + '</span>' +
-    '</div>'
+    `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+      <span style="font-size:16px;">${escapeHtml(node.icon || '')}</span>
+      <span style="font-size:13px;color:#cbd5e1;">${escapeHtml(node.name)}</span>
+      <span style="font-size:11px;color:#64748b;margin-left:auto;">${node.type === 'coordinator' ? '核心调度' : '平台节点'}</span>
+    </div>`
   ).join('');
 }
 
@@ -215,10 +207,10 @@ function renderEdgeTypes(data) {
 
   const edgeTypes = Object.values(edgeTypeMap);
   container.innerHTML = edgeTypes.map(et =>
-    '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">' +
-    '<div style="width:24px;height:2px;background:' + et.color + ';border-radius:1px;"></div>' +
-    '<span style="font-size:13px;color:#cbd5e1;">' + escapeHtml(et.label) + '</span>' +
-    '<span style="font-size:11px;color:#64748b;margin-left:auto;">' + escapeHtml(et.desc) + ' (' + et.count + ')</span>' +
-    '</div>'
+    `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+      <div style="width:24px;height:2px;background:${et.color};border-radius:1px;"></div>
+      <span style="font-size:13px;color:#cbd5e1;">${escapeHtml(et.label)}</span>
+      <span style="font-size:11px;color:#64748b;margin-left:auto;">${escapeHtml(et.desc)} (${et.count})</span>
+    </div>`
   ).join('');
 }
