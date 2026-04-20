@@ -32,7 +32,7 @@ function initSearchHandler() {
 
 async function loadSessionStats() {
   try {
-    const resp = await fetch('/api/sessions/stats');
+    const resp = await fetch(window.APP_BASE + '/api/sessions/stats');
     const data = await resp.json();
 
     const statNumbers = document.querySelectorAll('.stat-number');

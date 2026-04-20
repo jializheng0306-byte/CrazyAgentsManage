@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadTasks() {
   try {
-    const resp = await fetch('/api/tasks/list');
+    const resp = await fetch(window.APP_BASE + '/api/tasks/list');
     const data = await resp.json();
 
     const stats = data.stats || {};

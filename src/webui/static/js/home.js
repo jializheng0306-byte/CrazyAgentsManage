@@ -1,13 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
-  loadOverviewStats();
-  loadTeamCards();
-  loadMemoryGrid();
-  loadRoleGrid();
+  Promise.all([loadOverviewStats(), loadTeamCards(), loadMemoryGrid(), loadRoleGrid()]);
 });
 
 async function loadOverviewStats() {
   try {
-    const resp = await fetch('/api/overview/stats');
+    const resp = await fetch(window.APP_BASE + '/api/overview/stats');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
 
     const statValues = document.querySelectorAll('.stat-value');
@@ -32,8 +30,10 @@ async function loadOverviewStats() {
 
 async function loadTeamCards() {
   try {
-    const resp = await fetch('/api/overview/teams');
+    const resp = await fetch(window.APP_BASE + '/api/overview/teams');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const teams = await resp.json();
+    if (!Array.isArray(teams)) throw new Error('Invalid response');
 
     const container = document.getElementById('teamCards');
     if (!container) return;
@@ -44,7 +44,7 @@ async function loadTeamCards() {
     }
 
     container.innerHTML = teams.map(team => `
-      <div class="team-card" onclick="window.location.href='/team-memory'" style="cursor: pointer;">
+      <div class="team-card" onclick="window.location.href=(window.APP_BASE||'')+'/team-memory'" style="cursor: pointer;">
         <div class="team-card-header">
           <div class="team-name">🏢 ${escapeHtml(team.name)}</div>
           <div class="team-stats-right">
@@ -62,8 +62,10 @@ async function loadTeamCards() {
 
 async function loadMemoryGrid() {
   try {
-    const resp = await fetch('/api/overview/memories');
+    const resp = await fetch(window.APP_BASE + '/api/overview/memories');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const memories = await resp.json();
+    if (!Array.isArray(memories)) throw new Error('Invalid response');
 
     const container = document.getElementById('memoryGrid');
     if (!container) return;
@@ -87,8 +89,10 @@ async function loadMemoryGrid() {
 
 async function loadRoleGrid() {
   try {
-    const resp = await fetch('/api/overview/teams');
+    const resp = await fetch(window.APP_BASE + '/api/overview/teams');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const teams = await resp.json();
+    if (!Array.isArray(teams)) throw new Error('Invalid response');
 
     const container = document.getElementById('roleGrid');
     if (!container) return;
@@ -101,7 +105,8 @@ async function loadRoleGrid() {
     const allRoles = [];
     for (const team of teams) {
       if (team.role_count > 0) {
-        const detailResp = await fetch(`/api/memory/team/${encodeURIComponent(team.name)}`);
+        const detailResp = await fetch(window.APP_BASE + `/api/memory/team/${encodeURIComponent(team.name)}`);
+        if (!detailResp.ok) continue;
         const detail = await detailResp.json();
         const files = detail.files || [];
         files.forEach(f => {
@@ -109,7 +114,7 @@ async function loadRoleGrid() {
             name: f.name,
             team: team.name,
             size: f.size || 0,
-            preview: (f.content || '').substring(0, 100).replace('\n', ' '),
+            preview: (f.content || '').substring(0, 100).replace(/\n/g, ' '),
           });
         });
       }

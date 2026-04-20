@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadTeamList() {
   try {
-    const resp = await fetch('/api/overview/teams');
+    const resp = await fetch(window.APP_BASE + '/api/overview/teams');
     const teams = await resp.json();
 
     const container = document.querySelector('.team-sidebar') || document.querySelector('.team-list');
@@ -98,7 +98,7 @@ function renderTeamMemory(data) {
 
 async function loadMemories() {
   try {
-    const resp = await fetch('/api/overview/memories');
+    const resp = await fetch(window.APP_BASE + '/api/overview/memories');
     const memories = await resp.json();
 
     const container = document.querySelector('.memory-grid') || document.querySelector('.memories-list');
@@ -157,7 +157,7 @@ async function saveMemoryFile(filePath) {
   if (!editor) return;
 
   try {
-    const resp = await fetch('/api/memory/update', {
+    const resp = await fetch(window.APP_BASE + '/api/memory/update', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: filePath, content: editor.value }),

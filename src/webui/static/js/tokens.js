@@ -4,16 +4,36 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadTokenStats();
-  loadProviderBreakdown();
-  loadAgentBreakdown();
-  loadRecentUsage();
+  loadAllTokenData();
 });
+
+async function loadAllTokenData() {
+  try {
+    const resp = await fetch(window.APP_BASE + '/api/tokens/stats');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    renderTokenStats(data);
+    renderProviderBreakdown(data);
+    renderAgentBreakdown(data);
+  } catch (e) {
+    console.error('Failed to load token stats:', e);
+    document.querySelectorAll('.stat-value').forEach(el => { if (el) el.textContent = 'N/A'; });
+  }
+  loadRecentUsage();
+}
 
 async function loadTokenStats() {
   try {
-    const resp = await fetch('/api/tokens/stats');
+    const resp = await fetch(window.APP_BASE + '/api/tokens/stats');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
+    renderTokenStats(data);
+  } catch (e) {
+    console.error('Failed to load token stats:', e);
+  }
+}
+
+function renderTokenStats(data) {
 
     const statValues = document.querySelectorAll('.stat-value');
     const budgetUsd = data.budget_usd || null;
@@ -33,10 +53,8 @@ async function loadTokenStats() {
   }
 }
 
-async function loadProviderBreakdown() {
+function renderProviderBreakdown(data) {
   try {
-    const resp = await fetch('/api/tokens/stats');
-    const data = await resp.json();
     const providers = data.by_provider || {};
     const container = document.getElementById('providerDistribution') || document.querySelector('.provider-breakdown');
     if (!container) return;
@@ -68,10 +86,8 @@ async function loadProviderBreakdown() {
   }
 }
 
-async function loadAgentBreakdown() {
+function renderAgentBreakdown(data) {
   try {
-    const resp = await fetch('/api/tokens/stats');
-    const data = await resp.json();
     const sources = data.by_source || {};
     const container = document.getElementById('sourceDistribution') || document.querySelector('.agent-breakdown');
     if (!container) return;
@@ -106,7 +122,7 @@ async function loadAgentBreakdown() {
 
 async function loadRecentUsage() {
   try {
-    const resp = await fetch('/api/tokens/recent?limit=10');
+    const resp = await fetch(window.APP_BASE + '/api/tokens/recent?limit=10');
     const data = await resp.json();
 
     const container = document.getElementById('recentUsage') || document.querySelector('.recent-usage-tbody');

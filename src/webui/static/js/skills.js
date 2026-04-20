@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadSkillsList() {
   try {
-    const resp = await fetch('/api/skills/list');
+    const resp = await fetch(window.APP_BASE + '/api/skills/list');
     const data = await resp.json();
 
     allSkills = data.skills || [];
