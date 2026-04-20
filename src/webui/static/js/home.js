@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadOverviewStats() {
   try {
-    const resp = await fetch('/api/overview/stats');
+    const resp = await fetch(window.APP_BASE + '/api/overview/stats');
     const data = await resp.json();
 
     const statValues = document.querySelectorAll('.stat-value');
@@ -32,7 +32,7 @@ async function loadOverviewStats() {
 
 async function loadTeamCards() {
   try {
-    const resp = await fetch('/api/overview/teams');
+    const resp = await fetch(window.APP_BASE + '/api/overview/teams');
     const teams = await resp.json();
 
     const container = document.getElementById('teamCards');
@@ -62,7 +62,7 @@ async function loadTeamCards() {
 
 async function loadMemoryGrid() {
   try {
-    const resp = await fetch('/api/overview/memories');
+    const resp = await fetch(window.APP_BASE + '/api/overview/memories');
     const memories = await resp.json();
 
     const container = document.getElementById('memoryGrid');
@@ -87,7 +87,7 @@ async function loadMemoryGrid() {
 
 async function loadRoleGrid() {
   try {
-    const resp = await fetch('/api/overview/teams');
+    const resp = await fetch(window.APP_BASE + '/api/overview/teams');
     const teams = await resp.json();
 
     const container = document.getElementById('roleGrid');
@@ -101,7 +101,7 @@ async function loadRoleGrid() {
     const allRoles = [];
     for (const team of teams) {
       if (team.role_count > 0) {
-        const detailResp = await fetch(`/api/memory/team/${encodeURIComponent(team.name)}`);
+        const detailResp = await fetch(window.APP_BASE + `/api/memory/team/${encodeURIComponent(team.name)}`);
         const detail = await detailResp.json();
         const files = detail.files || [];
         files.forEach(f => {

@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadGraphData() {
   try {
-    const resp = await fetch('/api/graph/data');
+    const resp = await fetch(window.APP_BASE + '/api/graph/data');
     const data = await resp.json();
 
     const statValues = document.querySelectorAll('.stat-value');

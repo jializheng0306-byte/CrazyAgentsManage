@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadTokenStats() {
   try {
-    const resp = await fetch('/api/tokens/stats');
+    const resp = await fetch(window.APP_BASE + '/api/tokens/stats');
     const data = await resp.json();
 
     const statValues = document.querySelectorAll('.stat-value');
@@ -35,7 +35,7 @@ async function loadTokenStats() {
 
 async function loadProviderBreakdown() {
   try {
-    const resp = await fetch('/api/tokens/stats');
+    const resp = await fetch(window.APP_BASE + '/api/tokens/stats');
     const data = await resp.json();
     const providers = data.by_provider || {};
     const container = document.getElementById('providerDistribution') || document.querySelector('.provider-breakdown');
@@ -70,7 +70,7 @@ async function loadProviderBreakdown() {
 
 async function loadAgentBreakdown() {
   try {
-    const resp = await fetch('/api/tokens/stats');
+    const resp = await fetch(window.APP_BASE + '/api/tokens/stats');
     const data = await resp.json();
     const sources = data.by_source || {};
     const container = document.getElementById('sourceDistribution') || document.querySelector('.agent-breakdown');
@@ -106,7 +106,7 @@ async function loadAgentBreakdown() {
 
 async function loadRecentUsage() {
   try {
-    const resp = await fetch('/api/tokens/recent?limit=10');
+    const resp = await fetch(window.APP_BASE + '/api/tokens/recent?limit=10');
     const data = await resp.json();
 
     const container = document.getElementById('recentUsage') || document.querySelector('.recent-usage-tbody');

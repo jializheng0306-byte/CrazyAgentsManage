@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadTeamList() {
   try {
-    const resp = await fetch('/api/overview/teams');
+    const resp = await fetch(window.APP_BASE + '/api/overview/teams');
     const teams = await resp.json();
 
     const container = document.querySelector('.team-sidebar') || document.querySelector('.team-list');
@@ -47,7 +47,7 @@ async function selectTeam(teamName) {
   if (event?.currentTarget) event.currentTarget.style.background = 'rgba(102,126,234,0.15)';
 
   try {
-    const resp = await fetch(`/api/memory/team/${encodeURIComponent(teamName)}`);
+    const resp = await fetch(window.APP_BASE + `/api/memory/team/${encodeURIComponent(teamName)}`);
     const data = await resp.json();
 
     renderTeamMemory(data);
@@ -98,7 +98,7 @@ function renderTeamMemory(data) {
 
 async function loadMemories() {
   try {
-    const resp = await fetch('/api/overview/memories');
+    const resp = await fetch(window.APP_BASE + '/api/overview/memories');
     const memories = await resp.json();
 
     const container = document.querySelector('.memory-grid') || document.querySelector('.memories-list');
@@ -123,7 +123,7 @@ function formatSize(bytes) {
 
 async function editMemoryFile(filePath) {
   try {
-    const resp = await fetch(`/api/memory/file/${encodeURIComponent(filePath)}`);
+    const resp = await fetch(window.APP_BASE + `/api/memory/file/${encodeURIComponent(filePath)}`);
     const data = await resp.json();
 
     if (data.error) {
@@ -157,7 +157,7 @@ async function saveMemoryFile(filePath) {
   if (!editor) return;
 
   try {
-    const resp = await fetch('/api/memory/update', {
+    const resp = await fetch(window.APP_BASE + '/api/memory/update', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: filePath, content: editor.value }),

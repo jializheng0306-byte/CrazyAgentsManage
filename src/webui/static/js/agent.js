@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadAgentStats() {
   try {
-    const resp = await fetch('/api/dashboard/stats');
+    const resp = await fetch(window.APP_BASE + '/api/dashboard/stats');
     const data = await resp.json();
 
     const totalAgents = Object.keys(data.source_distribution || {}).length + 1;
@@ -25,7 +25,7 @@ async function loadAgentStats() {
 
 async function loadAgentCards() {
   try {
-    const resp = await fetch('/api/agents/list');
+    const resp = await fetch(window.APP_BASE + '/api/agents/list');
     const agents = await resp.json();
 
     const container = document.querySelector('.agent-cards') || document.querySelector('.agents-grid');

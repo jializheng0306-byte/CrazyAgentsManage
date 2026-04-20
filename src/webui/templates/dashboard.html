@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>监控仪表板 - CrazyAgentsManage</title>
-  <link rel="stylesheet" href="/static/css/design-system.css">
-  <link rel="stylesheet" href="/static/css/nav.css">
-  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/dashboard.css">
 </head>
 <body>
 
@@ -15,23 +15,23 @@
     <div class="container">
       <div class="global-nav-inner">
         <div class="nav-left">
-          <a href="/" class="nav-logo">
+          <a href="{{ BASE }}/" class="nav-logo">
             <div class="nav-logo-icon">⚡</div>
             Hermes
             <span class="nav-version">v0.5</span>
           </a>
           <div class="nav-menu">
-            <a href="/" class="nav-item">📊 概览</a>
-            <a href="/agent" class="nav-item active">🟣 Agent</a>
-            <a href="/tasks" class="nav-item">📋 任务</a>
-            <a href="/dashboard" class="nav-item">📊 监控仪表板</a>
-            <a href="/skills" class="nav-item">⚡ 技能</a>
-            <a href="/team-memory" class="nav-item">📝 团队记忆</a>
-            <a href="/cron" class="nav-item">⏰ 定时任务</a>
-            <a href="/graph" class="nav-item">🔗 图谱</a>
-            <a href="/sessions" class="nav-item pipeline">🔴 流水线</a>
-            <a href="/alerts" class="nav-item">🔔 告警</a>
-            <a href="/tokens" class="nav-item">💰 Token</a>
+            <a href="{{ BASE }}/" class="nav-item">📊 概览</a>
+            <a href="{{ BASE }}/agent" class="nav-item">🟣 Agent</a>
+            <a href="{{ BASE }}/tasks" class="nav-item">📋 任务</a>
+            <a href="{{ BASE }}/dashboard" class="nav-item active">📊 监控仪表板</a>
+            <a href="{{ BASE }}/skills" class="nav-item">⚡ 技能</a>
+            <a href="{{ BASE }}/team-memory" class="nav-item">📝 团队记忆</a>
+            <a href="{{ BASE }}/cron" class="nav-item">⏰ 定时任务</a>
+            <a href="{{ BASE }}/graph" class="nav-item">🔗 图谱</a>
+            <a href="{{ BASE }}/sessions" class="nav-item pipeline">🔴 流水线</a>
+            <a href="{{ BASE }}/alerts" class="nav-item">🔔 告警</a>
+            <a href="{{ BASE }}/tokens" class="nav-item">💰 Token</a>
           </div>
         </div>
         <div class="nav-right">
@@ -54,7 +54,7 @@
         <span class="vw-breadcrumb-text">Workflows</span>
         <span class="vw-breadcrumb-sep">/</span>
         <span class="vw-breadcrumb-current" id="sessionRunId">session_latest</span>
-        <a class="vw-external-link" href="/sessions" title="查看所有会话">↗</a>
+        <a class="vw-external-link" href="{{ BASE }}/sessions" title="查看所有会话">↗</a>
       </div>
     </div>
 
@@ -68,7 +68,7 @@
         </span>
       </div>
       <div class="vw-task-actions">
-        <button class="vw-btn-outline" onclick="window.location.href='/sessions'">查看全部会话</button>
+        <button class="vw-btn-outline" onclick="window.location.href=(window.APP_BASE||'')+'/sessions'">查看全部会话</button>
         <button class="vw-btn-more" onclick="toggleMenu()">⋮</button>
       </div>
     </div>
@@ -141,6 +141,6 @@
 
   </main>
 
-  <script src="/static/js/dashboard.js"></script>
+  <script src="{{ BASE }}/static/js/dashboard.js"></script>
 </body>
 </html>

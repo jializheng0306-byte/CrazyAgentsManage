@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadSkillsList() {
   try {
-    const resp = await fetch('/api/skills/list');
+    const resp = await fetch(window.APP_BASE + '/api/skills/list');
     const data = await resp.json();
 
     allSkills = data.skills || [];
@@ -94,7 +94,7 @@ async function selectSkill(skillPath) {
   const skillInfo = allSkills.find(s => s.name === skillName && (!category || s.category === category));
 
   try {
-    const resp = await fetch(`/api/skills/detail/${encodeURIComponent(skillPath)}`);
+    const resp = await fetch(window.APP_BASE + `/api/skills/detail/${encodeURIComponent(skillPath)}`);
     const data = await resp.json();
 
     if (data.error) {
