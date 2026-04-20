@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>知识图谱 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="/static/css/design-system.css">
+  <link rel="stylesheet" href="/static/css/nav.css">
+  <link rel="stylesheet" href="/static/css/pages.css">
+</head>
+<body>
+
+  <nav class="global-nav">
+    <div class="container">
+      <div class="global-nav-inner">
+        <div class="nav-left">
+          <a href="/" class="nav-logo">
+            <div class="nav-logo-icon">⚡</div>
+            Hermes
+            <span class="nav-version">v0.5</span>
+          </a>
+          <div class="nav-menu">
+            <a href="/" class="nav-item">📊 概览</a>
+            <a href="/agent" class="nav-item">🟣 Agent</a>
+            <a href="/tasks" class="nav-item">📋 任务</a>
+            <a href="/dashboard" class="nav-item">📊 监控仪表板</a>
+            <a href="/skills" class="nav-item">⚡ 技能</a>
+            <a href="/team-memory" class="nav-item">📝 团队记忆</a>
+            <a href="/cron" class="nav-item">⏰ 定时任务</a>
+            <a href="/graph" class="nav-item active">🔗 图谱</a>
+            <a href="/sessions" class="nav-item pipeline">🔴 流水线</a>
+            <a href="/alerts" class="nav-item">🔔 告警</a>
+            <a href="/tokens" class="nav-item">💰 Token</a>
+          </div>
+        </div>
+        <div class="nav-right">
+          <input type="text" class="nav-search" placeholder="搜索...">
+          <button class="nav-favorite">⭐ 收藏夹</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mt-lg">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+      <h1 class="page-title">知识图谱</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">可视化展示智能体之间的关系、任务依赖和数据流向</p>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--spacing-xl);">
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">智能体节点</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">关系连接</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">总会话数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">活跃平台</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding: var(--spacing-xl); margin-bottom: var(--spacing-xl); min-height: 500px; position: relative;">
+      <div style="position: absolute; top: var(--spacing-md); left: var(--spacing-md); display: flex; gap: var(--spacing-sm); z-index: 10;">
+        <button class="btn btn-secondary btn-sm" onclick="loadGraphData()">刷新图谱</button>
+      </div>
+      <div class="graph-container" style="min-height: 450px;">
+        <div style="padding: 24px; text-align: center; color: #64748b;">加载中...</div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+      <div class="card" style="padding: var(--spacing-lg);">
+        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-md);">节点类型说明</h3>
+        <div class="legend-nodes">
+          <div style="padding: 16px; text-align: center; color: #64748b;">加载中...</div>
+        </div>
+      </div>
+      <div class="card" style="padding: var(--spacing-lg);">
+        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-md);">连接类型说明</h3>
+        <div class="legend-edges">
+          <div style="padding: 16px; text-align: center; color: #64748b;">加载中...</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/graph.js"></script>
+</body>
+</html>

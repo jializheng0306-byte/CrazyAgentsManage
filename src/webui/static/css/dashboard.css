@@ -1,0 +1,506 @@
+/* Vercel Workflow Style Dashboard CSS */
+/* Matching: vercel.com/workflows/run/[id] dark theme */
+
+#dashboard-app {
+  max-width: 100%;
+  padding: 0;
+}
+
+/* ── Breadcrumb Bar ── */
+.vw-top-bar {
+  background: #0a0a0a;
+  border-bottom: 1px solid #1e1e1e;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+}
+
+.vw-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #888;
+}
+
+.vw-breadcrumb-icon { cursor: pointer; }
+.vw-breadcrumb-text { color: #aaa; }
+.vw-breadcrumb-sep { color: #444; }
+.vw-breadcrumb-current { color: #fff; font-weight: 500; }
+.vw-external-link {
+  color: #666;
+  text-decoration: none;
+  margin-left: 4px;
+  font-size: 14px;
+}
+.vw-external-link:hover { color: #aaa; }
+
+/* ── Task Header Row ── */
+.vw-task-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.vw-task-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vw-task-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+/* Status Pill (Vercel style) */
+.vw-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.vw-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  animation: vw-pulse 2s infinite;
+}
+
+@keyframes vw-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.vw-status-completed { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.vw-status-completed .vw-status-dot { background: #22c55e; animation: none; }
+
+.vw-status-running { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.vw-status-running .vw-status-dot { background: #3b82f6; }
+
+.vw-status-error { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.vw-status-error .vw-status-dot { background: #ef4444; animation: none; }
+
+.vw-status-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.vw-status-warning .vw-status-dot { background: #f59e0b; }
+
+.vw-task-actions { display: flex; gap: 8px; }
+
+.vw-btn-outline {
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 6px 14px;
+  color: #ccc;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.vw-btn-outline:hover { border-color: #555; color: #fff; }
+
+.vw-btn-more {
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+}
+.vw-btn-more:hover { border-color: #555; color: #fff; }
+
+/* ── Metadata Strip ── */
+.vw-meta-strip {
+  display: flex;
+  gap: 32px;
+  padding: 14px 24px;
+  border-bottom: 1px solid #1e1e1e;
+  overflow-x: auto;
+}
+
+.vw-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+}
+
+.vw-meta-label {
+  font-size: 11px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.vw-meta-value {
+  font-size: 13px;
+  color: #ddd;
+  font-weight: 500;
+}
+
+/* ── Tab Bar (Pill Style) ── */
+.vw-tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 10px 24px;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.vw-tab {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #777;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.vw-tab:hover { color: #bbb; }
+
+.vw-tab-active {
+  background: #fff;
+  color: #000;
+  font-weight: 600;
+}
+
+/* ── Search Bar ── */
+.vw-search-bar {
+  position: relative;
+  margin: 12px 24px;
+}
+
+.vw-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: #555;
+  pointer-events: none;
+}
+
+.vw-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 6px;
+  color: #ddd;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+
+.vw-search-input:focus {
+  border-color: #444;
+}
+
+.vw-search-input::placeholder {
+  color: #444;
+}
+
+/* ── Timeline Container (Core Gantt Chart) ── */
+.vw-timeline-container {
+  margin: 0 24px 20px;
+  border: 1px solid #1e1e1e;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+
+/* Time Ruler */
+.vw-time-ruler {
+  position: relative;
+  height: 36px;
+  border-bottom: 1px solid #1e1e1e;
+  overflow: hidden;
+}
+
+.vw-ruler-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 6px;
+}
+
+.vw-ruler-tick {
+  position: absolute;
+  bottom: 0;
+  font-size: 10px;
+  color: #444;
+  transform: translateX(-50%);
+  user-select: none;
+  padding-bottom: 4px;
+}
+
+.vw-ruler-tick::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  height: 6px;
+  background: #222;
+  transform: translateX(-50%);
+}
+
+.vw-ruler-grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #151515;
+}
+
+/* Timeline Body */
+.vw-timeline-body {
+  position: relative;
+  min-height: 300px;
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.vw-timeline-body::-webkit-scrollbar { width: 6px; }
+.vw-timeline-body::-webkit-scrollbar-track { background: #0a0a0a; }
+.vw-timeline-body::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+.vw-timeline-grid {
+  position: relative;
+  min-height: 200px;
+}
+
+/* Grid vertical lines (time columns) */
+.vw-grid-col {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #141414;
+  z-index: 0;
+}
+
+/* ── Timeline Row (Gantt Bar) ── */
+.vw-row {
+  position: relative;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #111;
+  z-index: 1;
+}
+
+.vw-row:hover { background: rgba(255,255,255,0.02); }
+
+/* Tree connector lines */
+.vw-tree-line-v {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #2a2a2a;
+}
+
+.vw-tree-line-h {
+  position: absolute;
+  left: 12px;
+  top: 19px;
+  width: 10px;
+  height: 1px;
+  background: #2a2a2a;
+}
+
+/* Task/Span Bar (Gantt) */
+.vw-span-bar {
+  position: absolute;
+  height: 26px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter 150s ease, box-shadow 150s ease;
+  z-index: 2;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.vw-span-bar:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.1);
+}
+
+/* Bar Colors (Vercel palette) */
+.vw-span-success {
+  background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+  color: #86efac;
+  border: 1px solid #22863a;
+}
+
+.vw-span-running {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+  color: #93c5fd;
+  border: 1px solid #3b82f6;
+}
+
+.vw-span-waiting {
+  background: linear-gradient(135deg, #451a03 0%, #d97706 100%);
+  color: #fcd34d;
+  border: 1px solid #f59e0b;
+}
+
+.vw-span-error {
+  background: linear-gradient(135deg, #450a0a 0%, #dc2626 100%);
+  color: #fca5a5;
+  border: 1px solid #ef4444;
+}
+
+.vw-span-sleep {
+  background: linear-gradient(135deg, #3f1d0a 0%, #b45309 100%);
+  color: #fbbf24;
+  border: 1px solid #d97706;
+}
+
+.vw-span-info {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #94a3b8;
+  border: 1px solid #475569;
+}
+
+/* Span label inside bar */
+.vw-span-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Span duration on right side of bar */
+.vw-span-duration {
+  flex-shrink: 0;
+  margin-left: 6px;
+  opacity: 0.85;
+}
+
+/* Indentation levels for tree structure */
+.vw-indent-0 { padding-left: 8px; }
+.vw-indent-1 { padding-left: 28px; }
+.vw-indent-2 { padding-left: 48px; }
+.vw-indent-3 { padding-left: 68px; }
+.vw-indent-4 { padding-left: 88px; }
+
+/* Empty state */
+.vw-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #444;
+  font-size: 14px;
+}
+
+/* ── Zoom Controls ── */
+.vw-zoom-controls {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  padding: 8px 24px 16px;
+}
+
+.vw-zoom-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 6px;
+  color: #777;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.vw-zoom-btn:hover { border-color: #444; color: #ccc; }
+
+/* ── Footer ── */
+.vw-footer {
+  text-align: center;
+  padding: 20px;
+  color: #333;
+  font-size: 12px;
+  border-top: 1px solid #111;
+  margin-top: 20px;
+}
+
+/* ── Events Tab Content ── */
+.vw-events-list {
+  padding: 16px 24px;
+}
+
+.vw-event-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #111;
+  font-size: 13px;
+}
+
+.vw-event-time {
+  color: #555;
+  font-family: 'SF Mono', monospace;
+  font-size: 12px;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.vw-event-role {
+  font-weight: 600;
+  color: #93c5fd;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.vw-event-content {
+  color: #aaa;
+  line-height: 1.5;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .vw-meta-strip { gap: 20px; flex-wrap: wrap; }
+  .vw-meta-item { min-width: 60px; }
+  .vw-task-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+
+@media (max-width: 600px) {
+  .vw-top-bar { padding: 8px 16px; }
+  .vw-task-header { padding: 16px; }
+  .vw-meta-strip { padding: 10px 16px; gap: 16px; }
+  .vw-tab-bar { padding: 8px 16px; }
+  .vw-search-bar { margin: 8px 16px; }
+  .vw-timeline-container { margin: 0 16px 16px; }
+  .vw-zoom-controls { padding: 8px 16px 12px; }
+}

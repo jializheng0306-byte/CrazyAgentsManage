@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系统告警 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="/static/css/design-system.css">
+  <link rel="stylesheet" href="/static/css/nav.css">
+  <link rel="stylesheet" href="/static/css/pages.css">
+</head>
+<body>
+  <nav class="global-nav"><div class="container"><div class="global-nav-inner"><div class="nav-left"><a href="/" class="nav-logo"><div class="nav-logo-icon">⚡</div>Hermes<span class="nav-version">v0.5</span></a><div class="nav-menu"><a href="/" class="nav-item">📊 概览</a><a href="/agent" class="nav-item">🟣 Agent</a><a href="/tasks" class="nav-item">📋 任务</a><a href="/dashboard" class="nav-item">📊 监控仪表板</a><a href="/skills" class="nav-item">⚡ 技能</a><a href="/team-memory" class="nav-item">📝 团队记忆</a><a href="/cron" class="nav-item">⏰ 定时任务</a><a href="/graph" class="nav-item">🔗 图谱</a><a href="/sessions" class="nav-item pipeline">🔴 流水线</a><a href="/alerts" class="nav-item active">🔔 告警</a><a href="/tokens" class="nav-item">💰 Token</a></div></div><div class="nav-right"><input type="text" class="nav-search" placeholder="搜索..."><button class="nav-favorite">⭐ 收藏夹</button></div></div></div></nav>
+  <main class="container mt-lg">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg);"><h1 class="page-title">系统告警中心</h1><p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">实时监控系统状态、异常告警和性能指标</p></div>
+    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--spacing-xl);">
+      <div class="stat-card" style="border-left: 3px solid #ef4444;"><div class="stat-value" style="color: #ef4444;">--</div><div class="stat-label">严重告警</div></div>
+      <div class="stat-card" style="border-left: 3px solid #f59e0b;"><div class="stat-value" style="color: #f59e0b;">--</div><div class="stat-label">警告级别</div></div>
+      <div class="stat-card" style="border-left: 3px solid #3b82f6;"><div class="stat-value" style="color: #3b82f6;">--</div><div class="stat-label">信息通知</div></div>
+      <div class="stat-card" style="border-left: 3px solid #10b981;"><div class="stat-value" style="color: #10b981;">--</div><div class="stat-label">平台在线</div></div>
+    </div>
+    <div class="card" style="padding: var(--spacing-md); margin-bottom: var(--spacing-lg); display: flex; gap: var(--spacing-sm); align-items: center;">
+      <button class="btn btn-primary btn-sm" onclick="filterAlerts('all')">全部</button>
+      <button class="btn btn-secondary btn-sm" onclick="filterAlerts('critical')">严重</button>
+      <button class="btn btn-secondary btn-sm" onclick="filterAlerts('warning')">警告</button>
+      <button class="btn btn-secondary btn-sm" onclick="filterAlerts('info')">信息</button>
+      <div style="flex: 1;"></div>
+      <button class="btn btn-secondary btn-sm" onclick="loadAlerts()">🔄 刷新</button>
+    </div>
+    <div id="alertsListContainer">
+      <div style="padding: 24px; text-align: center; color: #64748b;">加载中...</div>
+    </div>
+  </main>
+  <script src="/static/js/alerts.js"></script>
+</body>
+</html>

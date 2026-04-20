@@ -80,36 +80,48 @@
 
 ### v0.5.0 — WebUI 集成 (预计 3-4 周)
 
-**目标**：WebUI 多智能体可视化（含 Vercel 风格监控仪表板）
+**目标**：WebUI 多智能体可视化（含 Vercel 风格监控仪表板 + 会话流水线索引）
 
 | 任务 | 模块 | 文件 | 优先级 | 状态 |
 |------|------|------|--------|------|
+| 会话流水线索引 API | api | `api/sessions.py` | P0 | 待开始 |
+| 会话统计 API | api | `api/sessions_stats.py` | P0 | 待开始 |
+| 会话详情 API | api | `api/session_detail.py` | P0 | 待开始 |
+| 会话流水线索引页面 | webui | `templates/sessions.html` | P0 | 待开始 |
+| 会话列表 CSS | webui | `static/css/sessions.css` | P0 | 待开始 |
 | 智能体监控仪表板 API | api | `api/agent_dashboard.py` | P0 | 待开始 |
 | 时间线数据接口 | api | `api/timeline.py` | P0 | 待开始 |
 | 事件流接口 | api | `api/events.py` | P0 | 待开始 |
-| 监控仪表板页面 | webui | `templates/dashboard.html` | P0 | 待开始 |
-| 时间线 CSS 组件 | webui | `static/css/timeline.css` | P0 | 待开始 |
-| 任务编排 API | api | `api/task_orchestrator.py` | P0 | 待开始 |
-| 团队记忆 API | api | `api/team_memory.py` | P0 | 待开始 |
-| 任务编排页面 | webui | `templates/tasks.html` | P1 | 待开始 |
-| 团队记忆页面 | webui | `templates/team_memory.html` | P1 | 待开始 |
+| 监控仪表板页面 | webui | `templates/dashboard.html` | P0 | 已完成 |
+| 时间线 CSS 组件 | webui | `static/css/timeline.css` | P0 | 已完成 |
+| 任务编排 API | api | `api/task_orchestrator.py` | P1 | 待开始 |
+| 团队记忆 API | api | `api/team_memory.py` | P1 | 待开始 |
+| 任务编排页面 | webui | `templates/tasks.html` | P1 | 已完成 |
+| 团队记忆页面 | webui | `templates/team_memory.html` | P1 | 已完成 |
 | DAG 可视化 | webui | `static/js/dag_view.js` | P1 | 待开始 |
 | 导航栏改造 | webui | `templates/index.html` | P1 | 待开始 |
 
 **里程碑**：
-- [ ] WebUI 新增"监控"菜单项
-- [ ] 深色主题仪表板（纯黑背景 #000）
-- [ ] 顶部状态栏：工作流名称 + 来源 + 状态圆点（参考 Vercel）
-- [ ] 元数据行：开始时间/完成时间/耗时/Token 用量（参考 Vercel Created/Completed/Duration）
-- [ ] Trace/Events 标签页（参考 Vercel）
-- [ ] 搜索框 + 时间轴刻度（参考 Vercel Search spans）
-- [ ] 时间线视图（水平刻度 + 彩色任务条）
-- [ ] 嵌套任务层级（竖线连接，最多 3 层，参考 Vercel 缩进树）
-- [ ] 工具调用子跨度条（深蓝色 #1e3a5f，参考 Vercel hook/span）
-- [ ] 右侧持续时间标签（参考 Vercel 1m 48s 标签）
-- [ ] 缩放控制 +/-（参考 Vercel 右下角按钮）
-- [ ] 实时数据刷新（SSE 或 5 秒轮询）
-- [ ] 工具异常高亮显示（红色 #ef4444）
+- [ ] **会话流水线索引（P0 核心）**
+  - [x] PRD 2.1.9 节已完成需求定义
+  - [ ] 顶部统计面板：6个统计卡片（会话/代笔任务/状态记录/trace事件/日志注入/来源分布）
+  - [ ] 左侧根会话索引列表（可滚动、虚拟滚动支持10000+条）
+  - [ ] 会话卡片显示：标题 + 标签(异常/cron/手动) + 时间戳 + 工具摘要 + 状态
+  - [ ] 右侧流水线详情面板（入口提示/高亮片段/基础结果/最终结果/系统结果/Token用量）
+  - [ ] 底部会话画像（来源/时间/状态/工具列表）
+  - [ ] 筛选功能：按来源(cli/cron/feishu)/状态/时间范围/标签筛选
+  - [ ] 搜索功能：全文搜索 + 关键词高亮
+  - [ ] 收藏夹功能（⭐标记重要会话）
+  - [ ] 导出功能（Markdown/PDF/JSON/CSV）
+- [ ] **监控仪表板（Vercel Workflow 风格）**
+  - [x] 基础页面框架已完成
+  - [ ] 后端API对接
+  - [ ] 实时数据刷新
+- [ ] **通用UI规范**
+  - [ ] 纯黑背景主题 (#000000)
+  - [ ] Vercel Workflow 配色方案
+  - [ ] 响应式布局
+  - [ ] 全中文界面
 
 ---
 

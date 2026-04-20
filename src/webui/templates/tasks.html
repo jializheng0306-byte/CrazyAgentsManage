@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>任务编排 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="/static/css/design-system.css">
+  <link rel="stylesheet" href="/static/css/nav.css">
+  <link rel="stylesheet" href="/static/css/pages.css">
+</head>
+<body>
+
+  <nav class="global-nav">
+    <div class="container">
+      <div class="global-nav-inner">
+        <div class="nav-left">
+          <a href="/" class="nav-logo">
+            <div class="nav-logo-icon">⚡</div>
+            Hermes
+            <span class="nav-version">v0.5</span>
+          </a>
+          <div class="nav-menu">
+            <a href="/" class="nav-item">📊 概览</a>
+            <a href="/agent" class="nav-item">🟣 Agent</a>
+            <a href="/tasks" class="nav-item active">📋 任务</a>
+            <a href="/dashboard" class="nav-item">📊 监控仪表板</a>
+            <a href="/skills" class="nav-item">⚡ 技能</a>
+            <a href="/team-memory" class="nav-item">📝 团队记忆</a>
+            <a href="/cron" class="nav-item">⏰ 定时任务</a>
+            <a href="/graph" class="nav-item">🔗 图谱</a>
+            <a href="/sessions" class="nav-item pipeline">🔴 流水线</a>
+            <a href="/alerts" class="nav-item">🔔 告警</a>
+            <a href="/tokens" class="nav-item">💰 Token</a>
+          </div>
+        </div>
+        <div class="nav-right">
+          <input type="text" class="nav-search" placeholder="搜索...">
+          <button class="nav-favorite">⭐ 收藏夹</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mt-lg">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+      <h1 class="page-title">任务编排</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">会话任务执行状态与依赖关系可视化</p>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--spacing-xl);">
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">任务总数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">运行中</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">已完成</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">失败</div>
+      </div>
+    </div>
+
+    <div class="card mb-lg">
+      <div class="section-title" style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm); border-bottom: 1px solid var(--color-border);">
+        任务依赖图 (DAG)
+      </div>
+      <div class="dag-container" style="min-height: 200px;">
+        <div style="padding: 24px; text-align: center; color: #64748b;">加载中...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm); border-bottom: 1px solid var(--color-border);">
+        任务列表
+      </div>
+      <div class="tasks-table-body" style="min-height: 100px;">
+        <div style="padding: 24px; text-align: center; color: #64748b;">加载中...</div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/tasks.js"></script>
+</body>
+</html>

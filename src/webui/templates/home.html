@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>团队与角色 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="/static/css/design-system.css">
+  <link rel="stylesheet" href="/static/css/nav.css">
+  <link rel="stylesheet" href="/static/css/home.css">
+</head>
+<body>
+
+  <nav class="global-nav">
+    <div class="container">
+      <div class="global-nav-inner">
+        <div class="nav-left">
+          <div class="nav-logo">
+            <div class="nav-logo-icon">⚡</div>
+            Hermes
+            <span class="nav-version">v0.5</span>
+          </div>
+          <div class="nav-menu">
+            <a href="/" class="nav-item active">📊 概览</a>
+            <a href="/agent" class="nav-item">🟣 Agent</a>
+            <a href="/tasks" class="nav-item">📋 任务</a>
+            <a href="/dashboard" class="nav-item">📊 监控仪表板</a>
+            <a href="/skills" class="nav-item">⚡ 技能</a>
+            <a href="/team-memory" class="nav-item">📝 团队记忆</a>
+            <a href="/cron" class="nav-item">⏰ 定时任务</a>
+            <a href="/graph" class="nav-item">🔗 图谱</a>
+            <a href="/sessions" class="nav-item pipeline">🔴 流水线</a>
+            <a href="/alerts" class="nav-item">🔔 告警</a>
+            <a href="/tokens" class="nav-item">💰 Token</a>
+          </div>
+        </div>
+        <div class="nav-right">
+          <input type="text" class="nav-search" placeholder="搜索...">
+          <button class="nav-favorite">⭐ 收藏夹</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mt-lg">
+
+    <section class="hero-section">
+      <div class="hero-icon">👥</div>
+      <h1 class="hero-title">团队与角色</h1>
+      <p class="hero-subtitle">团队结构 · 记忆沉淀 · 角色体验</p>
+      <div class="hero-actions">
+        <button class="btn-expand" onclick="expandAll()">📂 全部展开</button>
+        <button class="btn-expand" onclick="collapseAll()">📁 全部收起</button>
+      </div>
+    </section>
+
+    <section class="stats-overview">
+      <div class="stat-card-home">
+        <div class="stat-value">--</div>
+        <div class="stat-label">团队</div>
+      </div>
+      <div class="stat-card-home">
+        <div class="stat-value">--</div>
+        <div class="stat-label">角色</div>
+      </div>
+      <div class="stat-card-home">
+        <div class="stat-value">--</div>
+        <div class="stat-label">记忆文件</div>
+      </div>
+      <div class="stat-card-home">
+        <div class="stat-value">--</div>
+        <div class="stat-label">团队记忆</div>
+      </div>
+      <div class="stat-card-home">
+        <div class="stat-value">--</div>
+        <div class="stat-label">会话总数</div>
+      </div>
+    </section>
+
+    <section class="team-section">
+      <div class="section-header">
+        <h2 class="section-title">🏢 团队列表</h2>
+      </div>
+      <div class="team-cards" id="teamCards">
+        <div style="padding: 24px; text-align: center; color: #64748b;">加载中...</div>
+      </div>
+    </section>
+
+    <section class="memory-section">
+      <div class="section-header">
+        <h2 class="section-title">📋 团队记忆</h2>
+        <button class="btn-refresh" onclick="loadMemoryGrid()">🔄 刷新</button>
+      </div>
+      <div class="memory-grid" id="memoryGrid">
+        <div style="padding: 24px; text-align: center; color: #64748b;">加载中...</div>
+      </div>
+    </section>
+
+    <section class="role-section">
+      <div class="section-header">
+        <h2 class="section-title">🎭 角色记忆</h2>
+      </div>
+      <div class="role-grid" id="roleGrid">
+        <div style="padding: 24px; text-align: center; color: #64748b;">加载中...</div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/js/home.js"></script>
+</body>
+</html>

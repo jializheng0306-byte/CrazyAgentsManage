@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>监控仪表板 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="/static/css/design-system.css">
+  <link rel="stylesheet" href="/static/css/nav.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+
+  <!-- Global Navigation Bar - Hermes Style -->
+  <nav class="global-nav">
+    <div class="container">
+      <div class="global-nav-inner">
+        <div class="nav-left">
+          <a href="/" class="nav-logo">
+            <div class="nav-logo-icon">⚡</div>
+            Hermes
+            <span class="nav-version">v0.5</span>
+          </a>
+          <div class="nav-menu">
+            <a href="/" class="nav-item">📊 概览</a>
+            <a href="/agent" class="nav-item active">🟣 Agent</a>
+            <a href="/tasks" class="nav-item">📋 任务</a>
+            <a href="/dashboard" class="nav-item">📊 监控仪表板</a>
+            <a href="/skills" class="nav-item">⚡ 技能</a>
+            <a href="/team-memory" class="nav-item">📝 团队记忆</a>
+            <a href="/cron" class="nav-item">⏰ 定时任务</a>
+            <a href="/graph" class="nav-item">🔗 图谱</a>
+            <a href="/sessions" class="nav-item pipeline">🔴 流水线</a>
+            <a href="/alerts" class="nav-item">🔔 告警</a>
+            <a href="/tokens" class="nav-item">💰 Token</a>
+          </div>
+        </div>
+        <div class="nav-right">
+          <input type="text" class="nav-search" placeholder="搜索...">
+          <button class="nav-favorite">⭐ 收藏夹</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content - Vercel Workflow Style -->
+  <main id="dashboard-app">
+
+    <!-- Breadcrumb / Project Bar -->
+    <div class="vw-top-bar">
+      <div class="vw-breadcrumb">
+        <span class="vw-breadcrumb-icon">◀</span>
+        <span class="vw-breadcrumb-text">Hermes Agent</span>
+        <span class="vw-breadcrumb-sep">/</span>
+        <span class="vw-breadcrumb-text">Workflows</span>
+        <span class="vw-breadcrumb-sep">/</span>
+        <span class="vw-breadcrumb-current" id="sessionRunId">session_latest</span>
+        <a class="vw-external-link" href="/sessions" title="查看所有会话">↗</a>
+      </div>
+    </div>
+
+    <!-- Task Header Row -->
+    <div class="vw-task-header">
+      <div class="vw-task-title-row">
+        <h1 class="vw-task-name" id="taskName">Hermes 会话追踪</h1>
+        <span class="vw-status-pill vw-status-running" id="statusPill">
+          <span class="vw-status-dot"></span>
+          <span id="statusText">运行中</span>
+        </span>
+      </div>
+      <div class="vw-task-actions">
+        <button class="vw-btn-outline" onclick="window.location.href='/sessions'">查看全部会话</button>
+        <button class="vw-btn-more" onclick="toggleMenu()">⋮</button>
+      </div>
+    </div>
+
+    <!-- Metadata Strip -->
+    <div class="vw-meta-strip">
+      <div class="vw-meta-item">
+        <span class="vw-meta-label">创建时间</span>
+        <span class="vw-meta-value" id="metaCreated">--</span>
+      </div>
+      <div class="vw-meta-item">
+        <span class="vw-meta-label">完成时间</span>
+        <span class="vw-meta-value" id="metaCompleted">--</span>
+      </div>
+      <div class="vw-meta-item">
+        <span class="vw-meta-label">持续时间</span>
+        <span class="vw-meta-value" id="metaDuration">--</span>
+      </div>
+      <div class="vw-meta-item">
+        <span class="vw-meta-label">Token 消耗</span>
+        <span class="vw-meta-value" id="metaTokens">--</span>
+      </div>
+      <div class="vw-meta-item">
+        <span class="vw-meta-label">消息数</span>
+        <span class="vw-meta-value" id="metaMessages">--</span>
+      </div>
+      <div class="vw-meta-item">
+        <span class="vw-meta-label">来源</span>
+        <span class="vw-meta-value" id="metaSource">--</span>
+      </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="vw-tab-bar">
+      <button class="vw-tab vw-tab-active" data-tab="trace" onclick="switchTab('trace')">Trace</button>
+      <button class="vw-tab" data-tab="events" onclick="switchTab('events')">Events</button>
+      <button class="vw-tab" data-tab="streams" onclick="switchTab('streams')">Streams</button>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="vw-search-bar">
+      <svg class="vw-search-icon" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M11 11L14.5 14.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      <input type="text" class="vw-search-input" placeholder="Search spans..." id="timelineSearch" oninput="filterTimeline()">
+    </div>
+
+    <!-- Timeline Area (Core) -->
+    <div class="vw-timeline-container" id="timelineContainer">
+      <!-- Time Ruler -->
+      <div class="vw-time-ruler" id="timeRuler">
+        <div class="vw-ruler-track" id="rulerTrack"></div>
+      </div>
+
+      <!-- Timeline Body (Gantt Chart) -->
+      <div class="vw-timeline-body" id="timelineBody">
+        <div class="vw-timeline-grid" id="timelineGrid"></div>
+      </div>
+    </div>
+
+    <!-- Zoom Controls -->
+    <div class="vw-zoom-controls">
+      <button class="vw-zoom-btn" onclick="zoomIn()" title="放大">🔍+</button>
+      <button class="vw-zoom-btn" onclick="zoomOut()" title="缩小">🔍−</button>
+      <button class="vw-zoom-btn" onclick="fitToView()" title="适应视图">⊡</button>
+    </div>
+
+    <!-- Footer -->
+    <div class="vw-footer">
+      Hermes Agent 内置可观测性仪表板 — 基于 SessionDB 实时数据构建
+    </div>
+
+  </main>
+
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

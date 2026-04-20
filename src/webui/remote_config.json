@@ -1,0 +1,7 @@
+{
+  "host": "47.99.217.1",
+  "user": "root",
+  "password": "J6J3jlzcrazy",
+  "hermes_home": "/root/.hermes",
+  "python_path": "/root/hermes-agent/venv/bin/python3"
+}

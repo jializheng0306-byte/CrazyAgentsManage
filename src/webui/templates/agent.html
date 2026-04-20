@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能体管理 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="/static/css/design-system.css">
+  <link rel="stylesheet" href="/static/css/nav.css">
+  <link rel="stylesheet" href="/static/css/pages.css">
+</head>
+<body>
+
+  <nav class="global-nav">
+    <div class="container">
+      <div class="global-nav-inner">
+        <div class="nav-left">
+          <a href="/" class="nav-logo">
+            <div class="nav-logo-icon">⚡</div>
+            Hermes
+            <span class="nav-version">v0.5</span>
+          </a>
+          <div class="nav-menu">
+            <a href="/" class="nav-item">📊 概览</a>
+            <a href="/agent" class="nav-item active">🟣 Agent</a>
+            <a href="/tasks" class="nav-item">📋 任务</a>
+            <a href="/dashboard" class="nav-item">📊 监控仪表板</a>
+            <a href="/skills" class="nav-item">⚡ 技能</a>
+            <a href="/team-memory" class="nav-item">📝 团队记忆</a>
+            <a href="/cron" class="nav-item">⏰ 定时任务</a>
+            <a href="/graph" class="nav-item">🔗 图谱</a>
+            <a href="/sessions" class="nav-item pipeline">🔴 流水线</a>
+            <a href="/alerts" class="nav-item">🔔 告警</a>
+            <a href="/tokens" class="nav-item">💰 Token</a>
+          </div>
+        </div>
+        <div class="nav-right">
+          <input type="text" class="nav-search" placeholder="搜索...">
+          <button class="nav-favorite">⭐ 收藏夹</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mt-lg">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+      <h1 class="page-title">智能体管理</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">管理所有AI智能体的状态、配置和性能监控</p>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--spacing-xl);">
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">智能体总数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">运行中</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">空闲中</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">异常</div>
+      </div>
+    </div>
+
+    <div class="agents-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: var(--spacing-lg);">
+      <div style="padding: 24px; text-align: center; color: #64748b; grid-column: 1 / -1;">加载中...</div>
+    </div>
+  </main>
+
+  <script src="/static/js/agent.js"></script>
+</body>
+</html>

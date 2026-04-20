@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>定时任务管理 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="/static/css/design-system.css">
+  <link rel="stylesheet" href="/static/css/nav.css">
+  <link rel="stylesheet" href="/static/css/pages.css">
+</head>
+<body>
+
+  <!-- Global Navigation Bar - Hermes Style -->
+  <nav class="global-nav">
+    <div class="container">
+      <div class="global-nav-inner">
+        <!-- Left: Logo + Menu -->
+        <div class="nav-left">
+          <a href="/" class="nav-logo">
+            <div class="nav-logo-icon">⚡</div>
+            Hermes
+            <span class="nav-version">v0.5</span>
+          </a>
+
+          <div class="nav-menu">
+            <a href="/" class="nav-item">📊 概览</a>
+            <a href="/agent" class="nav-item">🟣 Agent</a>
+            <a href="/tasks" class="nav-item">📋 任务</a>
+            <a href="/dashboard" class="nav-item">📊 监控仪表板</a>
+            <a href="/skills" class="nav-item">⚡ 技能</a>
+            <a href="/team-memory" class="nav-item">📝 团队记忆</a>
+            <a href="/cron" class="nav-item active">⏰ 定时任务</a>
+            <a href="/graph" class="nav-item">🔗 图谱</a>
+            <a href="/sessions" class="nav-item pipeline">🔴 流水线</a>
+            <a href="/alerts" class="nav-item">🔔 告警</a>
+            <a href="/tokens" class="nav-item">💰 Token</a>
+          </div>
+        </div>
+
+        <!-- Right: Search + Favorite -->
+        <div class="nav-right">
+          <input type="text" class="nav-search" placeholder="搜索...">
+          <button class="nav-favorite">⭐ 收藏夹</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container mt-lg">
+    <!-- Stats Grid -->
+    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">任务总数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">运行中</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">已暂停</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">--</div>
+        <div class="stat-label">失败</div>
+      </div>
+    </div>
+
+    <!-- Scheduled Tasks -->
+    <div class="card">
+      <div class="section-title" style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm); border-bottom: 1px solid var(--color-border);">
+        定时任务列表
+      </div>
+
+      <div class="cron-task-list" id="cronTaskList">
+        <div style="padding: 24px; text-align: center; color: #64748b;">加载中...</div>
+      </div>
+
+      <!-- Add Task Button -->
+      <div class="mt-lg">
+        <button class="btn btn-primary" onclick="showCreateJobForm()">创建新定时任务</button>
+      </div>
+    </div>
+
+    <!-- Create Job Modal -->
+    <div id="createJobModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; align-items: center; justify-content: center;">
+      <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; width: 90%; max-width: 500px;">
+        <h3 style="color: white; font-size: 16px; margin: 0 0 16px;">创建定时任务</h3>
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px;">任务名称</label>
+          <input id="cronName" type="text" placeholder="例：每日报告" style="width: 100%; padding: 8px 12px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 6px; font-size: 13px;">
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px;">执行计划 (Cron 表达式)</label>
+          <input id="cronSchedule" type="text" placeholder="例：0 9 * * * (每天9点)" style="width: 100%; padding: 8px 12px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 6px; font-size: 13px;">
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px;">执行提示词</label>
+          <textarea id="cronPrompt" rows="4" placeholder="描述任务内容..." style="width: 100%; padding: 8px 12px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 6px; font-size: 13px; resize: vertical;"></textarea>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px;">投递目标</label>
+          <select id="cronDeliver" style="width: 100%; padding: 8px 12px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 6px; font-size: 13px;">
+            <option value="local">本地</option>
+            <option value="memory">团队记忆</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button onclick="hideCreateJobForm()" style="padding: 8px 16px; background: #334155; color: #94a3b8; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">取消</button>
+          <button onclick="createJob()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">创建</button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script src="/static/js/cron.js"></script>
+</body>
+</html>
