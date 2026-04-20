@@ -11,6 +11,16 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSessionStats();
   loadSessionList();
   initSearchHandler();
+
+  const params = new URLSearchParams(window.location.search);
+  const searchQuery = params.get('search');
+  if (searchQuery) {
+    const searchInput = document.querySelector('.session-search') || document.querySelector('input[placeholder*="搜索"]');
+    if (searchInput) {
+      searchInput.value = searchQuery;
+      searchSessions(searchQuery);
+    }
+  }
 });
 
 function initSearchHandler() {
