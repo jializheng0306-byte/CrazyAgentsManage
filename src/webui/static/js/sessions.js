@@ -32,7 +32,7 @@ function initSearchHandler() {
 
 async function loadSessionStats() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/sessions/stats');
+    const resp = await fetch('/api/sessions/stats');
     const data = await resp.json();
 
     const statNumbers = document.querySelectorAll('.stat-number');
@@ -266,25 +266,10 @@ function filterBySource(source) {
   loadSessionList(source);
 }
 
-function formatTime(timestamp) {
-  if (!timestamp) return '--';
-  const d = new Date(typeof timestamp === 'number' ? timestamp * 1000 : timestamp);
-  if (isNaN(d.getTime())) return '--';
-  return d.toLocaleString('zh-CN', {
-    month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit',
-  });
+);
 }
 
-function getSourceEmoji(source) {
-  if (typeof window.getSourceEmoji === 'function') return window.getSourceEmoji(source);
-  const map = { cli: '🖥️', cron: '⏰', telegram: '📱', discord: '💬', feishu: '🐦', slack: '💼', api_server: '🔌', acp: '📝' };
+;
   return map[source] || '📡';
 }
 
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}

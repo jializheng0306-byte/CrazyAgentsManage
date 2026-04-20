@@ -2,10 +2,14 @@ document.addEventListener('DOMContentLoaded', () => {
   loadTasks();
 });
 
+let allTasks = [];
+let currentStatusFilter = 'all';
+
 async function loadTasks() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/tasks/list');
+    const resp = await fetch('/api/tasks/list');
     const data = await resp.json();
+    allTasks = data.tasks || [];
 
     const stats = data.stats || {};
     const statValues = document.querySelectorAll('.stat-value');
@@ -14,11 +18,41 @@ async function loadTasks() {
     if (statValues[2]) statValues[2].textContent = stats.completed || 0;
     if (statValues[3]) statValues[3].textContent = stats.failed || 0;
 
-    renderDAG(data.tasks || []);
-    renderTaskList(data.tasks || []);
+    renderStatusFilter();
+    renderDAG(allTasks);
+    renderTaskList(allTasks);
   } catch (e) {
     console.error('Failed to load tasks:', e);
   }
+}
+
+function renderStatusFilter() {
+  const container = document.querySelector('.task-filter') || document.querySelector('.stats-grid');
+  if (!container) return;
+
+  const counts = { all: allTasks.length, running: 0, completed: 0, failed: 0, pending: 0 };
+  allTasks.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
+
+  const filterBar = document.createElement('div');
+  filterBar.className = 'task-filter-bar';
+  filterBar.style.cssText = 'display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;';
+  filterBar.innerHTML = ['all', 'running', 'completed', 'failed'].map(s => {
+    const labels = { all: '全部', running: '运行中', completed: '已完成', failed: '失败' };
+    const colors = { all: '#667eea', running: '#f59e0b', completed: '#10b981', failed: '#ef4444' };
+    return `<button class="btn ${currentStatusFilter === s ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="filterTasks('${s}')" style="${currentStatusFilter === s ? 'background:' + colors[s] + ';border-color:' + colors[s] : ''}">${labels[s]} (${counts[s]})</button>`;
+  }).join('');
+
+  const existing = document.querySelector('.task-filter-bar');
+  if (existing) existing.replaceWith(filterBar);
+  else container.parentNode.insertBefore(filterBar, container.nextSibling);
+}
+
+function filterTasks(status) {
+  currentStatusFilter = status;
+  const filtered = status === 'all' ? allTasks : allTasks.filter(t => t.status === status);
+  renderStatusFilter();
+  renderDAG(filtered);
+  renderTaskList(filtered);
 }
 
 function renderDAG(tasks) {
@@ -72,7 +106,7 @@ function renderDAG(tasks) {
       const sc = statusColors[task.status] || statusColors.pending;
 
       html += `
-        <div style="background: ${sc.bg}; border: 1px solid ${sc.border}33; border-radius: 10px; padding: 14px; min-width: 160px; max-width: 220px; position: relative;">
+        <div style="background: ${sc.bg}; border: 1px solid ${sc.border}33; border-radius: 10px; padding: 14px; min-width: 160px; max-width: 220px; position: relative; cursor: pointer;" onclick="showTaskDetail('${escapeHtml(task.id)}')">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
             <div style="width: 8px; height: 8px; border-radius: 50%; background: ${sc.border};"></div>
             <span style="font-size: 13px; font-weight: 600; color: white;">${escapeHtml(task.name)}</span>
@@ -116,7 +150,7 @@ function renderTaskList(tasks) {
     const st = statusMap[task.status] || statusMap.pending;
 
     return `
-      <div style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #1f2937; gap: 16px;">
+      <div style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #1f2937; gap: 16px; cursor: pointer;" onclick="showTaskDetail('${escapeHtml(task.id)}')">
         <div style="flex: 1; min-width: 0;">
           <div style="font-size: 14px; color: white; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(task.name)}</div>
           <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">${getSourceEmoji(task.source)} ${task.source || '--'} · ${task.model || '--'}</div>
@@ -128,28 +162,59 @@ function renderTaskList(tasks) {
   }).join('');
 }
 
-function getSourceEmoji(source) {
-  if (typeof window.getSourceEmoji === 'function') return window.getSourceEmoji(source);
-  const map = { cli: '🖥️', cron: '⏰', telegram: '📱', discord: '💬', feishu: '🐦', slack: '💼', api_server: '🔌', acp: '📝' };
-  return map[source] || '📡';
-}
+function showTaskDetail(taskId) {
+  const task = allTasks.find(t => t.id === taskId);
+  if (!task) return;
 
-function formatDuration(seconds) {
-  if (!seconds || seconds <= 0) return '0s';
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) {
-    const m = Math.floor(seconds / 60);
-    const s = Math.round(seconds % 60);
-    return s > 0 ? `${m}m ${s}s` : `${m}m`;
-  }
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
+  const existing = document.getElementById('taskDetailModal');
+  if (existing) existing.remove();
 
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+  const statusMap = {
+    running: { color: '#f59e0b', text: '运行中' },
+    completed: { color: '#10b981', text: '已完成' },
+    failed: { color: '#ef4444', text: '失败' },
+    pending: { color: '#64748b', text: '等待中' },
+  };
+  const st = statusMap[task.status] || statusMap.pending;
+
+  const modal = document.createElement('div');
+  modal.id = 'taskDetailModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;max-width:500px;width:90%;position:relative;">
+      <button onclick="document.getElementById('taskDetailModal').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;">&times;</button>
+      <h2 style="font-size:18px;font-weight:600;color:white;margin:0 0 16px;">${escapeHtml(task.name)}</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">状态</div>
+          <div style="font-size:14px;color:${st.color};font-weight:500;">${st.text}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">来源</div>
+          <div style="font-size:14px;color:white;font-weight:500;">${getSourceEmoji(task.source)} ${escapeHtml(task.source || '--')}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">模型</div>
+          <div style="font-size:14px;color:white;font-weight:500;">${escapeHtml(task.model || '--')}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">持续时间</div>
+          <div style="font-size:14px;color:white;font-weight:500;">${task.duration ? formatDuration(task.duration) : '--'}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">消息数</div>
+          <div style="font-size:14px;color:white;font-weight:500;">${task.message_count || 0}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">工具调用</div>
+          <div style="font-size:14px;color:white;font-weight:500;">${task.tool_call_count || 0}</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;text-align:center;">
+        <a href="/sessions" style="color:#667eea;font-size:13px;text-decoration:none;">在会话流水线中查看 →</a>
+      </div>
+    </div>
+  `;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
 }
