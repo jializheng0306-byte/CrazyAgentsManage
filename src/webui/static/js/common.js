@@ -45,9 +45,41 @@ function formatTime(timestamp) {
   });
 }
 
+function formatTimeAgo(timestamp) {
+  if (!timestamp) return '--';
+  const ts = typeof timestamp === 'number' ? timestamp * 1000 : timestamp;
+  const diff = Date.now() - new Date(ts).getTime();
+  const secs = Math.floor(diff / 1000);
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 function escapeHtml(text) {
   if (!text) return '';
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function sanitizeColor(val) {
+  if (!val) return '#64748b';
+  if (/^#[0-9a-fA-F]{6}$/.test(val.trim())) return val.trim();
+  if (/^#[0-9a-fA-F]{3}$/.test(val.trim())) return val.trim();
+  return '#64748b';
+}
+
+function truncate(str, len) {
+  if (!str) return '';
+  return str.length > len ? str.substring(0, len) + '...' : str;
 }
