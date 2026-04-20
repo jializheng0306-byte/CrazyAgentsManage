@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadSkillsList() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/skills/list');
+    const resp = await fetch('/api/skills/list');
     const data = await resp.json();
 
     allSkills = data.skills || [];
@@ -157,15 +157,3 @@ function renderSkillDetail(skill) {
   `;
 }
 
-function formatSize(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
