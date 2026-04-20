@@ -500,7 +500,7 @@ def dashboard_session_detail(session_id):
         session['ended_at_iso'] = datetime.fromtimestamp(session['ended_at'], tz=timezone.utc).isoformat()
 
     messages = _db_query(
-        "SELECT id, session_id, role, content, tool_call_id, tool_calls, tool_name, "
+        "SELECT id, session_id, role, substr(content, 1, 500) as content, tool_call_id, tool_calls, tool_name, "
         "timestamp, token_count, finish_reason, reasoning "
         "FROM messages WHERE session_id = ? ORDER BY timestamp ASC",
         (session_id,)

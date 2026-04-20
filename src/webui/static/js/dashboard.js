@@ -8,7 +8,8 @@ let currentSession = null;
 let allSessions = [];
 let zoomLevel = 1;
 let refreshInterval = null;
-const REFRESH_MS = 5000;
+let currentTab = 'trace';
+const REFRESH_MS = 8000;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadLatestSession();
@@ -22,7 +23,7 @@ function startAutoRefresh() {
 
 async function loadLatestSession() {
   try {
-    const resp = await fetch('/api/dashboard/sessions?limit=5');
+    const resp = await fetch(window.APP_BASE + '/api/dashboard/sessions?limit=5');
     const sessions = await resp.json();
     allSessions = sessions;
 
@@ -42,7 +43,7 @@ async function loadLatestSession() {
 
 async function loadSessionDetail(sessionId) {
   try {
-    const resp = await fetch(`/api/dashboard/session/${sessionId}`);
+    const resp = await fetch(window.APP_BASE + `/api/dashboard/session/${sessionId}`);
     const data = await resp.json();
 
     if (data.error) {
@@ -52,7 +53,12 @@ async function loadSessionDetail(sessionId) {
 
     currentSession = data;
     updateHeader(data);
-    buildTimeline(data);
+
+    if (currentTab === 'trace') {
+      buildTimeline(data);
+    } else if (currentTab === 'events') {
+      renderEventsTab(data.messages || []);
+    }
   } catch (e) {
     console.error('Failed to load session detail:', e);
   }
@@ -83,7 +89,7 @@ function updateHeader(session) {
 
   const tokens = (session.input_tokens || 0) + (session.output_tokens || 0);
   document.getElementById('metaTokens').textContent = tokens > 0 ? formatTokenCount(tokens) : '--';
-  document.getElementById('metaMessages').textContent = (session.messages || []).length || '--';
+  document.getElementById('metaMessages').textContent = session.message_count || (session.messages || []).length || '--';
   document.getElementById('metaSource').textContent = session.source || 'unknown';
 }
 
@@ -97,7 +103,6 @@ function buildTimeline(session) {
   const baseTime = messages[0]?.timestamp || (session.started_at || Date.now() / 1000);
   let maxTime = baseTime;
 
-  const hasTimestamps = messages.some(m => m.timestamp);
   const sessionDuration = session.ended_at
     ? (session.ended_at - (session.started_at || baseTime))
     : (Date.now() / 1000 - (session.started_at || baseTime));
@@ -118,7 +123,8 @@ function buildTimeline(session) {
       
       spans.push({
         id: `msg-${msgIndex}`,
-        label: truncate(msg.content?.substring(0, 60) || '用户消息', 50),
+        label: truncate(msg.content?.substring(0, 80) || '用户消息', 60),
+        fullContent: msg.content || '',
         type: 'user',
         startTime,
         endTime: Math.max(endTime, startTime + 0.5),
@@ -131,11 +137,12 @@ function buildTimeline(session) {
       const nextMsg = messages[msgIndex + 1];
       const fallbackEnd = startTime + Math.max(avgMsgDuration * 0.8, 1);
       const endTime = nextMsg ? (nextMsg.timestamp || fallbackEnd) : (session.ended_at || fallbackEnd);
-      const contentPreview = msg.content?.substring(0, 60) || '';
+      const contentPreview = msg.content?.substring(0, 80) || '';
 
       spans.push({
         id: `msg-${msgIndex}`,
         label: contentPreview || '助手回复',
+        fullContent: msg.content || '',
         type: 'assistant',
         subType: msg.finish_reason === 'stop' ? 'success' : 'running',
         startTime,
@@ -156,6 +163,7 @@ function buildTimeline(session) {
       spans.push({
         id: `msg-${msgIndex}`,
         label: `${toolName}${contentPreview ? ': ' + truncate(contentPreview, 35) : ''}`,
+        fullContent: msg.content || '',
         type: 'tool',
         toolName,
         startTime,
@@ -167,7 +175,8 @@ function buildTimeline(session) {
     } else if (msg.role === 'system') {
       spans.push({
         id: `msg-${msgIndex}`,
-        label: truncate(msg.content?.substring(0, 60) || '系统提示', 50),
+        label: truncate(msg.content?.substring(0, 80) || '系统提示', 60),
+        fullContent: msg.content || '',
         type: 'system',
         startTime: msg.timestamp || baseTime,
         endTime: (msg.timestamp || baseTime) + 1,
@@ -217,7 +226,6 @@ function renderGrid(spans, baseTime, totalDuration) {
   if (!grid) return;
 
   grid.innerHTML = '';
-  const containerWidth = grid.parentElement?.offsetWidth || 1200;
 
   spans.forEach((span, idx) => {
     const row = document.createElement('div');
@@ -278,12 +286,45 @@ function getSpanBarClass(span) {
 }
 
 function onSpanClick(span) {
-  console.log('Span clicked:', span);
+  let modal = document.getElementById('vwSpanDetail');
+  if (modal) modal.remove();
+
+  modal = document.createElement('div');
+  modal.id = 'vwSpanDetail';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;';
+
+  const roleLabel = { user: '👤 用户消息', assistant: '🤖 助手回复', system: '⚙️ 系统提示', tool: '🔧 工具调用' };
+  const content = span.fullContent || span.label || '(无内容)';
+
+  modal.innerHTML = `
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;max-width:680px;width:90%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,0.5);">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #334155;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:14px;font-weight:600;color:#e2e8f0;">${roleLabel[span.type] || span.type}</span>
+          ${span.toolName ? `<span style="font-size:12px;color:#93c5fd;background:rgba(59,130,246,0.15);padding:2px 8px;border-radius:4px;">${escapeHtml(span.toolName)}</span>` : ''}
+          <span style="font-size:12px;color:#64748b;">${formatDuration(span.duration)}</span>
+        </div>
+        <button onclick="document.getElementById('vwSpanDetail').remove()" style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;padding:4px 8px;">✕</button>
+      </div>
+      <div style="padding:20px;overflow-y:auto;flex:1;">
+        <pre style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.6;color:#cbd5e1;margin:0;font-family:'SF Mono',Consolas,monospace;">${escapeHtml(content)}</pre>
+      </div>
+    </div>
+  `;
+
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
 }
 
 function switchTab(tabName) {
+  currentTab = tabName;
   document.querySelectorAll('.vw-tab').forEach(t => t.classList.remove('vw-tab-active'));
   document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('vw-tab-active');
+
+  const searchBar = document.querySelector('.vw-search-bar');
+  if (searchBar) {
+    searchBar.style.display = tabName === 'trace' ? '' : 'none';
+  }
 
   const body = document.getElementById('timelineBody');
   if (!body) return;
@@ -291,6 +332,10 @@ function switchTab(tabName) {
   if (tabName === 'events' && currentSession) {
     renderEventsTab(currentSession.messages || []);
   } else if (tabName === 'trace' && currentSession) {
+    body.innerHTML = `
+      <div class="vw-time-ruler" id="timeRuler"><div class="vw-ruler-track" id="rulerTrack"></div></div>
+      <div class="vw-timeline-body" id="timelineBody"><div class="vw-timeline-grid" id="timelineGrid"></div></div>
+    `;
     buildTimeline(currentSession);
   } else if (tabName === 'streams') {
     renderStreamsTab();
@@ -298,10 +343,10 @@ function switchTab(tabName) {
 }
 
 function renderEventsTab(messages) {
-  const body = document.getElementById('timelineBody');
-  if (!body) return;
+  const container = document.getElementById('timelineContainer');
+  if (!container) return;
 
-  body.innerHTML = `<div class="vw-events-list" id="eventsList"></div>`;
+  container.innerHTML = `<div class="vw-events-list" id="eventsList"></div>`;
   const list = document.getElementById('eventsList');
 
   messages.forEach((msg, i) => {
@@ -334,10 +379,10 @@ let streamEventSource = null;
 let streamEvents = [];
 
 function renderStreamsTab() {
-  const body = document.getElementById('timelineBody');
-  if (!body) return;
+  const container = document.getElementById('timelineContainer');
+  if (!container) return;
 
-  body.innerHTML = `
+  container.innerHTML = `
     <div style="padding: 16px;">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
         <div style="font-size: 14px; color: #94a3b8;">SSE 实时流 — 监控会话活动</div>
@@ -368,7 +413,8 @@ function toggleStream() {
   }
 
   try {
-    streamEventSource = new EventSource('/api/dashboard/stream');
+    const streamUrl = (window.APP_BASE || '') + '/api/dashboard/stream';
+    streamEventSource = new EventSource(streamUrl);
     if (btn) btn.textContent = '断开';
     if (status) status.textContent = '连接中...';
 
@@ -437,10 +483,11 @@ function toggleMenu() {
   menu.id = 'vwContextMenu';
   menu.style.cssText = 'position: fixed; top: 50%; right: 24px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 4px; z-index: 1000; min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);';
 
+  const base = window.APP_BASE || '';
   const items = [
     { label: '🔄 刷新数据', action: () => loadLatestSession() },
     { label: '🔍 适应视图', action: () => fitToView() },
-    { label: '📊 查看全部会话', action: () => window.location.href = '/sessions' },
+    { label: '📊 查看全部会话', action: () => window.location.href = base + '/sessions' },
     { label: '⏱️ 自动刷新: 开', action: (el) => {
       if (refreshInterval) {
         clearInterval(refreshInterval);
@@ -477,7 +524,6 @@ function toggleMenu() {
   setTimeout(() => document.addEventListener('click', closeHandler), 10);
 }
 
-/* ── Zoom Controls ── */
 function zoomIn() {
   zoomLevel = Math.min(zoomLevel * 1.5, 5);
   if (currentSession) buildTimeline(currentSession);
@@ -493,7 +539,6 @@ function fitToView() {
   if (currentSession) buildTimeline(currentSession);
 }
 
-/* ── Utilities ── */
 function renderEmptyState() {
   const grid = document.getElementById('timelineGrid');
   if (grid) {

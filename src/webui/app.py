@@ -2,11 +2,30 @@
 CrazyAgentsManage WebUI Application
 """
 
-from flask import Flask, render_template
+import os
+from flask import Flask, render_template, request, Response
 from api import api
 
 app = Flask(__name__)
 app.register_blueprint(api)
+
+BASE_PATH = os.environ.get('APP_BASE_PATH', '')
+
+
+@app.context_processor
+def inject_base():
+    return {'BASE': BASE_PATH}
+
+
+@app.after_request
+def inject_base_script(response: Response):
+    if response.content_type and 'text/html' in response.content_type:
+        script = f'<script>window.APP_BASE="{BASE_PATH}";</script>'
+        content = response.get_data(as_text=True)
+        if '</head>' in content:
+            content = content.replace('</head>', script + '</head>')
+            response.set_data(content)
+    return response
 
 
 @app.route('/')
