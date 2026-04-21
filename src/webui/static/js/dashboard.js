@@ -180,7 +180,7 @@ function buildTimeline(session) {
 
       spans.push({
         id: `msg-${msgIndex}`,
-        label: contentPreview || '助手回复',
+        label: contentPreview || (msg.finish_reason === 'stop' ? '✅ 完成' : '⏳ 思考中...'),
         type: 'assistant',
         subType: msg.finish_reason === 'stop' ? 'success' : 'running',
         startTime,
@@ -196,7 +196,14 @@ function buildTimeline(session) {
       const fallbackEnd = startTime + Math.max(avgMsgDuration * 1.2, 2);
       const endTime = nextMsg ? (nextMsg.timestamp || fallbackEnd) : (session.ended_at || fallbackEnd);
       const toolName = msg.tool_name || 'tool_call';
-      const contentPreview = msg.content?.substring(0, 50) || '';
+      let contentPreview = msg.content?.substring(0, 50) || '';
+      try {
+        const parsed = JSON.parse(msg.content || '');
+        if (parsed.output) contentPreview = String(parsed.output).substring(0, 50);
+        else if (parsed.error) contentPreview = '❌ Error: ' + String(parsed.error).substring(0, 35);
+        else if (parsed.success === false) contentPreview = '❌ Failed';
+        else if (parsed.success === true) contentPreview = '✅ OK' + (parsed.skills ? ` (${parsed.skills.length} skills)` : '');
+      } catch(e) { /* not JSON, use raw */ }
 
       spans.push({
         id: `msg-${msgIndex}`,
@@ -263,6 +270,7 @@ function renderGrid(spans, baseTime, totalDuration) {
 
   grid.innerHTML = '';
   const containerWidth = grid.parentElement?.offsetWidth || 1200;
+  const MIN_BAR_PX = 80;
 
   spans.forEach((span, idx) => {
     const row = document.createElement('div');
@@ -271,15 +279,22 @@ function renderGrid(spans, baseTime, totalDuration) {
 
     const startPct = ((span.startTime - baseTime) / totalDuration) * 100 * zoomLevel;
     const widthPct = (span.duration / totalDuration) * 100 * zoomLevel;
+    const barWidthPx = (widthPct / 100) * containerWidth;
 
     const bar = document.createElement('div');
     bar.className = getSpanBarClass(span);
     bar.style.left = `${Math.max(startPct, 0)}%`;
-    bar.style.width = `${Math.min(widthPct, 95)}%`;
+
+    if (barWidthPx < MIN_BAR_PX) {
+      bar.style.width = `${MIN_BAR_PX}px`;
+      bar.style.minWidth = `${MIN_BAR_PX}px`;
+    } else {
+      bar.style.width = `${Math.min(widthPct, 95)}%`;
+    }
 
     bar.innerHTML = `
-      <span class="vw-span-label">${escapeHtml(span.label)}</span>
-      <span class="vw-span-duration">${formatDuration(span.duration)}</span>
+      <span class="vw-span-label" title="${escapeHtml(span.label)}">${escapeHtml(span.label)}</span>
+      ${barWidthPx > 50 ? `<span class="vw-span-duration">${formatDuration(span.duration)}</span>` : ''}
     `;
 
     bar.onclick = () => onSpanClick(span);

@@ -336,15 +336,17 @@
   border-radius: 4px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 0 8px;
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
-  transition: filter 150s ease, box-shadow 150s ease;
+  transition: filter 0.15s ease, box-shadow 0.15s ease;
   z-index: 2;
-  overflow: hidden;
+  overflow: visible;
   white-space: nowrap;
+  min-width: 80px;
+  max-width: 95%;
 }
 
 .vw-span-bar:hover {
@@ -393,8 +395,9 @@
 .vw-span-label {
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 40px;
+  color: inherit;
 }
 
 /* Span duration on right side of bar */
