@@ -358,6 +358,7 @@ def overview_teams():
             'memory_count': len(md_files),
             'role_count': len(sub_dirs),
             'path': f'memory/{team_name}',
+            'type': 'team',
         })
 
     if not teams:
@@ -370,6 +371,7 @@ def overview_teams():
                     'role_count': 0,
                     'path': '',
                     'session_count': src['cnt'],
+                    'type': 'source',
                 })
 
     return jsonify(teams)

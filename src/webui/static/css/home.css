@@ -203,6 +203,13 @@
   border-radius: 12px;
   padding: var(--spacing-lg);
   text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.15s;
+  white-space: nowrap;
+}
+.stat-card-home:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
 }
 
 .stat-number-home {

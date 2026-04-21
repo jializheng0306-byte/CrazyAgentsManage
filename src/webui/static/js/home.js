@@ -44,23 +44,32 @@ async function loadTeamCards() {
     const container = document.getElementById('teamCards');
     if (!container) return;
 
+    const hasRealTeams = teams.some(t => t.type === 'team');
+    const sectionTitle = document.querySelector('.team-section .section-title');
+    if (sectionTitle) {
+      sectionTitle.textContent = hasRealTeams ? '🏢 团队列表' : '🖥️ 平台 / 来源';
+    }
+
     if (teams.length === 0) {
-      container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b;">暂无团队数据</div>';
+      container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b;">暂无数据</div>';
       return;
     }
 
-    container.innerHTML = teams.map(team => `
-      <div class="team-card" onclick="window.location.href='/team-memory'" style="cursor: pointer;">
+    container.innerHTML = teams.map(team => {
+      const icon = team.type === 'source' ? '🔌' : '🏢';
+      const href = team.type === 'source' ? '/manage/sessions' : '/manage/team-memory';
+      return `
+      <div class="team-card" onclick="location.href='${href}'" style="cursor: pointer;">
         <div class="team-card-header">
-          <div class="team-name">🏢 ${escapeHtml(team.name)}</div>
+          <div class="team-name">${icon} ${escapeHtml(team.name)}</div>
           <div class="team-stats-right">
-            <span><span class="team-stat-num">${team.memory_count || 0}</span> 记忆</span>
-            <span><span class="team-stat-num">${team.role_count || 0}</span> 角色</span>
+            ${team.memory_count > 0 ? `<span><span class="team-stat-num">${team.memory_count}</span> 记忆</span>` : ''}
+            ${team.role_count > 0 ? `<span><span class="team-stat-num">${team.role_count}</span> 角色</span>` : ''}
             ${team.session_count ? `<span><span class="team-stat-num">${team.session_count}</span> 会话</span>` : ''}
           </div>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   } catch (e) {
     console.error('Failed to load team cards:', e);
   }
