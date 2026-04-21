@@ -20,6 +20,8 @@ _hermes_home = None
 _remote_config = None
 _skills_cache = {'data': None, 'timestamp': 0}
 _skills_cache_ttl = 300
+_overview_cache = {'data': None, 'timestamp': 0}
+_overview_cache_ttl = 60
 _local_db_cache = {}
 _local_db_lock = threading.Lock()
 
@@ -276,6 +278,10 @@ def _list_files(base_path, sub_path='', ext='*.md'):
 
 @api.route('/overview/stats')
 def overview_stats():
+    now = time.time()
+    if _overview_cache['data'] is not None and (now - _overview_cache['timestamp']) < _overview_cache_ttl:
+        return jsonify(_overview_cache['data'])
+
     stats = {
         'teams': 0,
         'roles': 0,
@@ -289,36 +295,33 @@ def overview_stats():
         'sources': [],
     }
 
-    sessions = _db_query("SELECT COUNT(*) as cnt FROM sessions")
-    if sessions:
-        stats['sessions'] = sessions[0].get('cnt', 0)
+    combined = _db_query(
+        "SELECT "
+        "COUNT(*) as sessions, "
+        "SUM(CASE WHEN ended_at IS NULL THEN 1 ELSE 0 END) as active, "
+        "(SELECT COUNT(*) FROM messages) as messages, "
+        "COALESCE(SUM(input_tokens), 0) + COALESCE(SUM(output_tokens), 0) as total_tokens, "
+        "COUNT(DISTINCT source) as source_count "
+        "FROM sessions"
+    )
+    if combined:
+        row = combined[0]
+        stats['sessions'] = row.get('sessions', 0) or 0
+        stats['active_sessions'] = row.get('active', 0) or 0
+        stats['messages'] = row.get('messages', 0) or 0
+        stats['total_tokens'] = row.get('total_tokens', 0) or 0
 
-    active = _db_query("SELECT COUNT(*) as cnt FROM sessions WHERE ended_at IS NULL")
-    if active:
-        stats['active_sessions'] = active[0].get('cnt', 0)
-
-    messages = _db_query("SELECT COUNT(*) as cnt FROM messages")
-    if messages:
-        stats['messages'] = messages[0].get('cnt', 0)
-
-    token_total = _db_query("SELECT COALESCE(SUM(input_tokens), 0) + COALESCE(SUM(output_tokens), 0) as total FROM sessions")
-    if token_total:
-        stats['total_tokens'] = token_total[0].get('total', 0) or 0
-
-    sources = _db_query("SELECT DISTINCT source FROM sessions")
+    sources = _db_query("SELECT DISTINCT source FROM sessions WHERE source IS NOT NULL AND source != ''")
     if sources:
         stats['sources'] = [s['source'] for s in sources if s.get('source')]
 
     home = _get_hermes_home()
 
-    memory_dir = 'memory'
-    memory_dirs = _list_dir(home, memory_dir)
+    memory_dirs = _list_dir(home, 'memory')
     stats['teams'] = len(memory_dirs)
 
     if stats['teams'] == 0:
-        source_teams = _db_query("SELECT COUNT(DISTINCT source) as cnt FROM sessions")
-        if source_teams:
-            stats['teams'] = source_teams[0].get('cnt', 0)
+        stats['teams'] = len(stats['sources'])
 
     memory_files = _list_files(home, 'memories', '*.md')
     stats['memory_files'] = len(memory_files)
@@ -327,18 +330,15 @@ def overview_stats():
     if soul_file:
         stats['memory_files'] += len(soul_file)
 
-    team_memory_files = _list_files(home, memory_dir, '*.md')
+    team_memory_files = _list_files(home, 'memory', '*.md')
     stats['team_memories'] = len(team_memory_files)
 
     skills_dirs = _list_dir(home, 'skills')
     stats['skills'] = len(skills_dirs)
+    stats['roles'] = stats['skills']
 
-    role_dirs = set()
-    for sd in skills_dirs:
-        sub = _list_dir(home, f'skills/{sd}')
-        role_dirs.update(sub)
-    stats['roles'] = len(role_dirs) if role_dirs else stats['teams']
-
+    _overview_cache['data'] = stats
+    _overview_cache['timestamp'] = now
     return jsonify(stats)
 
 
