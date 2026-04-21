@@ -18,6 +18,8 @@ api = Blueprint('api', __name__, url_prefix='/api')
 
 _hermes_home = None
 _remote_config = None
+_skills_cache = {'data': None, 'timestamp': 0}
+_skills_cache_ttl = 300
 _local_db_cache = {}
 _local_db_lock = threading.Lock()
 
@@ -313,6 +315,11 @@ def overview_stats():
     memory_dirs = _list_dir(home, memory_dir)
     stats['teams'] = len(memory_dirs)
 
+    if stats['teams'] == 0:
+        source_teams = _db_query("SELECT COUNT(DISTINCT source) as cnt FROM sessions")
+        if source_teams:
+            stats['teams'] = source_teams[0].get('cnt', 0)
+
     memory_files = _list_files(home, 'memories', '*.md')
     stats['memory_files'] = len(memory_files)
 
@@ -324,8 +331,13 @@ def overview_stats():
     stats['team_memories'] = len(team_memory_files)
 
     skills_dirs = _list_dir(home, 'skills')
-    stats['roles'] = len(skills_dirs)
     stats['skills'] = len(skills_dirs)
+
+    role_dirs = set()
+    for sd in skills_dirs:
+        sub = _list_dir(home, f'skills/{sd}')
+        role_dirs.update(sub)
+    stats['roles'] = len(role_dirs) if role_dirs else stats['teams']
 
     return jsonify(stats)
 
@@ -1090,6 +1102,10 @@ def _scan_remote_skills(cfg):
 
 @api.route('/skills/list')
 def skills_list():
+    now = time.time()
+    if _skills_cache['data'] is not None and (now - _skills_cache['timestamp']) < _skills_cache_ttl:
+        return jsonify(_skills_cache['data'])
+
     if _is_remote_mode():
         skills = _scan_remote_skills(_get_remote_config())
     else:
@@ -1107,11 +1123,14 @@ def skills_list():
             categories[cat] = {'name': cat, 'display': s.get('category_display', cat), 'count': 0}
         categories[cat]['count'] += 1
 
-    return jsonify({
+    result = {
         'skills': skills,
         'total': len(skills),
         'categories': sorted(categories.values(), key=lambda x: -x['count']),
-    })
+    }
+    _skills_cache['data'] = result
+    _skills_cache['timestamp'] = now
+    return jsonify(result)
 
 
 @api.route('/skills/detail/<path:skill_path>')
