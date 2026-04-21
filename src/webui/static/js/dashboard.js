@@ -8,22 +8,50 @@ let currentSession = null;
 let allSessions = [];
 let zoomLevel = 1;
 let refreshInterval = null;
-const REFRESH_MS = 5000;
+let autoRefreshEnabled = true;
+const REFRESH_MS = 60000;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadLatestSession();
   startAutoRefresh();
+  const metaArea = document.getElementById('metaSource');
+  if (metaArea && !document.getElementById('autoRefreshToggle')) {
+    const btn = document.createElement('button');
+    btn.id = 'autoRefreshToggle';
+    btn.textContent = '⏸️ 暂停';
+    btn.style.cssText = 'padding:4px 12px;background:#334155;color:#cbd5e1;border:1px solid #475569;border-radius:6px;cursor:pointer;font-size:12px;margin-left:8px;';
+    btn.onclick = (e) => { e.stopPropagation(); toggleAutoRefresh(); };
+    metaArea.parentNode.insertBefore(btn, metaArea.nextSibling);
+  }
 });
 
 function startAutoRefresh() {
   if (refreshInterval) clearInterval(refreshInterval);
+  if (!autoRefreshEnabled) return;
   refreshInterval = setInterval(loadLatestSession, REFRESH_MS);
 }
 
+function toggleAutoRefresh() {
+  autoRefreshEnabled = !autoRefreshEnabled;
+  const btn = document.getElementById('autoRefreshToggle');
+  if (btn) {
+    if (autoRefreshEnabled) {
+      btn.textContent = '⏸️ 暂停';
+      btn.style.background = '#334155';
+      startAutoRefresh();
+    } else {
+      btn.textContent = '▶️ 已暂停';
+      btn.style.background = '#dc2626';
+      if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null; }
+    }
+  }
+}
+
 async function loadLatestSession() {
+  showLoadingSpinner();
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     const resp = await fetch('./api/dashboard/sessions?limit=5', {
       signal: controller.signal
@@ -43,8 +71,10 @@ async function loadLatestSession() {
 
     await loadSessionDetail(target.id);
   } catch (e) {
-    console.error('Failed to load sessions:', e);
-    renderEmptyState();
+    if (e.name !== 'AbortError') {
+      console.error('Failed to load sessions:', e);
+      renderEmptyState();
+    }
   }
 }
 
@@ -56,7 +86,8 @@ async function loadSessionDetail(sessionId) {
     clearTimeout(timeoutId);
     const data = await resp.json();
 
-    if (data.error) {
+    if (data.error || !data || typeof data.id === 'undefined') {
+      console.warn('Invalid session data received:', data);
       renderEmptyState();
       return;
     }
@@ -65,12 +96,15 @@ async function loadSessionDetail(sessionId) {
     updateHeader(data);
     buildTimeline(data);
   } catch (e) {
-    console.error('Failed to load session detail:', e);
+    if (e.name !== 'AbortError') {
+      console.error('Failed to load session detail:', e);
+      renderEmptyState();
+    }
   }
 }
 
 function updateHeader(session) {
-  document.getElementById('sessionRunId').textContent = session.id?.substring(0, 12) || 'unknown';
+  document.getElementById('sessionRunId').textContent = (typeof session?.id === 'string' ? session.id.substring(0, 12) : String(session?.id || 'unknown')).substring(0, 12);
   document.getElementById('taskName').textContent = session.title || 'Hermes 会话追踪';
 
   const pill = document.getElementById('statusPill');
@@ -301,8 +335,12 @@ function switchTab(tabName) {
 
   if (tabName === 'events' && currentSession) {
     renderEventsTab(currentSession.messages || []);
-  } else if (tabName === 'trace' && currentSession) {
-    buildTimeline(currentSession);
+  } else if (tabName === 'trace') {
+    if (currentSession && currentSession.id) {
+      loadSessionDetail(currentSession.id);
+    } else {
+      loadLatestSession();
+    }
   } else if (tabName === 'streams') {
     renderStreamsTab();
   }
@@ -505,6 +543,19 @@ function fitToView() {
 }
 
 /* ── Utilities ── */
+function showLoadingSpinner() {
+  const grid = document.getElementById('timelineGrid');
+  if (grid) {
+    grid.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:80px 20px;flex-direction:column;gap:12px;"><div style="width:40px;height:40px;border:4px solid #334155;border-top:#667eea solid;border-radius:50%;animation:vwDashSpin 0.8s linear infinite;"></div><span style="color:#94a3b8;font-size:14px;">正在加载数据...</span></div>';
+  }
+  if (!document.getElementById('vwDashSpinStyle')) {
+    const s = document.createElement('style');
+    s.id = 'vwDashSpinStyle';
+    s.textContent = '@keyframes vwDashSpin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(s);
+  }
+}
+
 function renderEmptyState() {
   const grid = document.getElementById('timelineGrid');
   if (grid) {

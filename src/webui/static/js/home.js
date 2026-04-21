@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  Promise.all([loadOverviewStats(), loadTeamCards(), loadMemoryGrid(), loadRoleGrid()]);
+  Promise.allSettled([loadOverviewStats(), loadTeamCards(), loadMemoryGrid(), loadRoleGrid()]);
 });
 
 async function loadOverviewStats() {

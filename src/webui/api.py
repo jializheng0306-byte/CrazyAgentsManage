@@ -22,6 +22,8 @@ _skills_cache = {'data': None, 'timestamp': 0}
 _skills_cache_ttl = 300
 _overview_cache = {'data': None, 'timestamp': 0}
 _overview_cache_ttl = 60
+_dashboard_cache = {'data': None, 'timestamp': 0}
+_dashboard_cache_ttl = 30
 _local_db_cache = {}
 _local_db_lock = threading.Lock()
 
@@ -460,6 +462,13 @@ def dashboard_sessions():
     limit = int(request.args.get('limit', 20))
     offset = int(request.args.get('offset', 0))
 
+    cache_key = f"dash_sess_{source}_{limit}_{offset}"
+    now = time.time()
+    if (_dashboard_cache.get('data') and
+            _dashboard_cache.get('key') == cache_key and
+            (now - _dashboard_cache['timestamp']) < _dashboard_cache_ttl):
+        return jsonify(_dashboard_cache['data'])
+
     params = []
     where = ""
     if source:
@@ -486,6 +495,9 @@ def dashboard_sessions():
         )
         row['preview'] = first_msg[0].get('preview', '') if first_msg else ''
 
+    _dashboard_cache['data'] = rows
+    _dashboard_cache['key'] = cache_key
+    _dashboard_cache['timestamp'] = now
     return jsonify(rows)
 
 
