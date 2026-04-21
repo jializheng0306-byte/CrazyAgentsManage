@@ -4,7 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadOverviewStats() {
   try {
-    const resp = await fetch('./api/overview/stats');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/overview/stats', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
 
@@ -30,7 +33,10 @@ async function loadOverviewStats() {
 
 async function loadTeamCards() {
   try {
-    const resp = await fetch('./api/overview/teams');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/overview/teams', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const teams = await resp.json();
     if (!Array.isArray(teams)) throw new Error('Invalid response');
@@ -62,7 +68,10 @@ async function loadTeamCards() {
 
 async function loadMemoryGrid() {
   try {
-    const resp = await fetch('./api/overview/memories');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/overview/memories', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const memories = await resp.json();
     if (!Array.isArray(memories)) throw new Error('Invalid response');
@@ -89,7 +98,10 @@ async function loadMemoryGrid() {
 
 async function loadRoleGrid() {
   try {
-    const resp = await fetch('./api/overview/teams');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/overview/teams', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const teams = await resp.json();
     if (!Array.isArray(teams)) throw new Error('Invalid response');
@@ -105,7 +117,10 @@ async function loadRoleGrid() {
     const allRoles = [];
     for (const team of teams) {
       if (team.role_count > 0) {
-        const detailResp = await fetch(`./api/memory/team/${encodeURIComponent(team.name)}`);
+        const detailController = new AbortController();
+        const detailTimeoutId = setTimeout(() => detailController.abort(), 60000);
+        const detailResp = await fetch(`./api/memory/team/${encodeURIComponent(team.name)}`, { signal: detailController.signal });
+        clearTimeout(detailTimeoutId);
         if (!detailResp.ok) continue;
         const detail = await detailResp.json();
         const files = detail.files || [];

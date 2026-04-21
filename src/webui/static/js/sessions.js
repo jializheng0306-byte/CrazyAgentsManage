@@ -42,7 +42,10 @@ function initSearchHandler() {
 
 async function loadSessionStats() {
   try {
-    const resp = await fetch('./api/sessions/stats');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/sessions/stats', { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
 
     const statNumbers = document.querySelectorAll('.stat-number');
@@ -79,7 +82,10 @@ async function loadSessionList(source) {
     const params = new URLSearchParams({ limit: '30' });
     if (source) params.set('source', source);
 
-    const resp = await fetch(`./api/sessions/list?${params}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/sessions/list?${params}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const sessions = await resp.json();
 
     const container = document.querySelector('.session-list') || document.querySelector('.session-items');
@@ -125,7 +131,10 @@ async function searchSessions(query) {
     const params = new URLSearchParams({ q: query, limit: '20' });
     if (currentSource) params.set('source', currentSource);
 
-    const resp = await fetch(`./api/sessions/search?${params}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/sessions/search?${params}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const results = await resp.json();
 
     const container = document.querySelector('.session-list') || document.querySelector('.session-items');
@@ -157,7 +166,10 @@ async function selectSession(sessionId) {
   if (event && event.currentTarget) event.currentTarget.classList.add('active');
 
   try {
-    const resp = await fetch(`./api/sessions/detail/${sessionId}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/sessions/detail/${sessionId}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
 
     if (data.error) {
@@ -253,7 +265,10 @@ async function loadSessionTree(sessionId) {
   if (!area) return;
 
   try {
-    const resp = await fetch(`./api/sessions/tree/${sessionId}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/sessions/tree/${sessionId}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const tree = await resp.json();
 
     const children = tree.filter(s => s.id !== sessionId && s.parent_session_id === sessionId);

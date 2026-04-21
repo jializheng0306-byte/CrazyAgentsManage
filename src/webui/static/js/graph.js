@@ -6,7 +6,10 @@ let graphData = null;
 
 async function loadGraphData() {
   try {
-    const resp = await fetch('./api/graph/data');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/graph/data', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     graphData = data;

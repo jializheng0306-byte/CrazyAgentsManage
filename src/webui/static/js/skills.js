@@ -101,7 +101,10 @@ async function selectSkill(skillPath) {
   const skillInfo = allSkills.find(s => s.name === skillName && (!category || s.category === category));
 
   try {
-    const resp = await fetch(`./api/skills/detail/${encodeURIComponent(skillPath)}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/skills/detail/${encodeURIComponent(skillPath)}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
 
     if (data.error) {

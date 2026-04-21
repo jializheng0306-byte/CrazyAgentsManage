@@ -138,7 +138,10 @@ async function loadMemories() {
 
 async function editMemoryFile(filePath) {
   try {
-    const resp = await fetch(`./api/memory/file/${encodeURIComponent(filePath)}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/memory/file/${encodeURIComponent(filePath)}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
 
     if (data.error) {
@@ -172,11 +175,15 @@ async function saveMemoryFile(filePath) {
   if (!editor) return;
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
     const resp = await fetch('./api/memory/update', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: filePath, content: editor.value }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     const data = await resp.json();
 
     if (data.error) {

@@ -6,7 +6,10 @@ let allAgents = [];
 
 async function loadAgentStats() {
   try {
-    const resp = await fetch('./api/agents/list');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/agents/list', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const agents = await resp.json();
     if (!Array.isArray(agents)) throw new Error('Invalid response');

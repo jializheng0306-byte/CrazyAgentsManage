@@ -7,7 +7,10 @@ let currentStatusFilter = 'all';
 
 async function loadTasks() {
   try {
-    const resp = await fetch('./api/tasks/list');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/tasks/list', { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
     allTasks = data.tasks || [];
 

@@ -50,7 +50,10 @@ async function loadLatestSession() {
 
 async function loadSessionDetail(sessionId) {
   try {
-    const resp = await fetch(`./api/dashboard/session/${sessionId}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/dashboard/session/${sessionId}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
 
     if (data.error) {
