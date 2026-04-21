@@ -276,10 +276,3 @@ function filterBySource(source) {
   loadSessionList(source);
 }
 
-);
-}
-
-;
-  return map[source] || '📡';
-}
-
