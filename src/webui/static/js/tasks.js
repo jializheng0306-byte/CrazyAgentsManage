@@ -7,7 +7,7 @@ let currentStatusFilter = 'all';
 
 async function loadTasks() {
   try {
-    const resp = await fetch('/api/tasks/list');
+    const resp = await fetch('./api/tasks/list');
     const data = await resp.json();
     allTasks = data.tasks || [];
 

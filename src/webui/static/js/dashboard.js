@@ -22,7 +22,7 @@ function startAutoRefresh() {
 
 async function loadLatestSession() {
   try {
-    const resp = await fetch('/api/dashboard/sessions?limit=5');
+    const resp = await fetch('./api/dashboard/sessions?limit=5');
     const sessions = await resp.json();
     allSessions = sessions;
 
@@ -42,7 +42,7 @@ async function loadLatestSession() {
 
 async function loadSessionDetail(sessionId) {
   try {
-    const resp = await fetch(`/api/dashboard/session/${sessionId}`);
+    const resp = await fetch(`./api/dashboard/session/${sessionId}`);
     const data = await resp.json();
 
     if (data.error) {
@@ -368,7 +368,7 @@ function toggleStream() {
   }
 
   try {
-    streamEventSource = new EventSource('/api/dashboard/stream');
+    streamEventSource = new EventSource('./api/dashboard/stream');
     if (btn) btn.textContent = '断开';
     if (status) status.textContent = '连接中...';
 

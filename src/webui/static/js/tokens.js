@@ -6,7 +6,7 @@ let currentTimeRange = '7d';
 
 async function loadAllTokenData() {
   try {
-    const resp = await fetch('/api/tokens/stats');
+    const resp = await fetch('./api/tokens/stats');
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     renderTokenStats(data);
@@ -110,7 +110,7 @@ function renderAgentBreakdown(data) {
 
 async function loadRecentUsage() {
   try {
-    const resp = await fetch('/api/tokens/recent?limit=10');
+    const resp = await fetch('./api/tokens/recent?limit=10');
     const data = await resp.json();
 
     const container = document.getElementById('recentUsage') || document.querySelector('.recent-usage-tbody');

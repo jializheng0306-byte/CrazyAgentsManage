@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadAlerts() {
   try {
-    const resp = await fetch('/api/alerts/list');
+    const resp = await fetch('./api/alerts/list');
     const alerts = await resp.json();
 
     let criticalCount = alerts.filter(a => a.level === 'critical').length;
@@ -86,7 +86,7 @@ function silenceAlert(alertId) {
 
 async function loadPlatformStatus() {
   try {
-    const resp = await fetch('/api/alerts/platform-status');
+    const resp = await fetch('./api/alerts/platform-status');
     const data = await resp.json();
 
     const statValues = document.querySelectorAll('.stat-value');
