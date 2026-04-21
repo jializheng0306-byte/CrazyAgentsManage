@@ -22,7 +22,14 @@ function startAutoRefresh() {
 
 async function loadLatestSession() {
   try {
-    const resp = await fetch('./api/dashboard/sessions?limit=5');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+    const resp = await fetch('./api/dashboard/sessions?limit=5', {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     const sessions = await resp.json();
     allSessions = sessions;
 
@@ -37,6 +44,7 @@ async function loadLatestSession() {
     await loadSessionDetail(target.id);
   } catch (e) {
     console.error('Failed to load sessions:', e);
+    renderEmptyState();
   }
 }
 

@@ -9,7 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadSkillsList() {
   try {
-    const resp = await fetch('./api/skills/list');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    const resp = await fetch('./api/skills/list', {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     const data = await resp.json();
 
     allSkills = data.skills || [];

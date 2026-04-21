@@ -7,13 +7,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadTeamList() {
   try {
-    const resp = await fetch('./api/overview/teams');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    const resp = await fetch('./api/overview/teams', {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     const teams = await resp.json();
 
     const container = document.querySelector('.team-sidebar') || document.querySelector('.team-list');
     if (!container) return;
 
-    if (teams.length === 0) {
+    if (!Array.isArray(teams) || teams.length === 0) {
       container.innerHTML = '<div style="padding: 16px; text-align: center; color: #64748b;">暂无团队数据</div>';
       return;
     }
@@ -47,7 +54,14 @@ async function selectTeam(teamName) {
   if (event?.currentTarget) event.currentTarget.style.background = 'rgba(102,126,234,0.15)';
 
   try {
-    const resp = await fetch(`./api/memory/team/${encodeURIComponent(teamName)}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    const resp = await fetch(`./api/memory/team/${encodeURIComponent(teamName)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     const data = await resp.json();
 
     renderTeamMemory(data);
@@ -98,11 +112,18 @@ function renderTeamMemory(data) {
 
 async function loadMemories() {
   try {
-    const resp = await fetch('./api/overview/memories');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    const resp = await fetch('./api/overview/memories', {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     const memories = await resp.json();
 
     const container = document.querySelector('.memory-grid') || document.querySelector('.memories-list');
-    if (!container || memories.length === 0) return;
+    if (!container || !Array.isArray(memories) || memories.length === 0) return;
 
     container.innerHTML = memories.slice(0, 12).map(mem => `
       <div class="card" style="padding: 12px;">
