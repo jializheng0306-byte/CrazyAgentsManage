@@ -213,12 +213,12 @@
   color: #444;
 }
 
-/* ── Timeline Container (Core Gantt Chart) ── */
+/* Timeline Container (Core Gantt Chart) */
 .vw-timeline-container {
   margin: 0 24px 20px;
   border: 1px solid #1e1e1e;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   background: #0a0a0a;
 }
 
@@ -274,7 +274,7 @@
 .vw-timeline-body {
   position: relative;
   min-height: 300px;
-  max-height: 60vh;
+  max-height: calc(100vh - 280px);
   overflow-y: auto;
   overflow-x: hidden;
 }
