@@ -9,7 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadCronJobs() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/cron/list');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/cron/list', { signal: controller.signal });
+    clearTimeout(timeoutId);
     const jobs = await resp.json();
 
     const statsGrid = document.querySelector('.stats-grid');
@@ -118,7 +121,10 @@ async function loadCronJobs() {
 
 async function pauseJob(jobId) {
   try {
-    const resp = await fetch(`/api/cron/${jobId}/pause`, { method: 'POST' });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/cron/${jobId}/pause`, { method: 'POST', signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
     if (data.error) {
       alert('暂停失败: ' + data.error);
@@ -132,7 +138,10 @@ async function pauseJob(jobId) {
 
 async function resumeJob(jobId) {
   try {
-    const resp = await fetch(`/api/cron/${jobId}/resume`, { method: 'POST' });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/cron/${jobId}/resume`, { method: 'POST', signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
     if (data.error) {
       alert('恢复失败: ' + data.error);
@@ -147,7 +156,10 @@ async function resumeJob(jobId) {
 async function runJob(jobId) {
   if (!confirm('确定要立即执行此任务吗？')) return;
   try {
-    const resp = await fetch(`/api/cron/${jobId}/run`, { method: 'POST' });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/cron/${jobId}/run`, { method: 'POST', signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
     if (data.error) {
       alert('执行失败: ' + data.error);
@@ -163,7 +175,10 @@ async function runJob(jobId) {
 async function deleteJob(jobId) {
   if (!confirm('确定要删除此任务吗？此操作不可恢复。')) return;
   try {
-    const resp = await fetch(`/api/cron/${jobId}`, { method: 'DELETE' });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/cron/${jobId}`, { method: 'DELETE', signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
     if (data.error) {
       alert('删除失败: ' + data.error);
@@ -177,7 +192,10 @@ async function deleteJob(jobId) {
 
 async function viewOutput(jobId) {
   try {
-    const resp = await fetch(`/api/cron/${jobId}/output`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/cron/${jobId}/output`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const outputs = await resp.json();
 
     if (outputs.length === 0) {
@@ -226,11 +244,15 @@ async function createJob() {
   }
 
   try {
-    const resp = await fetch(window.APP_BASE + '/api/cron/create', {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/cron/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, schedule, prompt, deliver }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     const data = await resp.json();
 
     if (data.error) {
@@ -244,9 +266,3 @@ async function createJob() {
   }
 }
 
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}

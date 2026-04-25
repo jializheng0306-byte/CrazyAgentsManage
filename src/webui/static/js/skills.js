@@ -9,7 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadSkillsList() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/skills/list');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    const resp = await fetch('./api/skills/list', {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     const data = await resp.json();
 
     allSkills = data.skills || [];
@@ -94,7 +101,10 @@ async function selectSkill(skillPath) {
   const skillInfo = allSkills.find(s => s.name === skillName && (!category || s.category === category));
 
   try {
-    const resp = await fetch(`/api/skills/detail/${encodeURIComponent(skillPath)}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/skills/detail/${encodeURIComponent(skillPath)}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
 
     if (data.error) {
@@ -157,15 +167,3 @@ function renderSkillDetail(skill) {
   `;
 }
 
-function formatSize(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}

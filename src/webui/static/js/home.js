@@ -1,10 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
-  Promise.all([loadOverviewStats(), loadTeamCards(), loadMemoryGrid(), loadRoleGrid()]);
+  Promise.allSettled([loadOverviewStats(), loadTeamCards(), loadMemoryGrid(), loadRoleGrid()]);
 });
 
 async function loadOverviewStats() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/overview/stats');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/overview/stats', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
 
@@ -30,7 +33,10 @@ async function loadOverviewStats() {
 
 async function loadTeamCards() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/overview/teams');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/overview/teams', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const teams = await resp.json();
     if (!Array.isArray(teams)) throw new Error('Invalid response');
@@ -38,23 +44,32 @@ async function loadTeamCards() {
     const container = document.getElementById('teamCards');
     if (!container) return;
 
+    const hasRealTeams = teams.some(t => t.type === 'team');
+    const sectionTitle = document.querySelector('.team-section .section-title');
+    if (sectionTitle) {
+      sectionTitle.textContent = hasRealTeams ? '🏢 团队列表' : '🖥️ 平台 / 来源';
+    }
+
     if (teams.length === 0) {
-      container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b;">暂无团队数据</div>';
+      container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b;">暂无数据</div>';
       return;
     }
 
-    container.innerHTML = teams.map(team => `
-      <div class="team-card" onclick="window.location.href=(window.APP_BASE||'')+'/team-memory'" style="cursor: pointer;">
+    container.innerHTML = teams.map(team => {
+      const icon = team.type === 'source' ? '🔌' : '🏢';
+      const href = team.type === 'source' ? '/manage/sessions' : '/manage/team-memory';
+      return `
+      <div class="team-card" onclick="location.href='${href}'" style="cursor: pointer;">
         <div class="team-card-header">
-          <div class="team-name">🏢 ${escapeHtml(team.name)}</div>
+          <div class="team-name">${icon} ${escapeHtml(team.name)}</div>
           <div class="team-stats-right">
-            <span><span class="team-stat-num">${team.memory_count || 0}</span> 记忆</span>
-            <span><span class="team-stat-num">${team.role_count || 0}</span> 角色</span>
+            ${team.memory_count > 0 ? `<span><span class="team-stat-num">${team.memory_count}</span> 记忆</span>` : ''}
+            ${team.role_count > 0 ? `<span><span class="team-stat-num">${team.role_count}</span> 角色</span>` : ''}
             ${team.session_count ? `<span><span class="team-stat-num">${team.session_count}</span> 会话</span>` : ''}
           </div>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   } catch (e) {
     console.error('Failed to load team cards:', e);
   }
@@ -62,7 +77,10 @@ async function loadTeamCards() {
 
 async function loadMemoryGrid() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/overview/memories');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/overview/memories', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const memories = await resp.json();
     if (!Array.isArray(memories)) throw new Error('Invalid response');
@@ -89,7 +107,10 @@ async function loadMemoryGrid() {
 
 async function loadRoleGrid() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/overview/teams');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/overview/teams', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const teams = await resp.json();
     if (!Array.isArray(teams)) throw new Error('Invalid response');
@@ -105,7 +126,10 @@ async function loadRoleGrid() {
     const allRoles = [];
     for (const team of teams) {
       if (team.role_count > 0) {
-        const detailResp = await fetch(window.APP_BASE + `/api/memory/team/${encodeURIComponent(team.name)}`);
+        const detailController = new AbortController();
+        const detailTimeoutId = setTimeout(() => detailController.abort(), 60000);
+        const detailResp = await fetch(`./api/memory/team/${encodeURIComponent(team.name)}`, { signal: detailController.signal });
+        clearTimeout(detailTimeoutId);
         if (!detailResp.ok) continue;
         const detail = await detailResp.json();
         const files = detail.files || [];
@@ -149,11 +173,4 @@ function collapseAll() {
   document.querySelectorAll('.memory-card, .role-card').forEach(el => {
     el.style.display = 'none';
   });
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }

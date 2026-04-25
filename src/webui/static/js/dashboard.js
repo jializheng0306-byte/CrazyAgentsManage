@@ -8,21 +8,56 @@ let currentSession = null;
 let allSessions = [];
 let zoomLevel = 1;
 let refreshInterval = null;
-const REFRESH_MS = 5000;
+let autoRefreshEnabled = true;
+const REFRESH_MS = 60000;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadLatestSession();
   startAutoRefresh();
+  const metaArea = document.getElementById('metaSource');
+  if (metaArea && !document.getElementById('autoRefreshToggle')) {
+    const btn = document.createElement('button');
+    btn.id = 'autoRefreshToggle';
+    btn.textContent = '⏸️ 暂停';
+    btn.style.cssText = 'padding:4px 12px;background:#334155;color:#cbd5e1;border:1px solid #475569;border-radius:6px;cursor:pointer;font-size:12px;margin-left:8px;';
+    btn.onclick = (e) => { e.stopPropagation(); toggleAutoRefresh(); };
+    metaArea.parentNode.insertBefore(btn, metaArea.nextSibling);
+  }
 });
 
 function startAutoRefresh() {
   if (refreshInterval) clearInterval(refreshInterval);
+  if (!autoRefreshEnabled) return;
   refreshInterval = setInterval(loadLatestSession, REFRESH_MS);
 }
 
+function toggleAutoRefresh() {
+  autoRefreshEnabled = !autoRefreshEnabled;
+  const btn = document.getElementById('autoRefreshToggle');
+  if (btn) {
+    if (autoRefreshEnabled) {
+      btn.textContent = '⏸️ 暂停';
+      btn.style.background = '#334155';
+      startAutoRefresh();
+    } else {
+      btn.textContent = '▶️ 已暂停';
+      btn.style.background = '#dc2626';
+      if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null; }
+    }
+  }
+}
+
 async function loadLatestSession() {
+  showLoadingSpinner();
   try {
-    const resp = await fetch('/api/dashboard/sessions?limit=5');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    const resp = await fetch('./api/dashboard/sessions?limit=5', {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     const sessions = await resp.json();
     allSessions = sessions;
 
@@ -36,16 +71,23 @@ async function loadLatestSession() {
 
     await loadSessionDetail(target.id);
   } catch (e) {
-    console.error('Failed to load sessions:', e);
+    if (e.name !== 'AbortError') {
+      console.error('Failed to load sessions:', e);
+      renderEmptyState();
+    }
   }
 }
 
 async function loadSessionDetail(sessionId) {
   try {
-    const resp = await fetch(`/api/dashboard/session/${sessionId}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/dashboard/session/${sessionId}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
 
-    if (data.error) {
+    if (data.error || !data || typeof data.id === 'undefined') {
+      console.warn('Invalid session data received:', data);
       renderEmptyState();
       return;
     }
@@ -54,12 +96,15 @@ async function loadSessionDetail(sessionId) {
     updateHeader(data);
     buildTimeline(data);
   } catch (e) {
-    console.error('Failed to load session detail:', e);
+    if (e.name !== 'AbortError') {
+      console.error('Failed to load session detail:', e);
+      renderEmptyState();
+    }
   }
 }
 
 function updateHeader(session) {
-  document.getElementById('sessionRunId').textContent = session.id?.substring(0, 12) || 'unknown';
+  document.getElementById('sessionRunId').textContent = (typeof session?.id === 'string' ? session.id.substring(0, 12) : String(session?.id || 'unknown')).substring(0, 12);
   document.getElementById('taskName').textContent = session.title || 'Hermes 会话追踪';
 
   const pill = document.getElementById('statusPill');
@@ -135,7 +180,7 @@ function buildTimeline(session) {
 
       spans.push({
         id: `msg-${msgIndex}`,
-        label: contentPreview || '助手回复',
+        label: contentPreview || (msg.finish_reason === 'stop' ? '✅ 完成' : '⏳ 思考中...'),
         type: 'assistant',
         subType: msg.finish_reason === 'stop' ? 'success' : 'running',
         startTime,
@@ -151,7 +196,14 @@ function buildTimeline(session) {
       const fallbackEnd = startTime + Math.max(avgMsgDuration * 1.2, 2);
       const endTime = nextMsg ? (nextMsg.timestamp || fallbackEnd) : (session.ended_at || fallbackEnd);
       const toolName = msg.tool_name || 'tool_call';
-      const contentPreview = msg.content?.substring(0, 50) || '';
+      let contentPreview = msg.content?.substring(0, 50) || '';
+      try {
+        const parsed = JSON.parse(msg.content || '');
+        if (parsed.output) contentPreview = String(parsed.output).substring(0, 50);
+        else if (parsed.error) contentPreview = '❌ Error: ' + String(parsed.error).substring(0, 35);
+        else if (parsed.success === false) contentPreview = '❌ Failed';
+        else if (parsed.success === true) contentPreview = '✅ OK' + (parsed.skills ? ` (${parsed.skills.length} skills)` : '');
+      } catch(e) { /* not JSON, use raw */ }
 
       spans.push({
         id: `msg-${msgIndex}`,
@@ -218,6 +270,7 @@ function renderGrid(spans, baseTime, totalDuration) {
 
   grid.innerHTML = '';
   const containerWidth = grid.parentElement?.offsetWidth || 1200;
+  const MIN_BAR_PX = 80;
 
   spans.forEach((span, idx) => {
     const row = document.createElement('div');
@@ -226,15 +279,22 @@ function renderGrid(spans, baseTime, totalDuration) {
 
     const startPct = ((span.startTime - baseTime) / totalDuration) * 100 * zoomLevel;
     const widthPct = (span.duration / totalDuration) * 100 * zoomLevel;
+    const barWidthPx = (widthPct / 100) * containerWidth;
 
     const bar = document.createElement('div');
     bar.className = getSpanBarClass(span);
     bar.style.left = `${Math.max(startPct, 0)}%`;
-    bar.style.width = `${Math.min(widthPct, 95)}%`;
+
+    if (barWidthPx < MIN_BAR_PX) {
+      bar.style.width = `${MIN_BAR_PX}px`;
+      bar.style.minWidth = `${MIN_BAR_PX}px`;
+    } else {
+      bar.style.width = `${Math.min(widthPct, 95)}%`;
+    }
 
     bar.innerHTML = `
-      <span class="vw-span-label">${escapeHtml(span.label)}</span>
-      <span class="vw-span-duration">${formatDuration(span.duration)}</span>
+      <span class="vw-span-label" title="${escapeHtml(span.label)}">${escapeHtml(span.label)}</span>
+      ${barWidthPx > 50 ? `<span class="vw-span-duration">${formatDuration(span.duration)}</span>` : ''}
     `;
 
     bar.onclick = () => onSpanClick(span);
@@ -290,8 +350,12 @@ function switchTab(tabName) {
 
   if (tabName === 'events' && currentSession) {
     renderEventsTab(currentSession.messages || []);
-  } else if (tabName === 'trace' && currentSession) {
-    buildTimeline(currentSession);
+  } else if (tabName === 'trace') {
+    if (currentSession && currentSession.id) {
+      loadSessionDetail(currentSession.id);
+    } else {
+      loadLatestSession();
+    }
   } else if (tabName === 'streams') {
     renderStreamsTab();
   }
@@ -368,7 +432,7 @@ function toggleStream() {
   }
 
   try {
-    streamEventSource = new EventSource('/api/dashboard/stream');
+    streamEventSource = new EventSource('./api/dashboard/stream');
     if (btn) btn.textContent = '断开';
     if (status) status.textContent = '连接中...';
 
@@ -494,6 +558,19 @@ function fitToView() {
 }
 
 /* ── Utilities ── */
+function showLoadingSpinner() {
+  const grid = document.getElementById('timelineGrid');
+  if (grid) {
+    grid.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:80px 20px;flex-direction:column;gap:12px;"><div style="width:40px;height:40px;border:4px solid #334155;border-top:#667eea solid;border-radius:50%;animation:vwDashSpin 0.8s linear infinite;"></div><span style="color:#94a3b8;font-size:14px;">正在加载数据...</span></div>';
+  }
+  if (!document.getElementById('vwDashSpinStyle')) {
+    const s = document.createElement('style');
+    s.id = 'vwDashSpinStyle';
+    s.textContent = '@keyframes vwDashSpin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(s);
+  }
+}
+
 function renderEmptyState() {
   const grid = document.getElementById('timelineGrid');
   if (grid) {
@@ -526,7 +603,6 @@ function formatTimeAgo(timestamp) {
 }
 
 function formatDuration(seconds) {
-  if (!seconds || seconds <= 0) return '0s';
   if (seconds < 60) return `${Math.round(seconds)}s`;
   if (seconds < 3600) {
     const m = Math.floor(seconds / 60);
@@ -550,12 +626,6 @@ function formatTimelineTick(seconds) {
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
-function formatTokenCount(n) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-  return String(n);
-}
-
 function formatTimestamp(timestamp) {
   if (!timestamp) return '--';
   const d = new Date(typeof timestamp === 'number' ? timestamp * 1000 : timestamp);
@@ -563,14 +633,3 @@ function formatTimestamp(timestamp) {
   return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 2 });
 }
 
-function truncate(str, len) {
-  if (!str) return '';
-  return str.length > len ? str.substring(0, len) + '...' : str;
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}

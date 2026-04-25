@@ -1,0 +1,10 @@
+{
+  "status": "failed",
+  "timestamp": "2026-04-25T00:00:00Z",
+  "agent": "codex",
+  "counterpart": "HermesAgent",
+  "stage": "example",
+  "message": "Describe the failure",
+  "artifacts": [],
+  "next_action": "Describe the recovery path"
+}

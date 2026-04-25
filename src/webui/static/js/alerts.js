@@ -1,10 +1,7 @@
-/**
- * Alerts JavaScript - 系统告警中心
- * 数据源: /api/alerts/* (读取 gateway_state.json)
- */
-
 let alertRefreshInterval = null;
 let currentFilter = 'all';
+let acknowledgedAlerts = new Set();
+let silencedAlerts = new Set();
 
 document.addEventListener('DOMContentLoaded', () => {
   loadAlerts();
@@ -17,7 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadAlerts() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/alerts/list');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/alerts/list', { signal: controller.signal });
+    clearTimeout(timeoutId);
     const alerts = await resp.json();
 
     let criticalCount = alerts.filter(a => a.level === 'critical').length;
@@ -37,8 +37,10 @@ async function loadAlerts() {
       filtered = alerts.filter(a => a.level === currentFilter);
     }
 
+    filtered = filtered.filter(a => !acknowledgedAlerts.has(a.id) && !silencedAlerts.has(a.id));
+
     if (filtered.length === 0) {
-      container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b;">✅ 暂无' + (currentFilter === 'all' ? '' : currentFilter + '级别') + '告警</div>';
+      container.innerHTML = '<div class="empty-state">✅ 暂无' + (currentFilter === 'all' ? '' : currentFilter + '级别') + '告警</div>';
       return;
     }
 
@@ -55,28 +57,42 @@ function renderAlertItem(alert) {
   const color = colors[alert.level] || '#3b82f6';
 
   return `
-    <div class="card mb-md" style="padding: 16px; border-left: 3px solid ${color}; background: ${color}11;">
-      <div style="display: flex; align-items: start; justify-content: space-between; margin-bottom: 8px;">
-        <div style="flex: 1;">
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
-            <span style="font-size: 20px;">${icons[alert.level] || '📋'}</span>
-            <h4 style="font-size: 15px; font-weight: 600; color: white; margin: 0;">${escapeHtml(alert.message)}</h4>
-            <span style="font-size: 11px; padding: 2px 8px; background: ${color}26; color: ${color}; border-radius: 4px; font-weight: 500;">${labels[alert.level] || alert.level}</span>
+    <div class="card mb-md" style="padding:16px;border-left:3px solid ${color};background:${color}11;">
+      <div class="alert-item" style="padding:0;border:none;">
+        <span class="alert-icon">${icons[alert.level] || '📋'}</span>
+        <div class="alert-content">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <h4 style="font-size:15px;font-weight:600;color:white;margin:0;">${escapeHtml(alert.message)}</h4>
+            <span class="status-badge" style="background:${color}26;color:${color};font-size:11px;">${labels[alert.level] || alert.level}</span>
           </div>
+          <div class="alert-desc">来源: ${escapeHtml(alert.source || 'unknown')}${alert.detail ? ' · ' + escapeHtml(alert.detail) : ''}</div>
+          <div class="alert-time">${escapeHtml(alert.time || '')}</div>
         </div>
-        <span style="font-size: 12px; color: #64748b;">${escapeHtml(alert.time || '')}</span>
-      </div>
-      <div style="font-size: 12px; color: #64748b;">
-        来源: ${escapeHtml(alert.source || 'unknown')}
-        ${alert.detail ? `<br>详情: ${escapeHtml(alert.detail)}` : ''}
+        <div class="alert-actions">
+          <button class="alert-action-btn" onclick="acknowledgeAlert('${alert.id}')" title="确认告警">✓</button>
+          <button class="alert-action-btn" onclick="silenceAlert('${alert.id}')" title="静默告警">🔇</button>
+        </div>
       </div>
     </div>
   `;
 }
 
+function acknowledgeAlert(alertId) {
+  acknowledgedAlerts.add(alertId);
+  loadAlerts();
+}
+
+function silenceAlert(alertId) {
+  silencedAlerts.add(alertId);
+  loadAlerts();
+}
+
 async function loadPlatformStatus() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/alerts/platform-status');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/alerts/platform-status', { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
 
     const statValues = document.querySelectorAll('.stat-value');
@@ -91,11 +107,4 @@ async function loadPlatformStatus() {
 function filterAlerts(level) {
   currentFilter = level;
   loadAlerts();
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
