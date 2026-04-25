@@ -85,14 +85,14 @@
 
 来源：
 
-- `~/.hermes/memory/`
+- `~/.hermes/memories/`
 
 核心对象：
 
-- 团队目录
-- 共享记忆
-- 角色记忆
-- 团队文档
+- `MEMORY.md`
+- `USER.md`
+- 现阶段以 Hermes 既有记忆文件为主
+- `teams/` / `shared-context/` 属于未来能力，不应假定当前环境已存在
 
 对应页面：
 
@@ -105,6 +105,7 @@
 
 - `cron/jobs.json`
 - `cron/output/`
+- Hermes 内置 Cron API（由 Hermes web server 暴露）
 
 核心对象：
 
@@ -113,6 +114,11 @@
 - 调度规则
 - 输出沉淀
 - auto-deliver 结果分发
+
+说明：
+
+- `cron/jobs.json` 不存在时，优先判断为“当前环境未配置真实 cron job”，而不是“框架缺失 cron 能力”
+- CrazyAgentsManage 后续应优先对接 Hermes 已有 Cron API，而不是自行重建一套 cron 状态机
 
 对应页面：
 
@@ -156,6 +162,36 @@
 - 联动链路是否健康
 - 是否支持后续运营闭环
 
+### 3.4 运行边界修正
+
+根据最新的 HermesAgent 复核，需要明确区分三类对象：
+
+1. `CrazyAgentsManage` 仓库本地协作工件
+
+- `scripts/runtime/*`
+- `.omx/`
+- `harness/`
+- `docs/02-engineering/harness/*`
+
+这些属于项目仓库自身的协作协议与 runtime-local 辅助层，不属于 Hermes 自带全局框架目录。
+
+2. Hermes 既有运行时能力
+
+- `~/.hermes/memories/`
+- `~/.hermes/cron/`
+- Hermes web server 暴露的 Cron CRUD API
+- `gateway_state.json`
+- `state.db`
+
+这些属于当前 Hermes 已有能力，CrazyAgentsManage 应优先对接，而不是重复实现。
+
+3. 未来扩展能力
+
+- `~/.hermes/teams/`
+- `~/.hermes/shared-context/`
+
+这些目前不应被视为“缺失”，而应被视为后续产品化能力。
+
 ## 4. `Codex` 与 `HermesAgent` 的职责边界
 
 ## 4.1 Codex：开发负责人
@@ -169,7 +205,7 @@
    包括 API、页面、组件、聚合逻辑、缓存、搜索、状态流、错误处理、测试。
 
 3. 负责联动集成设计。
-   包括 Hermes 数据源读取、FlowMind 插件状态接入、跨系统字段映射、健康检查接口、告警口径。
+   包括 Hermes 数据源读取、FlowMind 插件状态接入、跨系统字段映射、健康检查接口、告警口径，以及优先复用 Hermes 既有 API（尤其是 Cron API）而不是重复造轮子。
 
 4. 负责开发期验证。
    包括本地验证、测试补齐、回归验证、部署前检查、问题定位和修复。
@@ -216,6 +252,7 @@
    - 信息是否够用
    - 是否易于发现异常
    - 是否能支持后续运营动作
+   - 是否真正接上了 Hermes 已有运行时能力，而不是停留在 demo/mock
 
 6. 负责把运营结论回流给开发。
    即把“线上观察到的问题”转成结构化的产品反馈，而不是直接给模糊意见。
@@ -303,20 +340,20 @@ Codex 每次交付后，输出以下结构：
 
 ### 7.1 Codex 第一阶段开发范围
 
-1. 统一领域模型。
-   先把 `session / agent / skill / team / cron / gateway / flowmind_link` 七类对象定义稳定。
+1. 补齐仓库级协作工件。
+   先把 `scripts/runtime/*`、`harness/*`、`docs/02-engineering/harness/*` 变成真实可执行、可追踪的仓库事实，而不是只停留在文档描述。
 
-2. 完成 Hermes 运行态总览页。
-   要求能回答“现在 Hermes 是否健康”。
+2. 补 Hermes 运行态的真实信号。
+   优先把 `Codex` / `HermesAgent` / `FlowMind link` 的存活、卡死、异常、Cron 逾期等信号显式暴露出来。
 
-3. 完成 FlowMind 联动状态页。
-   要求能回答“FlowMind 插件是否在线、最近同步了什么、哪里异常”。
+3. 对接 Hermes 既有 Cron API。
+   不重建 Cron 基础设施，优先让 CrazyAgentsManage 的 Flask/API 层代理 Hermes 已有的 Cron CRUD 能力。
 
-4. 完成告警与任务联动页。
-   要求能把异常、任务、执行结果串起来。
+4. 做 session stuck 推断。
+   第一阶段可以先在 CrazyAgentsManage 读模型层做“推断型 stuck 标记”，验证有效后再考虑回推 Hermes session schema。
 
-5. 为后续运营预留配置面。
-   技能分类、专家标签、运营分组先以配置文件方式落地。
+5. 再推进统一领域模型和 FlowMind 联动页。
+   等上面 4 项成立后，再稳定 `session / agent / skill / cron / gateway / flowmind_link` 的正式对象模型和页面结构。
 
 ### 7.2 HermesAgent 第一阶段运营范围
 
@@ -330,10 +367,13 @@ Codex 每次交付后，输出以下结构：
    包括哪些工作流需要监控、哪些节点要展示、失败后如何处理。
 
 4. 给出定时任务治理规则。
-   包括哪些任务必须可见、哪些结果必须沉淀、哪些异常必须告警。
+   包括哪些任务必须可见、哪些结果必须沉淀、哪些异常必须告警，并明确当前 Hermes 已有 Cron API 中哪些能力应优先被运营使用。
 
 5. 给出 FlowMind 联动关注点。
    包括插件健康、数据同步、任务映射、状态一致性、回写需求。
+
+6. 负责对现有能力做“不要重造轮子”的审查。
+   当 Hermes 已有 API 或运行时能力可直接复用时，应优先指出，而不是把问题继续描述成“从零实现”。
 
 ## 8. 推荐工作机制
 
@@ -367,6 +407,25 @@ Codex 每次交付后，输出以下结构：
 
 如果后续继续推进，我建议下一步直接进入：
 
-1. 先定义 CrazyAgentsManage 的统一领域模型
-2. 再定义首页与 FlowMind 联动页的信息架构
-3. 最后再拆具体迭代开发任务
+1. 先补齐仓库级协作工件与 runtime 脚本
+2. 再对接 Hermes 既有 Cron API 与真实运行态信号
+3. 然后做 session stuck 推断与派单入口
+4. 最后再稳定统一领域模型与 FlowMind 联动页
+
+## 10. 最新共识
+
+基于 Codex 与 HermesAgent 最近一轮往返，当前已达成的共识是：
+
+- 角色分工方向正确：
+  - `Codex` 负责开发 lane
+  - `HermesAgent` 负责运营 lane
+- `CrazyAgentsManage` 仍然是“方向正确但尚未可运营”的状态
+- 当前真正的 P0 blocker 已收敛为：
+  1. 仓库级 `scripts/runtime/*` 等协作工件落地
+  2. 真实运行态信号可见
+  3. CrazyAgentsManage 对接 Hermes 既有 Cron API
+  4. session stuck 检测
+- 当前不应再把以下内容继续误判为“框架缺失”：
+  - `~/.hermes/memory/`（正确路径是 `~/.hermes/memories/`）
+  - `cron/jobs.json` 缺失 = 框架无 cron（更准确是“未配置真实 cron job”）
+  - `~/.hermes/teams/` / `~/.hermes/shared-context/`（这是未来能力，不是现有环境缺件）
