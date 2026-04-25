@@ -412,20 +412,80 @@ Codex 每次交付后，输出以下结构：
 3. 然后做 session stuck 推断与派单入口
 4. 最后再稳定统一领域模型与 FlowMind 联动页
 
-## 10. 最新共识
+## 10. 最终收敛结论
 
-基于 Codex 与 HermesAgent 最近一轮往返，当前已达成的共识是：
+### 10.1 分类原则
 
-- 角色分工方向正确：
-  - `Codex` 负责开发 lane
-  - `HermesAgent` 负责运营 lane
-- `CrazyAgentsManage` 仍然是“方向正确但尚未可运营”的状态
-- 当前真正的 P0 blocker 已收敛为：
-  1. 仓库级 `scripts/runtime/*` 等协作工件落地
-  2. 真实运行态信号可见
-  3. CrazyAgentsManage 对接 Hermes 既有 Cron API
-  4. session stuck 检测
-- 当前不应再把以下内容继续误判为“框架缺失”：
-  - `~/.hermes/memory/`（正确路径是 `~/.hermes/memories/`）
-  - `cron/jobs.json` 缺失 = 框架无 cron（更准确是“未配置真实 cron job”）
-  - `~/.hermes/teams/` / `~/.hermes/shared-context/`（这是未来能力，不是现有环境缺件）
+以下结论严格区分两类对象：
+
+- **A 类 — 仓库工件**：`CrazyAgentsManage` 仓库内应交付但尚未落地的脚本、配置、文档。属于 Codex 开发职责。
+- **B 类 — 运行时对接**：Hermes-Agent 已有的运行时能力，CrazyAgentsManage 应对接但尚未对接的。属于双方协作。
+
+不设"框架缺失"这一分类。Hermes-Agent 的既有运行时能力是事实存在，CrazyAgentsManage 未接入 ≠ Hermes 框架缺件。
+
+### 10.2 Runtime Gap
+
+| # | 差距 | 分类 | 说明 |
+|---|------|------|------|
+| R1 | `scripts/runtime/*` 未落地 | A | 仓库协作工件，属于 Codex 交付物 |
+| R2 | `harness/*` / `.omx/*` 未落地 | A | 仓库协作工件，属于 Codex 交付物 |
+| R3 | CrazyAgentsManage 未对接 Hermes Cron API | B | Hermes 已有 Cron CRUD API，CrazyAgentsManage 应代理而非重建 |
+| R4 | Session stuck 无推断机制 | B | Hermes session schema 无 stuck 标记，CrazyAgentsManage 可先做读模型推断 |
+
+### 10.3 Operations Gap
+
+| # | 差距 | 分类 | 说明 |
+|---|------|------|------|
+| O1 | 无派单入口 | A | 仓库工件：运营动作无法通过 WebUI 触发 |
+| O2 | 无真实运行态信号到达 WebUI | B | Gateway / Cron / Session 存活、卡死、逾期信号未暴露到页面 |
+| O3 | 技能路径未统一 | B | `~/.hermes/skills/` vs `/opt/hermes-webui/skills/` 两套路径未归一 |
+
+### 10.4 Missing Signal
+
+| # | 信号 | 来源 | 当前状态 |
+|---|------|------|---------|
+| S1 | Gateway 在线状态 | `gateway_state.json` | 数据源已有，WebUI 未消费 |
+| S2 | Cron 执行状态 | Hermes Cron API | API 已有，未对接 |
+| S3 | Session stuck 标记 | `state.db` sessions | 需读模型推断，无原生标记 |
+| S4 | FlowMind 插件健康 | FlowMind ingress API | 未接入 |
+
+### 10.5 Missing Action
+
+| # | 动作 | 触发条件 | 当前状态 |
+|---|------|---------|---------|
+| A1 | 运营巡检触发 | 定时 / 手动 | Cron API 可用但未配置真实巡检 job |
+| A2 | 僵尸 session 处理 | stuck 标记命中 | 推断机制未实现 |
+| A3 | 告警通知 | 异常信号触发 | 无告警规则与分发机制 |
+| A4 | 派单 | 运营发现需修复的问题 | 无 WebUI 入口 |
+
+### 10.6 Accept / Reject
+
+| # | 判定 | 内容 | 理由 |
+|---|------|------|------|
+| ✅ | Accept | 角色分工方向：Codex = 开发, HermesAgent = 运营 | 上下游关系合理 |
+| ✅ | Accept | P0 收敛为 4 项 blocker | 比之前的"框架缺失"描述更精确 |
+| ✅ | Accept | `~/.hermes/memories/` 为正确路径 | `memory/` 是旧写法 |
+| ✅ | Accept | Cron 未配置 ≠ 框架无 cron | 区分"能力"与"配置" |
+| ✅ | Accept | `teams/` `shared-context/` 为未来能力 | 不应被视为现有环境缺件 |
+| ❌ | Reject | 把仓库工件未落地描述为"框架缺失" | 混淆了 A 类和 B 类 |
+| ❌ | Reject | 把 Cron 未对接描述为"Hermes 无 cron" | 事实错误，Hermes 已有 Cron API |
+| ❌ | Reject | 混合描述仓库工件和运行时框架 | 必须严格分类 |
+| ❌ | Reject | 把 `~/.hermes/teams/` / `~/.hermes/shared-context/` 当成当前环境 blocker | 归入"未来能力未引入"，不是当前缺件 |
+
+### 10.7 Follow-up Requested from Codex
+
+| # | 跟进项 | 优先级 | 分类 | 备注 |
+|---|--------|--------|------|------|
+| F1 | `scripts/runtime/*` 落地为可执行脚本 | P0 | A | |
+| F2 | `harness/*` / `.omx/*` 落地为仓库级协作协议 | P0 | A | |
+| F3 | 对接 Hermes Cron API（代理而非重建） | P0 | B | |
+| F4 | 暴露真实运行态信号到 WebUI | P0 | B | |
+| F5 | 实现 session stuck 读模型推断 | P1 | B | |
+| F6 | 实现派单入口 | P1* | A | *P0 完成后立即再评估，若运营 lane 仍无法向开发 lane 交付结构化任务，则上提为 P0.5 |
+| F7 | 统一技能路径 | P1 | B | 若技能中心已纳入主运营闭环则上提 |
+
+### 10.8 优先级定稿
+
+- **P0 = R1–R4**：打通最小运行态与 Cron 对接，消除先天阻断项
+- **P1 = O1–O3 + F5–F7**：补齐运营闭环，F6 在 P0 完成后做再评估
+- 不再为边界定义继续拉锯，后续发现新问题以增量方式追加
