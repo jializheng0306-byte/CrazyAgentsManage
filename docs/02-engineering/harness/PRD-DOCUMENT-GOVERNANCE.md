@@ -1,54 +1,54 @@
-# PRD Document Governance
+# PRD 文档治理规则
 
-## Why This Exists
+## 为什么需要这个文件
 
-CrazyAgentsManage no longer uses a single monolithic PRD as its only planning surface.
+`CrazyAgentsManage` 不再把单一的大 PRD 当作唯一规划面。
 
-The repository now uses:
+当前仓库采用的是：
 
-1. a technical implementation PRD
-2. an operations implementation PRD
-3. a canonical execution roadmap
+1. 技术实现 PRD
+2. 运营实现 PRD
+3. 统一执行路线图
 
-This document defines how those artifacts must be maintained inside the Codex ↔ HermesAgent harness workflow.
+本文件定义的是：这些文档如何被纳入 `Codex ↔ HermesAgent` 的 harness 流程。
 
-## Canonical Files
+## 规范文档
 
 - `docs/prd/technical-implementation-prd.md`
 - `docs/prd/operations-implementation-prd.md`
 - `docs/roadmap/prd-execution-roadmap.md`
 - `docs/prd/README.md`
 
-## Ownership
+## 责任归属
 
-- `Codex` owns document version management and sequencing updates
-- `HermesAgent` owns operations review and acceptance comments
+- `Codex` 负责文档版本管理与节奏更新
+- `HermesAgent` 负责运营视角复核与验收意见
 
-## Update Triggers
+## 触发条件
 
-Update the PRD system when an iteration changes:
+当一次迭代改变以下任意内容时，必须更新 PRD 体系：
 
-- technical scope
-- operator-facing scope
-- implementation phase ordering
-- merge/readiness status
-- role/handoff implications that affect execution
+- 技术范围
+- 运营语义
+- 实施阶段排序
+- merge / readiness 状态
+- 影响执行流程的角色/交接约束
 
-## Required Closeout Updates
+## 强制收口更新
 
-At the end of each non-trivial iteration, update:
+每次非平凡迭代结束时，必须至少检查并更新：
 
-1. technical PRD if engineering scope changed
-2. operations PRD if operator-facing meaning changed
-3. roadmap if phase/state/priority changed
-4. harness closeout notes if collaboration state changed
+1. 技术 PRD（若工程范围变化）
+2. 运营 PRD（若运营语义变化）
+3. 路线图（若阶段/状态/优先级变化）
+4. harness closeout 记录（若协作状态变化）
 
-## No-Merge Rule
+## 不得合并规则
 
-Do not treat a branch as ready for merge until the affected PRD documents and roadmap are updated.
+如果受影响的 PRD 文档和路线图没有更新，就不得把当前分支视为 ready for merge。
 
-## Boundary Rule
+## 边界规则
 
-Do not let chat-only conclusions override the PRD system.
+聊天中的结论不能覆盖 PRD 文档体系。
 
-If chat and repository differ, repository documents must be updated or the chat conclusion is non-canonical.
+如果聊天结论与仓库文件不一致，则以仓库文档为准，或者立即补文档；否则该聊天结论不具备 canonical 地位。

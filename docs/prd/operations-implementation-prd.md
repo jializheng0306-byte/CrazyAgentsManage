@@ -1,182 +1,182 @@
-# CrazyAgentsManage Operations Implementation PRD
+# CrazyAgentsManage 运营实现 PRD
 
-## Version
+## 版本信息
 
-| Field | Value |
-|------|-------|
-| Product | CrazyAgentsManage |
-| Document Type | Operations Implementation PRD |
-| Version | v0.1.0 |
-| Status | Active baseline |
-| Owner | Codex (document management) |
-| Operations Reviewer | HermesAgent |
-| Last Updated | 2026-04-26 |
+| 字段 | 内容 |
+|------|------|
+| 产品 | CrazyAgentsManage |
+| 文档类型 | 运营实现 PRD |
+| 版本 | v0.1.0 |
+| 状态 | 当前主基线 |
+| 文档管理者 | Codex |
+| 运营复核方 | HermesAgent |
+| 最后更新 | 2026-04-26 |
 
-## Scope
+## 范围
 
-This PRD defines what the operator-facing system must expose so Hermes-side operations are real, usable, and reviewable.
+本 PRD 定义的是：为了让 Hermes 侧运营真正可用，系统必须向运营者暴露什么、支持什么、以及怎样才算达到运营可接受状态。
 
-It covers:
+覆盖内容包括：
 
-- operator personas
-- runtime objects that must be visible
-- operator workflows
-- alerts, reports, and action surfaces
-- operational acceptance criteria
+- 运营角色视角
+- 必须可见的运行时对象
+- 运营工作流
+- 告警、报告、动作入口
+- 运营验收标准
 
-It does not define backend implementation details. Those belong in:
+它不负责后端实现细节，后端与前端实现细节由以下文档定义：
 
 - `docs/prd/technical-implementation-prd.md`
 
-## Operator Baseline
+## 运营基线
 
-### Accepted role model
+### 已接受的角色模型
 
-- `HermesAgent` is the operations lane
-- `Codex` is the development lane
-- operations work should result in structured feedback, not ad hoc architecture rewrites
+- `HermesAgent` 是运营 lane
+- `Codex` 是开发 lane
+- 运营工作应输出结构化反馈，而不是直接重写架构方案
 
-### Primary operator questions
+### 运营最核心的 5 个问题
 
-Operators must be able to answer:
+运营者必须能快速回答：
 
-1. What is running?
-2. What is stuck?
-3. What failed?
-4. What requires intervention?
-5. Which FlowMind-linked states are drifting?
+1. 现在什么在运行？
+2. 什么卡住了？
+3. 什么失败了？
+4. 哪里需要介入？
+5. 哪些 FlowMind 关联状态正在漂移？
 
-## Primary Runtime Objects
+## 运营必须可见的运行时对象
 
-The operator console must make the following objects explicit:
+控制台至少要显式展示：
 
 - sessions
 - delegated tasks / child runs
 - skills
 - cron jobs
 - runtime alerts
-- gateway/platform connection state
+- gateway / platform connection state
 - FlowMind bridge state
-- token/cost usage
+- token / cost usage
 
-## Required Operator Views
+## 必需的运营视图
 
-### 1. Session view
+### 1. Session 视图
 
-Operators need:
+运营者需要看到：
 
-- active vs completed vs suspect sessions
-- parent/child task lineage
-- message/tool/token summaries
-- stuck indicators
+- active / completed / suspect sessions
+- 父子任务 lineage
+- message / tool / token 摘要
+- stuck 指示器
 
-### 2. Task/delegation view
+### 2. Task / Delegation 视图
 
-Operators need:
+运营者需要看到：
 
-- pending/running/done/failed states
-- dependency visibility
-- child agent ownership
-- actionable follow-up path
+- pending / running / done / failed 状态
+- 依赖关系
+- 子智能体归属
+- 下一步可操作入口
 
-### 3. Skills view
+### 3. Skills 视图
 
-Operators need:
+运营者需要看到：
 
-- installed skills
-- missing/invalid skills
-- role or domain grouping
-- which skill failures block real work
+- 已安装 skills
+- 缺失 / 失效 skills
+- 角色 / 领域分组
+- 哪些 skill 故障会阻断真实工作
 
-### 4. Cron view
+### 4. Cron 视图
 
-Operators need:
+运营者需要看到：
 
-- configured jobs
-- last run / next run
-- success/failure state
-- pause/resume/trigger entry when actually supported
+- 已配置任务
+- 上次运行 / 下次运行
+- 成功 / 失败状态
+- pause / resume / trigger 入口（前提是真有后端能力）
 
-### 5. Alerts view
+### 5. Alerts 视图
 
-Operators need:
+运营者需要看到：
 
-- explicit anomaly records
-- severity
-- affected runtime object
-- suggested next action
+- 明确异常记录
+- 严重级别
+- 受影响运行时对象
+- 建议下一步动作
 
-## Required Operator Actions
+## 必需的运营动作
 
-The system must eventually support structured actions for:
+系统最终必须支持以下结构化动作：
 
-- acknowledge an alert
-- open the affected runtime object
-- dispatch or re-dispatch a task
-- inspect session/task evidence
-- trigger a review routine
-- operate cron jobs when backed by real runtime capability
+- 确认告警
+- 打开受影响对象
+- 发起或重新发起任务
+- 检查 session / task 证据
+- 触发 review 例行流程
+- 在有真实后端支持时操作 cron job
 
-If an action does not yet exist, the UI must not imply that it does.
+如果某个动作当前还不存在，UI 不得假装它存在。
 
-## FlowMind-Side Operator Needs
+## FlowMind 侧运营需求
 
-From the operator perspective, CrazyAgentsManage must distinguish:
+从运营视角，CrazyAgentsManage 必须清楚区分：
 
-- Hermes runtime truth
-- FlowMind governance truth
-- pending or unconfirmed candidate state
+- Hermes 运行时真相
+- FlowMind 治理真相
+- 尚未确认的 candidate 状态
 
-### Operator expectations for FlowMind-linked state
+### 对 FlowMind 关联状态的运营要求
 
-- candidate state must be distinguishable from canonical truth
-- review and feedback loops must be visible
-- drift or blockage should be surfaced as operator questions, not hidden in logs
+- candidate 状态必须与 canonical truth 区分开
+- review / feedback 闭环必须可见
+- drift 或 blockage 必须以运营问题的形式暴露，而不是藏在日志里
 
-## Reporting Expectations
+## 报告需求
 
-Operators need recurring outputs such as:
+运营侧需要固定输出，例如：
 
-- daily runtime digest
-- weekly operational audit
-- pending/stuck review list
-- failed task / failed cron summaries
+- 每日运行摘要
+- 每周运营审计
+- pending / stuck review 清单
+- failed task / failed cron 汇总
 
-These reports may start as manual or semi-manual, but the PRD should treat them as explicit product requirements.
+这些报告可以从半自动开始，但在 PRD 层必须被视为显式产品要求。
 
-## Operational Acceptance Criteria
+## 运营验收门槛
 
 ### P0
 
-- operators can identify runtime health without shell access
-- stuck or failed states are visible
-- FlowMind-linked runtime states are not mislabeled as canonical truth
-- operator-facing critical views are not mock-only
+- 运营者无需 shell 访问即可判断 runtime 健康
+- stuck / failed 状态清晰可见
+- FlowMind 关联状态不会被误标成 canonical truth
+- 关键运营视图不再是 mock-only
 
 ### P1
 
-- operators can perform basic structured follow-up actions
-- reports and recurring review workflows are consistent
-- skill/cron/session surfaces are cross-linked
+- 运营者能执行基本的结构化后续动作
+- 报告与 review 流程稳定
+- skill / cron / session 表面互相关联
 
 ### P2
 
-- richer automation
-- predictive alerts
-- governance assistance and optimization loops
+- 更丰富的自动化
+- 预测式告警
+- 治理辅助与优化闭环
 
-## Non-Goals
+## 非目标
 
-This PRD does not authorize:
+本运营 PRD 不授权：
 
-- direct code implementation ownership by HermesAgent
-- replacing repository truth with chat-only operations decisions
-- turning every conceptual future capability into a current runtime commitment
+- 让 HermesAgent 直接承担代码实现责任
+- 用聊天结论替代仓库真相
+- 把任何未来能力都误写成当前运行时承诺
 
-## Change Control
+## 变更控制
 
-When an iteration changes operator-facing meaning, update:
+当某轮迭代改变了运营语义时，必须同步更新：
 
-1. this operations PRD
+1. 本运营 PRD
 2. `docs/roadmap/prd-execution-roadmap.md`
-3. the relevant harness closeout records if collaboration state changed
+3. 若协作状态变化，再更新对应 harness closeout 记录

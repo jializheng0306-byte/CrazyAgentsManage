@@ -1,100 +1,100 @@
-# PRD System
+# PRD 文档体系说明
 
-## Purpose
+## 目的
 
-CrazyAgentsManage now uses a split PRD system instead of relying on a single monolithic product document.
+`CrazyAgentsManage` 不再依赖单一的大而全 PRD 作为唯一规划入口。
 
-The split exists because the project has already converged on two different but tightly coupled implementation lanes:
+当前项目已经收敛为两条紧密耦合、但职责不同的实施轨道：
 
-1. technical implementation
-2. operations implementation
+1. 技术实现轨
+2. 运营实现轨
 
-This keeps repository truth aligned with the accepted Codex/HermesAgent role model:
+采用拆分式 PRD，是为了让仓库事实与当前已接受的 `Codex / HermesAgent` 分工保持一致：
 
-- `Codex` owns development planning, implementation sequencing, and document version management
-- `HermesAgent` owns operations framing, runtime review, and operational acceptance
+- `Codex` 负责开发规划、实现排序、文档版本管理
+- `HermesAgent` 负责运营 framing、运行时复核、运营验收
 
-## Consensus Baseline
+## 共识基线
 
-The current shared product understanding is:
+当前双方已经达成的产品共识是：
 
-- `CrazyAgentsManage` is the Hermes-side operator console and runtime host management surface
-- `FlowMind` is the governance engine and canonical truth layer, not the operator console itself
-- `Codex` remains the development lane
-- `HermesAgent` remains the operations lane
+- `CrazyAgentsManage` 是 Hermes 侧的运营控制台与运行态管理面
+- `FlowMind` 是治理引擎与 canonical truth 层，不是运营控制台本身
+- `Codex` 继续担任开发 lane
+- `HermesAgent` 继续担任运营 lane
 
-This baseline should not be reopened casually. Update it only when repository evidence changes.
+除非仓库事实发生变化，否则不应随意重开这一共识。
 
-## Canonical Documents
+## 当前规范文档
 
-### Technical PRD
+### 技术实现 PRD
 
-File:
+文件：
 
 - `docs/prd/technical-implementation-prd.md`
 
-Use this for:
+用于承载：
 
-- architecture boundaries
-- backend/frontend implementation scope
-- data contracts
-- runtime integration surfaces
-- technical acceptance criteria
+- 架构边界
+- 前后端实现范围
+- 数据契约
+- 运行时集成面
+- 技术验收标准
 
-### Operations PRD
+### 运营实现 PRD
 
-File:
+文件：
 
 - `docs/prd/operations-implementation-prd.md`
 
-Use this for:
+用于承载：
 
-- operator personas
-- runtime signals and dashboards
-- operator workflows
-- action surfaces
-- operational acceptance criteria
+- 运营角色与使用者视角
+- 运行时信号与仪表板要求
+- 运营工作流
+- 运营动作入口
+- 运营验收标准
 
-### Execution Roadmap
+### 执行路线图
 
-File:
+文件：
 
 - `docs/roadmap/prd-execution-roadmap.md`
 
-Use this for:
+用于承载：
 
-- phase ordering
-- implementation sequence
-- document update cadence
-- release and merge gates
+- 阶段排序
+- 实施顺序
+- 文档更新节奏
+- 发布与合并门槛
 
-## Legacy Documents
+## 旧文档的定位
 
-The following files remain useful as background inputs, but they are no longer the only canonical PRD surface:
+以下文件仍然是重要背景输入，但不再是唯一 canonical PRD 面：
 
 - `docs/prd/product-requirements.md`
 - `docs/prd/multi-agent-architecture-design.md`
 - `docs/prd/observability-design.md`
 - `docs/06-agent-ops/hermes-agent-operations-design.md`
 
-When conflicts appear, the split PRD set plus the roadmap should be treated as the active planning baseline.
+当这些文件与拆分 PRD 产生冲突时，应优先以拆分后的 PRD 与路线图为准。
 
-## Update Rules
+## 更新规则
 
-After every non-trivial iteration, update all affected documents before calling the round complete:
+每次发生非平凡迭代后，在宣布该轮完成之前，必须同步更新受影响的文档：
 
-1. technical PRD
-2. operations PRD
-3. execution roadmap
-4. harness closeout / handoff artifacts when collaboration state changed
+1. 技术 PRD
+2. 运营 PRD
+3. 执行路线图
+4. 若协作状态发生变化，还要更新 harness closeout / handoff 工件
 
-If an iteration changes only runtime operations, the operations PRD and roadmap still need updates.
-If an iteration changes only engineering implementation, the technical PRD and roadmap still need updates.
+如果某轮只改了运行时运营语义，仍需更新运营 PRD 与路线图。
+如果某轮只改了工程实现，仍需更新技术 PRD 与路线图。
 
-## Merge Rule
+## 合并规则
 
-No merge to a shared branch should be treated as complete until:
+共享分支上的一次迭代，不应被视为“已完成”，除非：
 
-1. affected PRD documents are updated
-2. roadmap status is updated
-3. Codex/HermesAgent handoff state is consistent with repository truth
+1. 受影响的 PRD 文档已更新
+2. 路线图状态已更新
+3. `Codex / HermesAgent` 的交接状态与仓库真相一致

@@ -1,202 +1,202 @@
-# CrazyAgentsManage Technical Implementation PRD
+# CrazyAgentsManage 技术实现 PRD
 
-## Version
+## 版本信息
 
-| Field | Value |
-|------|-------|
-| Product | CrazyAgentsManage |
-| Document Type | Technical Implementation PRD |
-| Version | v0.1.0 |
-| Status | Active baseline |
-| Owner | Codex |
-| Operations Reviewer | HermesAgent |
-| Last Updated | 2026-04-26 |
+| 字段 | 内容 |
+|------|------|
+| 产品 | CrazyAgentsManage |
+| 文档类型 | 技术实现 PRD |
+| 版本 | v0.1.0 |
+| 状态 | 当前主基线 |
+| 负责人 | Codex |
+| 运营复核方 | HermesAgent |
+| 最后更新 | 2026-04-26 |
 
-## Scope
+## 范围
 
-This PRD defines the engineering work required to turn CrazyAgentsManage into a real Hermes-side operator console.
+本 PRD 定义的是：为了把 `CrazyAgentsManage` 做成真正可用的 Hermes 侧运营控制台，当前需要推进的工程实现工作。
 
-It covers:
+覆盖内容包括：
 
-- runtime data ingestion
-- API and adapter surfaces
-- frontend/backend implementation scope
-- technical acceptance criteria
-- phased implementation ordering
+- 运行时数据接入
+- API 与适配层
+- 前后端实现范围
+- 技术验收标准
+- 分阶段实施顺序
 
-It does not define operator policy in detail. That belongs in:
+它不负责细化运营策略，运营策略单独由以下文档定义：
 
 - `docs/prd/operations-implementation-prd.md`
 
-## Product Boundary
+## 产品边界
 
-### Current shared boundary
+### 当前已接受的边界
 
-- `CrazyAgentsManage` is the Hermes runtime/operator console
-- `FlowMind` is the governance engine and canonical truth layer
-- `CrazyAgentsManage` may display, relay, and operationalize FlowMind-facing state
-- `CrazyAgentsManage` must not redefine FlowMind semantics ad hoc
+- `CrazyAgentsManage` 是 Hermes 运行时 / 运营控制台
+- `FlowMind` 是治理引擎与 canonical truth 层
+- `CrazyAgentsManage` 可以展示、转发、运营化 FlowMind 相关状态
+- `CrazyAgentsManage` 不应擅自重定义 FlowMind 语义
 
-### Technical implication
+### 技术上的含义
 
-Implementation must keep three seams explicit:
+实现时必须把以下三条缝保持清晰：
 
-1. Hermes runtime and session substrate
-2. CrazyAgentsManage operator console and adapters
-3. FlowMind governance and truth interfaces
+1. Hermes 运行时与 session substrate
+2. CrazyAgentsManage 运营控制台与适配层
+3. FlowMind 治理与 truth 接口
 
-## Current Technical Baseline
+## 当前技术基线
 
-### Runtime facts already available
+### 已存在的运行时事实
 
-- Hermes runtime data sources already exist and are readable:
+- Hermes 运行时数据源已存在且可读取：
   - `state.db`
   - `gateway_state.json`
   - `~/.hermes/skills/`
   - `~/.hermes/memories/`
-  - cron / runtime process state
-- CrazyAgentsManage already has a WebUI/API demo for runtime observation
-- Codex/Hermes role split is already accepted and should not be re-argued in implementation work
+  - cron / 运行进程状态
+- CrazyAgentsManage 已有一套 WebUI/API 观测层 demo
+- `Codex / HermesAgent` 分工已经定稿，实施阶段不应重辩角色边界
 
-### Known gaps still relevant
+### 当前仍成立的技术缺口
 
-- session stuck / zombie inference needs stronger technical treatment
-- runtime signals still need normalization before they are operator-ready
-- some control surfaces remain mock or incomplete
-- FlowMind-facing interfaces must align to actual bridge contracts, not imagined endpoints
+- session stuck / zombie inference 还需要更可靠的技术处理
+- 运行时信号仍需标准化后才能真正给运营使用
+- 部分控制面仍是 mock 或不完整
+- FlowMind 侧接口必须对齐真实 bridge contract，而不是想象中的 API
 
-## Implementation Areas
+## 实施域
 
-### 1. Runtime State Adapters
+### 1. 运行时状态适配层
 
-Build and harden read adapters for:
+需要构建并加固的读取适配层包括：
 
-- session state
-- message / token accounting
-- task/delegation lineage
+- session 状态
+- message / token 统计
+- task / delegation lineage
 - skills inventory
-- cron job state
-- alerts and anomaly indicators
+- cron job 状态
+- alerts 与异常指示器
 
-Acceptance criteria:
+验收标准：
 
-- adapters tolerate partial/missing runtime files
-- adapters distinguish “not configured” from “broken”
-- adapter outputs are normalized for frontend consumption
+- 适配层能容忍缺失/部分存在的运行时文件
+- 适配层能区分“未配置”与“已损坏”
+- 输出能够标准化给前端消费
 
-### 2. Task / Delegation Substrate
+### 2. 任务 / 委派 substrate
 
-Implement or finish the substrate required for:
+需要实现或补完的能力包括：
 
-- role-aware delegation
-- shared context/task state files
+- 角色化委派
+- shared context / task state 文件
 - task graph lineage
-- cross-session task tracking
+- 跨 session 的任务跟踪
 
-Acceptance criteria:
+验收标准：
 
-- delegated tasks produce durable status artifacts
-- parent/child lineage can be queried and rendered
-- failure state is explicit, not inferred from silence alone
+- 委派任务会留下持久状态工件
+- 父子 lineage 可查询、可渲染
+- 失败状态不能靠“沉默推断”，必须有显式状态
 
-### 3. Team / Memory Substrate
+### 3. Team / Memory substrate
 
-Implement the repository-side pieces for:
+需要实现仓库侧的以下部分：
 
 - team memory
-- shared context directories
-- role memory loading
-- post-iteration memory writeback
+- shared context 目录结构
+- role memory 加载
+- 迭代后的 memory writeback
 
-Acceptance criteria:
+验收标准：
 
-- team and shared-context structures are created predictably
-- read/write boundaries are explicit
-- memory updates are reviewable and attributable
+- team / shared-context 结构可预测创建
+- 读写边界明确
+- 记忆更新可追溯、可审阅
 
-### 4. Runtime Controls
+### 4. 运行时控制面
 
-Implement real operator controls for:
+需要实现真实可操作的控制面：
 
-- cron visibility and actions
-- session inspection
+- cron 可视化与操作
+- session 检查
 - task dispatch entry
-- bridge status inspection
+- bridge 状态检查
 - runtime alert acknowledgement
 
-Acceptance criteria:
+验收标准：
 
-- every control exposed in the UI is backed by a real action or a documented non-action
-- mock endpoints are either replaced or clearly labeled
+- UI 暴露的每个控制，都必须对应真实动作，或明确说明其当前不可执行
+- mock endpoint 要么替换，要么清晰标注
 
-### 5. Observability UI
+### 5. 可观测性 UI
 
-Implement the operator-facing UI for:
+需要实现的运营 UI 包括：
 
 - sessions
 - task graph / lineage
 - runtime health
 - skills inventory
 - cron surfaces
-- token/cost visibility
-- alerts and exceptions
+- token/cost 可见性
+- alerts 与异常
 
-Acceptance criteria:
+验收标准：
 
-- source/runtime state is visible without shell access
-- root cause breadcrumbs exist for abnormal states
-- high-frequency pages remain usable with large data sets
+- 无需 shell 访问即可看懂主要运行状态
+- 异常状态具备根因 breadcrumbs
+- 高频页面在大数据量下仍可用
 
-## FlowMind Integration Contract
+## FlowMind 集成契约
 
-CrazyAgentsManage must align to the real FlowMind-facing interfaces already established in `FlowMindDeploy`.
+CrazyAgentsManage 必须对齐 `FlowMindDeploy` 里已经存在的真实 FlowMind-facing 接口。
 
-### Current bridge-aligned surfaces
+### 当前 bridge 对齐面
 
 - candidate ingress
 - truth query
 - context compilation
 - truth change feedback
 
-### Rule
+### 规则
 
-Do not invent new API names in implementation planning unless they are explicitly marked as proposed and separated from already implemented bridge surfaces.
+除非明确标记为“提案”，否则技术规划里不得新造 API 名称替代已实现 bridge surface。
 
-## Non-Goals
+## 非目标
 
-This PRD does not authorize:
+本技术 PRD 不授权以下行为：
 
-- redefining FlowMind product semantics
-- treating Hermes as the source of canonical truth
-- making HermesAgent a second coding lane
-- chat-only architectural decisions without repository artifacts
+- 重定义 FlowMind 产品语义
+- 把 Hermes 当成 canonical truth 的来源
+- 把 HermesAgent 拉回第二开发 lane
+- 只靠聊天做架构决策而不落仓库工件
 
-## Technical Acceptance Gates
+## 技术验收门槛
 
 ### P0
 
-- runtime state adapters are reliable
-- real runtime signals are exposed
-- session/task anomalies are identifiable
-- non-mock critical operator surfaces exist
+- runtime state adapter 可靠
+- 真实 runtime 信号已暴露
+- session/task 异常可识别
+- 关键运营控制面不再停留在 mock
 
 ### P1
 
-- task dispatch entry is usable
-- skill scanning is consistent
-- memory/team substrate is functional
-- key UI pages are operationally navigable
+- task dispatch entry 可用
+- skill 扫描一致
+- memory/team substrate 可工作
+- 关键页面具备运营可导航性
 
 ### P2
 
-- advanced automation and optimization layers
-- long-tail dashboards
-- secondary integrations and convenience tooling
+- 更高级的自动化与优化层
+- 长尾 dashboard
+- 次级集成与便利性能力
 
-## Change Control
+## 变更控制
 
-When a task changes technical scope, update:
+当任务改变了技术范围时，必须同步更新：
 
-1. this PRD
+1. 本技术 PRD
 2. `docs/roadmap/prd-execution-roadmap.md`
-3. harness closeout artifacts if role coordination changed
+3. 如果角色协作状态发生变化，还要更新 harness closeout 工件
