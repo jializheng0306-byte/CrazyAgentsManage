@@ -1,9 +1,17 @@
 # 基于 OpenClaw 实战文章的 HermesAgent 运营体系设计
 
-> **文档版本**: v1.0  
+> **文档版本**: v2.0  
 > **创建日期**: 2026-04-26  
-> **状态**: 初稿，待与 Codex CLI 同步定稿  
+> **修订日期**: 2026-04-26（按 Codex CLI 4 点评审意见修订）  
+> **状态**: 第二稿，待 Codex CLI 复核  
 > **参考文章**: 《OpenClaw 实战：一个人、一台 Mac、六个 AI Agent — 从"能聊天"到"能干活"的工程实战》
+
+**v2.0 修订说明**（基于 Codex CLI 评审 4 点 + 仓库边界纠正）：
+1. Part 3 API 表改为"已落地接口 / 拟新增接口"双栏，对齐四类桥接契约审计结论
+2. 全文严格分层：【现状】= 代码+测试可验证；【目标】= 架构设计；【路线图】= 实施计划
+3. "编码专家"从 Hermes 内部专家层移除，改为"对外开发执行接口"（能力层）
+4. 所有插件/技能/Cron 清单加三级状态标注：🟢已安装 🟡已验证未安装 🔴计划开发
+5. 仓库边界纠正：文档归属 CrazyAgentsManage（HermesAgent 运营宿主层），不再误放 FlowMindDeploy
 
 ---
 
@@ -26,7 +34,7 @@
 
 ### 1.2 两个维度的演进
 
-| 维度 | 当前状态 | 目标状态 |
+| 维度 | 【现状】 | 【目标】 |
 |------|----------|----------|
 | **静态维度** | FlowMind 产品设计 + Demo 原型 | 结构化的承诺治理系统 |
 | **动态维度** | 单一 Agent 执行任务 | 多 Agent 协作的运营体系 |
@@ -43,6 +51,8 @@
 
 ### 2.1 架构概览
 
+> **【目标】** 以下架构为设计目标，各层落地状态见逐节标注。
+
 基于文章的"1+5+6"阵型理念，结合 FlowMind 的承诺治理语义，设计以下架构：
 
 ```
@@ -51,9 +61,7 @@
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
 │  │  飞书群聊    │  │  Web UI     │  │  CLI 接口   │             │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘             │
-│         │                │                │                      │
 └─────────┼────────────────┼────────────────┼─────────────────────┘
-          │                │                │
           ▼                ▼                ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    编排层 (Orchestration Layer)                  │
@@ -65,20 +73,18 @@
 │  │  - 记忆系统管理                                           │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
-          │                │                │
           ▼                ▼                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    专家层 (Expert Layer)                         │
+│                    专家层 (Expert Layer) — 4 个常驻角色          │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
 │  │  承诺管家    │  │  情报哨兵    │  │  内容策展   │             │
 │  │  (Promise)  │  │  (Intel)    │  │  (Content)  │             │
 │  └─────────────┘  └─────────────┘  └─────────────┘             │
-│  ┌─────────────┐  ┌─────────────┐                              │
-│  │  运维卫士    │  │  编码专家    │                              │
-│  │  (Ops)      │  │  (Coder)    │                              │
-│  └─────────────┘  └─────────────┘                              │
+│  ┌─────────────┐                                               │
+│  │  运维卫士    │  ⚠️ 编码专家不在专家层，见能力层"对外开发接口"  │
+│  │  (Ops)      │                                               │
+│  └─────────────┘                                               │
 └─────────────────────────────────────────────────────────────────┘
-          │                │                │
           ▼                ▼                ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    能力层 (Capability Layer)                     │
@@ -86,8 +92,11 @@
 │  │  技能库      │  │  MCP 工具    │  │  Cron 任务  │             │
 │  │  (Skills)   │  │  (Tools)    │  │  (Schedule) │             │
 │  └─────────────┘  └─────────────┘  └─────────────┘             │
+│  ┌─────────────────────────────────────────────┐               │
+│  │  对外开发执行接口 (Codex/Claude Code/OpenCode) │               │
+│  │  ⚠️ 非 Hermes 内部角色，通过 delegate_task/ACP 调用 │           │
+│  └─────────────────────────────────────────────┘               │
 └─────────────────────────────────────────────────────────────────┘
-          │                │                │
           ▼                ▼                ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    记忆层 (Memory Layer)                         │
@@ -100,7 +109,6 @@
 │  │  (经验库)   │  │  (日报归档)  │                              │
 │  └─────────────┘  └─────────────┘                              │
 └─────────────────────────────────────────────────────────────────┘
-          │                │                │
           ▼                ▼                ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    数据层 (Data Layer)                           │
@@ -115,48 +123,67 @@
 
 #### 2.2.1 编排层 - Zoe
 
-**职责**：
+**【现状】** HermesAgent 已具备 `delegate_task`、`cronjob`、`memory` 等原生能力。
+
+**【目标】职责**：
 - 任务分派与协调（基于 ACP 协议）
 - 圆桌讨论主持（三态通信协议）
 - 系统巡检与维护（3次/天）
 - 记忆系统管理（weekly maintenance）
 
-**实现方式**：
+**【现状】实现方式**：
 - 基于 HermesAgent 的主实例
 - 使用 `delegate_task` 委派任务给专家
 - 使用 `cronjob` 定时执行巡检
 - 使用 `memory` 管理持久化记忆
 
-#### 2.2.2 专家层
+#### 2.2.2 专家层（4 个常驻角色）
 
-| 专家角色 | 职责 | 核心能力 |
-|---------|------|----------|
-| **承诺管家 (Promise)** | FlowMind 承诺治理 | 承诺创建/查询/追踪、状态管理、Review 触发 |
-| **情报哨兵 (Intel)** | 信息采集与分析 | RSS/网页监控、趋势分析、情报摘要 |
-| **内容策展 (Content)** | 内容生成与发布 | 文案撰写、多平台适配、发布管理 |
-| **运维卫士 (Ops)** | 系统运维与监控 | 健康检查、告警处理、性能优化 |
-| **编码专家 (Coder)** | 代码开发与调试 | 委派给 Codex CLI / Claude Code |
+| 专家角色 | 职责 | 核心能力 | 落地状态 |
+|---------|------|----------|---------|
+| **承诺管家 (Promise)** | FlowMind 承诺治理 | 承诺创建/查询/追踪、状态管理、Review 触发 | 🔴【目标】待建立 |
+| **情报哨兵 (Intel)** | 信息采集与分析 | RSS/网页监控、趋势分析、情报摘要 | 🔴【目标】待建立 |
+| **内容策展 (Content)** | 内容生成与发布 | 文案撰写、多平台适配、发布管理 | 🔴【目标】待建立 |
+| **运维卫士 (Ops)** | 系统运维与监控 | 健康检查、告警处理、性能优化 | 🔴【目标】待建立 |
 
-#### 2.2.3 能力层
+> ⚠️ **编码专家不在此层**。代码开发由 Codex CLI 负责，HermesAgent 通过"对外开发执行接口"委派，不自身执行代码。详见 2.2.3。
 
-- **技能库**：基于 ClawHub 的 100+ Skills，按需加载
+#### 2.2.3 对外开发执行接口（能力层，非专家角色）
+
+**【现状】** HermesAgent 已具备 `delegate_task` 能力，可通过 ACP 协议调用外部开发 Agent。
+
+**【目标】** 明确编码工作不属于 Hermes 内部职责，而是通过接口委派：
+
+| 被委派方 | 适用场景 | 调用方式 |
+|---------|---------|---------|
+| Codex CLI | 代码实现、架构设计 | `delegate_task(acp_command="codex")` |
+| Claude Code | 复杂编码任务 | `delegate_task(acp_command="claude")` |
+| OpenCode | 轻量修复 | `delegate_task(acp_command="opencode")` |
+
+**Hermes 自身角色**：仅负责任务编排、需求传达、结果验收，不做代码执行。
+
+#### 2.2.4 能力层
+
+- **技能库**：基于 ClawHub 的 Skills，按需加载
 - **MCP 工具**：通过 MCP 协议接入外部服务
-- **Cron 任务**：52+ 定时任务覆盖全时段
+- **Cron 任务**：定时任务覆盖关键时段
 
 ### 2.3 与 FlowMind 的映射
 
-| FlowMind 概念 | 架构组件 | 实现方式 |
-|--------------|---------|----------|
-| Canonical Truth | 承诺管家 | 基于 FlowMind API 的承诺对象管理 |
-| Capture/Clarify | 情报哨兵 | 信息采集 + 人工确认流程 |
-| Query/Review | 承诺管家 + Zoe | 结构化查询 + Review 工作流 |
-| Governed Integration | 编码专家 | ACP 协议 + 审查流程 |
+| FlowMind 概念 | 架构组件 | 实现方式 | 落地状态 |
+|--------------|---------|----------|---------|
+| Canonical Truth | 承诺管家 | 基于 FlowMind API 的承诺对象管理 | 🔴【目标】 |
+| Capture/Clarify | 情报哨兵 | 信息采集 + 人工确认流程 | 🔴【目标】 |
+| Query/Review | 承诺管家 + Zoe | 结构化查询 + Review 工作流 | 🟡【目标】Truth Query API 已落地 |
+| Governed Integration | 对外开发接口 | ACP 协议 + 审查流程 | 🟡【目标】delegate_task 已可用 |
 
 ---
 
 ## Part 2: HermesAgent 运营体系落地方案
 
 ### 3.1 专家角色设定
+
+> **【目标】** 以下为各专家角色的设计规范，落地需逐步实施。
 
 #### 3.1.1 承诺管家 (Promise Keeper)
 
@@ -181,22 +208,9 @@
 ```
 
 **技能配置**：
-- `flowmind-candidate-ingress`: 发送候选数据到 FlowMind API
-- `flowmind-pilot`: Pilot 测试执行模式
-- `webhook-subscriptions`: 事件驱动的 Webhook 管理
-
-**Cron 任务**：
-```yaml
-# 每日承诺 Review
-- schedule: "0 9 * * *"
-  name: "daily-promise-review"
-  prompt: "检查所有待办承诺的状态，识别 overdue/blocked/stale 条目，生成 Review 报告"
-
-# 每周承诺盘点
-- schedule: "0 18 * * 5"
-  name: "weekly-promise-audit"
-  prompt: "生成本周承诺完成率、下周计划、风险预警报告"
-```
+- 🟢 `flowmind-candidate-ingress`: 发送候选数据到 FlowMind API（已安装）
+- 🟢 `flowmind-pilot`: Pilot 测试执行模式（已安装）
+- 🟡 `webhook-subscriptions`: 事件驱动的 Webhook 管理（已验证未安装）
 
 #### 3.1.2 情报哨兵 (Intel Sentinel)
 
@@ -221,28 +235,10 @@
 ```
 
 **技能配置**：
-- `blogwatcher`: 监控博客和 RSS/Atom feed
-- `youtube-content`: 获取 YouTube 视频转录
-- `arxiv`: 搜索学术论文
-- `polymarket`: 查询预测市场数据
-
-**Cron 任务**：
-```yaml
-# 晨间情报 (08:30)
-- schedule: "30 8 * * *"
-  name: "morning-intel"
-  prompt: "采集过去 12 小时的重要信息，生成晨报，推送到飞书群"
-
-# 午间论文解读 (12:00)
-- schedule: "0 12 * * *"
-  name: "noon-paper-review"
-  prompt: "搜索 arXiv 最新 AI/Agent 论文，选择 Top3 进行解读"
-
-# 晚间趋势分析 (20:00)
-- schedule: "0 20 * * *"
-  name: "evening-trend-analysis"
-  prompt: "分析今日技术趋势，更新 tech-radar.json"
-```
+- 🟡 `blogwatcher`: 监控博客和 RSS/Atom feed（已验证未安装）
+- 🟡 `youtube-content`: 获取 YouTube 视频转录（已验证未安装）
+- 🟡 `arxiv`: 搜索学术论文（已验证未安装）
+- 🟡 `polymarket`: 查询预测市场数据（已验证未安装）
 
 #### 3.1.3 内容策展 (Content Curator)
 
@@ -267,23 +263,10 @@
 ```
 
 **技能配置**：
-- `marketing-content-creator`: 多平台内容创作
-- `marketing-xiaohongshu-operator`: 小红书运营
-- `marketing-wechat-operator`: 微信生态运营
-- `marketing-douyin-strategist`: 抖音策略
-
-**Cron 任务**：
-```yaml
-# 每日内容规划 (10:00)
-- schedule: "0 10 * * *"
-  name: "daily-content-planning"
-  prompt: "消费今日情报，生成内容创意，规划发布计划"
-
-# 每周内容复盘 (18:00 周日)
-- schedule: "0 18 * * 0"
-  name: "weekly-content-review"
-  prompt: "分析本周内容效果，调整下周策略"
-```
+- 🟡 `marketing-content-creator`: 多平台内容创作（已验证未安装）
+- 🟡 `marketing-xiaohongshu-operator`: 小红书运营（已验证未安装）
+- 🟡 `marketing-wechat-operator`: 微信生态运营（已验证未安装）
+- 🟡 `marketing-douyin-strategist`: 抖音策略（已验证未安装）
 
 #### 3.1.4 运维卫士 (Ops Guardian)
 
@@ -308,96 +291,39 @@
 ```
 
 **技能配置**：
-- `hermes-stuck-session-diagnosis`: 诊断卡住的会话
-- `clickhouse-log-rescue`: ClickHouse 日志紧急修复
-- `server-maintain`: 服务器远程维护
-
-**Cron 任务**：
-```yaml
-# 系统健康检查 (每 15 分钟)
-- schedule: "*/15 * * * *"
-  name: "system-health-check"
-  prompt: "检查系统状态：磁盘、内存、CPU、网络、服务状态"
-
-# 每日运维报告 (23:00)
-- schedule: "0 23 * * *"
-  name: "daily-ops-report"
-  prompt: "生成今日运维报告：故障、恢复、优化建议"
-```
-
-#### 3.1.5 编码专家 (Coder Expert)
-
-**实现方式**：
-- 不直接运行，而是通过 ACP 协议委派给：
-  - Codex CLI（主要）
-  - Claude Code（备选）
-  - OpenCode（轻量任务）
-
-**委派策略**：
-```yaml
-# 任务分派规则
-- 代码实现: Codex CLI
-- 架构设计: Claude Code
-- 简单修复: OpenCode
-- 代码审查: HermesAgent 自身
-```
+- 🟢 `hermes-stuck-session-diagnosis`: 诊断卡住的会话（已安装）
+- 🟡 `clickhouse-log-rescue`: ClickHouse 日志紧急修复（已验证未安装）
+- 🟢 `server-maintain`: 服务器远程维护（已安装）
 
 ### 3.2 插件安装方案
 
-#### 3.2.1 核心插件（必须）
+#### 3.2.1 核心插件
 
-| 插件 | 用途 | 安装命令 |
-|------|------|----------|
-| `ima-note` | IMA 笔记服务 | 已安装 |
-| `flowmind-candidate-ingress` | FlowMind 候选数据入口 | `npx clawhub install flowmind-candidate-ingress` |
-| `flowmind-pilot` | FlowMind Pilot 测试 | `npx clawhub install flowmind-pilot` |
-| `webhook-subscriptions` | Webhook 事件驱动 | `npx clawhub install webhook-subscriptions` |
-| `feishu-lark-cli-docs` | 飞书文档操作 | `npx clawhub install feishu-lark-cli-docs` |
+| 插件 | 用途 | 状态 | 安装命令 |
+|------|------|------|----------|
+| `flowmind-candidate-ingress` | FlowMind 候选数据入口 | 🟢已安装 | — |
+| `flowmind-pilot` | FlowMind Pilot 测试 | 🟢已安装 | — |
+| `feishu-lark-cli-docs` | 飞书文档操作 | 🟢已安装 | — |
+| `feishu-outbound-mention` | 飞书 @ 提醒修复 | 🟢已安装 | — |
+| `webhook-subscriptions` | Webhook 事件驱动 | 🟡已验证未安装 | `npx clawhub install webhook-subscriptions` |
 
 #### 3.2.2 能力插件（按需）
 
-| 插件 | 用途 | 适用专家 |
-|------|------|----------|
-| `blogwatcher` | RSS/博客监控 | 情报哨兵 |
-| `youtube-content` | YouTube 转录 | 情报哨兵 |
-| `arxiv` | 学术论文搜索 | 情报哨兵 |
-| `marketing-content-creator` | 内容创作 | 内容策展 |
-| `hermes-stuck-session-diagnosis` | 会话诊断 | 运维卫士 |
-| `server-maintain` | 服务器维护 | 运维卫士 |
-
-#### 3.2.3 安装脚本
-
-```bash
-#!/bin/bash
-# install-core-plugins.sh
-
-echo "=== 安装核心插件 ==="
-
-# FlowMind 相关
-npx clawhub install flowmind-candidate-ingress
-npx clawhub install flowmind-pilot
-
-# 事件驱动
-npx clawhub install webhook-subscriptions
-
-# 飞书集成
-npx clawhub install feishu-lark-cli-docs
-npx clawhub install feishu-outbound-mention
-
-# 信息采集
-npx clawhub install blogwatcher
-npx clawhub install arxiv
-
-# 内容运营
-npx clawhub install marketing-content-creator
-
-# 运维诊断
-npx clawhub install hermes-stuck-session-diagnosis
-
-echo "=== 核心插件安装完成 ==="
-```
+| 插件 | 用途 | 适用专家 | 状态 |
+|------|------|---------|------|
+| `blogwatcher` | RSS/博客监控 | 情报哨兵 | 🟡已验证未安装 |
+| `youtube-content` | YouTube 转录 | 情报哨兵 | 🟡已验证未安装 |
+| `arxiv` | 学术论文搜索 | 情报哨兵 | 🟡已验证未安装 |
+| `polymarket` | 预测市场数据 | 情报哨兵 | 🟡已验证未安装 |
+| `marketing-content-creator` | 内容创作 | 内容策展 | 🟡已验证未安装 |
+| `marketing-xiaohongshu-operator` | 小红书运营 | 内容策展 | 🟡已验证未安装 |
+| `hermes-stuck-session-diagnosis` | 会话诊断 | 运维卫士 | 🟢已安装 |
+| `server-maintain` | 服务器维护 | 运维卫士 | 🟢已安装 |
+| `clickhouse-log-rescue` | ClickHouse 日志修复 | 运维卫士 | 🟡已验证未安装 |
 
 ### 3.3 技能设计
+
+> **【目标】** 以下技能体系为设计规划，绝大部分尚未创建（🔴计划开发）。
 
 #### 3.3.1 技能分类体系
 
@@ -425,91 +351,33 @@ skills/
     └── performance-opt/ # 性能优化
 ```
 
-#### 3.3.2 核心技能示例：承诺管家
-
-**技能文件**：`skills/promise-governance/capture-clarify/SKILL.md`
-
-```markdown
----
-name: promise-capture-clarify
-description: |
-  承诺采集与澄清技能。从用户输入、外部 Agent、系统事件中识别潜在承诺，
-  通过 Clarify 流程确认后持久化到 FlowMind Canonical Truth。
----
-
-# 承诺采集与澄清
-
-## 触发条件
-- 用户说"帮我记一下..."、"我需要..."、"待办..."
-- 外部 Agent 提交 Candidate
-- 系统事件触发（如 deadline 到期）
-
-## 工作流程
-
-### 1. 识别 Candidate
-从输入中提取：
-- 承诺内容
-- 截止时间（可选）
-- 关联项目（可选）
-- 优先级（可选）
-
-### 2. Clarify 流程
-如果信息不完整，进入澄清：
-```
-用户：帮我记一下明天开会
-Agent：好的，我需要确认几个信息：
-1. 会议主题是什么？
-2. 具体时间？
-3. 需要准备什么？
-```
-
-### 3. 确认与持久化
-```bash
-# 调用 FlowMind API 创建承诺
-flowmind-candidate-ingress --type commitment \
-  --content "明天 14:00 产品评审会" \
-  --deadline "2026-04-27T14:00:00+08:00" \
-  --source "user-chat" \
-  --confidence 0.9
-```
-
-### 4. 反馈确认
-```
-Agent：已记录承诺：
-- 内容：明天 14:00 产品评审会
-- 截止：2026-04-27 14:00
-- 状态：待确认
-
-需要我设置提醒吗？
-```
-
-## 注意事项
-- 不要假设用户的意图，不确定就问
-- 外部 Agent 的输入必须标记为 Candidate，不能直接成为 Canonical Truth
-- 每次创建承诺都要记录来源和置信度
-```
+**状态标注**：以上全部为 🔴计划开发，尚未创建任何 SKILL.md。
 
 ### 3.4 工作流设定
+
+> **【目标】** 以下为每日工作流设计，大部分为规划，仅少量 Cron 已配置。
 
 #### 3.4.1 每日工作流
 
 ```
-07:00  系统启动，加载 SOUL.md + MEMORY.md
-08:00  情报哨兵开始采集（晨报）
-08:30  推送晨报到飞书群
-09:00  承诺管家执行每日 Review
-10:00  内容策展开始创意规划
-12:00  情报哨兵推送午间论文解读
-14:00  Zoe 执行午间巡检
-18:00  情报哨兵推送晚间趋势分析
-20:00  内容策展执行发布计划
-22:00  Zoe 执行晚间巡检
-23:00  各专家执行每日反思
-23:30  Zoe 汇总全团队产出
-23:45  推送日报到飞书群
+07:00  系统启动，加载 SOUL.md + MEMORY.md          【现状】已实现
+08:00  情报哨兵开始采集（晨报）                      【目标】待实施
+08:30  推送晨报到飞书群                              【目标】待实施
+09:00  承诺管家执行每日 Review                        【目标】待实施
+10:00  内容策展开始创意规划                           【目标】待实施
+12:00  情报哨兵推送午间论文解读                       【目标】待实施
+14:00  Zoe 执行午间巡检                              【目标】待实施
+18:00  情报哨兵推送晚间趋势分析                       【目标】待实施
+20:00  内容策展执行发布计划                           【目标】待实施
+22:00  Zoe 执行晚间巡检                              【目标】待实施
+23:00  各专家执行每日反思                             【目标】待实施
+23:30  Zoe 汇总全团队产出                            【目标】待实施
+23:45  推送日报到飞书群                              【目标】待实施
 ```
 
 #### 3.4.2 协作工作流
+
+> **【目标】** 三态通信协议为设计规范，代码中尚未实现。
 
 基于文章的三态通信协议：
 
@@ -539,24 +407,28 @@ Zoe: @承诺管家 [state=final] [ack_id=review-20260426]
 
 #### 3.5.1 任务清单
 
-| 任务名称 | 调度时间 | 执行专家 | 任务描述 |
-|---------|---------|---------|---------|
-| `morning-intel` | 08:30 | 情报哨兵 | 采集过去 12 小时的重要信息 |
-| `daily-promise-review` | 09:00 | 承诺管家 | 检查所有待办承诺状态 |
-| `daily-content-planning` | 10:00 | 内容策展 | 消费情报，生成内容创意 |
-| `noon-paper-review` | 12:00 | 情报哨兵 | 搜索 arXiv 最新论文 |
-| `noon-ops-check` | 14:00 | Zoe | 执行午间系统巡检 |
-| `evening-trend-analysis` | 20:00 | 情报哨兵 | 分析今日技术趋势 |
-| `daily-content-publish` | 20:00 | 内容策展 | 执行发布计划 |
-| `nightly-ops-check` | 22:00 | Zoe | 执行晚间系统巡检 |
-| `daily-reflection` | 23:00 | 各专家 | 执行每日反思 |
-| `daily-summary` | 23:30 | Zoe | 汇总全团队产出 |
-| `daily-digest` | 23:45 | Zoe | 推送日报到飞书群 |
-| `weekly-promise-audit` | 18:00 周五 | 承诺管家 | 生成本周承诺盘点 |
-| `weekly-content-review` | 18:00 周日 | 内容策展 | 分析本周内容效果 |
-| `weekly-memory-maintenance` | 10:00 周日 | Zoe | 执行记忆系统维护 |
+| 任务名称 | 调度时间 | 执行专家 | 任务描述 | 状态 |
+|---------|---------|---------|---------|------|
+| `morning-intel` | 08:30 | 情报哨兵 | 采集过去 12 小时的重要信息 | 🔴计划开发 |
+| `daily-promise-review` | 09:00 | 承诺管家 | 检查所有待办承诺状态 | 🔴计划开发 |
+| `daily-content-planning` | 10:00 | 内容策展 | 消费情报，生成内容创意 | 🔴计划开发 |
+| `noon-paper-review` | 12:00 | 情报哨兵 | 搜索 arXiv 最新论文 | 🔴计划开发 |
+| `noon-ops-check` | 14:00 | Zoe | 执行午间系统巡检 | 🔴计划开发 |
+| `evening-trend-analysis` | 20:00 | 情报哨兵 | 分析今日技术趋势 | 🔴计划开发 |
+| `daily-content-publish` | 20:00 | 内容策展 | 执行发布计划 | 🔴计划开发 |
+| `nightly-ops-check` | 22:00 | Zoe | 执行晚间系统巡检 | 🔴计划开发 |
+| `daily-reflection` | 23:00 | 各专家 | 执行每日反思 | 🔴计划开发 |
+| `daily-summary` | 23:30 | Zoe | 汇总全团队产出 | 🔴计划开发 |
+| `daily-digest` | 23:45 | Zoe | 推送日报到飞书群 | 🔴计划开发 |
+| `weekly-promise-audit` | 18:00 周五 | 承诺管家 | 生成本周承诺盘点 | 🔴计划开发 |
+| `weekly-content-review` | 18:00 周日 | 内容策展 | 分析本周内容效果 | 🔴计划开发 |
+| `weekly-memory-maintenance` | 10:00 周日 | Zoe | 执行记忆系统维护 | 🔴计划开发 |
+
+> ⚠️ 以上 14 个 Cron 任务全部为 🔴计划开发，当前无任何已配置运行的专用运营 Cron。
 
 #### 3.5.2 Cron 任务配置示例
+
+> **【目标】** 以下为 Cron 配置示例，尚未注册到 Hermes。
 
 ```yaml
 # 晨间情报采集
@@ -584,15 +456,17 @@ Zoe: @承诺管家 [state=final] [ack_id=review-20260426]
 
 #### 3.6.1 五层记忆架构
 
-| 层级 | 存储 | 时间尺度 | 管理方式 | 典型内容 |
+| 层级 | 存储 | 时间尺度 | 管理方式 | 落地状态 |
 |------|------|---------|---------|---------|
-| L1 身份层 | SOUL.md | 永恒 | 人工确认修改 | 身份 + 硬约束 + 决策框架 |
-| L2 长期记忆 | MEMORY.md | 长期 | Agent 自主维护 | 结构化经验 |
-| L3 中期记忆 | memory/YYYY-MM-DD.md | 中期 | 自动提取 | Session 精华快照 |
-| L4 短期记忆 | .learnings/ | 短期 | 即时记录 | 错误记录、用户纠正 |
-| L5 持久化 | Skills + Obsidian | 持久 | 共享/归档 | 技能库 + 知识归档 |
+| L1 身份层 | SOUL.md | 永恒 | 人工确认修改 | 🟢已实现 |
+| L2 长期记忆 | MEMORY.md | 长期 | Agent 自主维护 | 🟢已实现 |
+| L3 中期记忆 | memory/YYYY-MM-DD.md | 中期 | 自动提取 | 🟡部分实现（compaction 机制存在但无结构化归档） |
+| L4 短期记忆 | .learnings/ | 短期 | 即时记录 | 🔴计划开发 |
+| L5 持久化 | Skills + Obsidian | 持久 | 共享/归档 | 🟡Skills 已实现，Obsidian 未集成 |
 
 #### 3.6.2 记忆自主迭代循环
+
+> **【目标】** 以下循环为设计规范，自动 promote 机制尚未实现。
 
 ```
 触发事件（操作失败/用户纠正/发现更优做法）
@@ -606,28 +480,6 @@ Zoe: @承诺管家 [state=final] [ack_id=review-20260426]
 下次 Session 加载（bootstrap hook）
     ↓
 Agent 行为改进
-```
-
-#### 3.6.3 配置示例
-
-```yaml
-# ~/.hermes/config.yaml
-memory:
-  auto_compaction: true
-  compaction_threshold: 40000  # tokens
-  max_memory_size: 3000  # tokens
-  
-  # 自动维护
-  maintenance:
-    enabled: true
-    schedule: "weekly"
-    prune_after: "7d"
-    max_disk_bytes: 104857600  # 100MB
-
-  # 记忆搜索
-  search:
-    enabled: true
-    providers: ["local", "mem0"]  # 可选外部记忆
 ```
 
 ---
@@ -652,7 +504,7 @@ memory:
 │                          │                                  │
 │                          ▼                                  │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │  HermesAgent (Zoe + 专家团队)                        │   │
+│  │  HermesAgent (Zoe + 4 专家团队)                      │   │
 │  │  - 接收用户输入                                       │   │
 │  │  - 识别承诺候选                                       │   │
 │  │  - 执行 Clarify 流程                                 │   │
@@ -671,24 +523,33 @@ memory:
 │                          ▼                                  │
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │  Canonical Truth Store                              │   │
-│  │  - 承诺对象                                          │   │
-│  │  - 项目对象                                          │   │
-│  │  - Next Actions                                     │   │
-│  │  - Waiting Fors                                     │   │
 │  └─────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### 4.1.3 FlowMind 提供的核心能力
+#### 4.1.3 FlowMind API 接口（双栏：已落地 / 拟新增）
 
-| 能力 | API 端点 | 用途 |
-|------|---------|------|
-| Candidate Ingress | `POST /api/candidates` | 接收承诺候选 |
-| Clarify Workflow | `POST /api/clarify` | 执行澄清流程 |
-| Truth Query | `GET /api/truth/query` | 查询承诺真相 |
-| Review Trigger | `POST /api/review/trigger` | 触发 Review |
-| Mutation Request | `POST /api/mutations` | 请求变更 |
-| Provenance Inspection | `GET /api/provenance` | 审计追溯 |
+> **对齐四类桥接契约审计结论（2026-04-26）**
+
+| 能力 | 【已落地接口】（代码+测试可验证） | 【拟新增接口】（文档定义，代码未实现） |
+|------|--------------------------------|--------------------------------------|
+| Candidate Ingress | `POST /api/integrations/candidate-ingress` ✅ | — |
+| Truth Query | `GET /bridge/truth` + `GET /bridge/truth/:id` ✅ | — |
+| Context Compilation | `POST /bridge/context-pack` ✅ | — |
+| Truth Change Feedback | `POST /bridge/feedback` + `GET /bridge/feedback/:instanceId` ✅ | — |
+| Clarify Workflow | — | `POST /api/clarify`（多轮澄清状态机）🔴 |
+| Review Trigger | — | `POST /api/review/trigger`（Review 工作流触发）🔴 |
+| Mutation Request | — | `POST /api/mutations`（请求变更）🔴 |
+| Provenance Inspection | — | `GET /api/provenance`（审计追溯）🔴 |
+
+**四类桥接当前状态（审计结论）**：
+
+| 桥接 | 状态 | 测试 | 关键 Gap |
+|------|------|------|---------|
+| Candidate Ingress | ✅已成立 | 5 UT | 无 |
+| Truth Query | ⚠️测试不足 | 仅 auth 测试 | 缺服务层 UT + e2e |
+| Context Compilation | ⚠️测试不足 | 间接 e2e | 缺独立 UT + ontology 可选注入 |
+| Truth Change Feedback | ⚠️架构缺口 | 无 | 无推送机制 / submitDecision 未自动联动 / 无 UT |
 
 ### 4.2 运营能力建设需求
 
@@ -697,31 +558,17 @@ memory:
 **目标**：让 HermesAgent 能够通过 API 与 FlowMind 交互
 
 **需求**：
-1. **Candidate Ingress API**
-   - 接收结构化承诺候选
-   - 返回 Candidate ID
-   - 支持批量提交
-
-2. **Clarify Workflow API**
-   - 支持多轮澄清
-   - 返回澄清状态
-   - 支持超时处理
-
-3. **Truth Query API**
-   - 按项目查询
-   - 按状态查询（overdue/blocked/stale）
-   - 按时间窗查询
-
-4. **Webhook 回调**
-   - 承诺状态变更通知
-   - Review 完成通知
-   - Deadline 预警通知
+1. **Candidate Ingress API** — 🟢已落地
+2. **Truth Query API** — 🟢已落地（⚠️需补 UT）
+3. **Context Compilation API** — 🟢已落地（⚠️需补 UT）
+4. **Truth Change Feedback API** — 🟡已落地但有架构缺口（P0：自动联动 + SSE 推送）
 
 **实现优先级**：
 ```
-P0: Candidate Ingress + Truth Query
-P1: Clarify Workflow + Webhook
-P2: Review Trigger + Mutation Request
+✅ 已完成: Candidate Ingress + Truth Query + Context Compilation + Feedback 基础
+P0 (当前): Feedback 自动联动（submitDecision→recordFeedback） + SSE 推送
+P1: 补齐 Truth Query / Context Compilation UT + provenanceRefs 修正
+P2: ontology 可选注入→必选或降级提示
 ```
 
 #### 4.2.2 Phase 2: 协作能力（中期）
@@ -729,66 +576,48 @@ P2: Review Trigger + Mutation Request
 **目标**：支持多 Agent 协作治理
 
 **需求**：
-1. **Agent 身份认证**
-   - 每个 Agent 有独立身份
-   - 区分用户操作和 Agent 操作
-   - 权限分级
-
-2. **协作工作流**
-   - Agent 间任务分派
-   - 承诺交接与确认
-   - 冲突检测与解决
-
-3. **审计追溯**
-   - 操作日志
-   - 变更历史
-   - 决策依据
+1. **Agent 身份认证** — 🔴待设计
+2. **协作工作流** — 🔴待设计（三态通信协议）
+3. **审计追溯** — 🔴待设计
 
 #### 4.2.3 Phase 3: 智能能力（远期）
 
 **目标**：让 FlowMind 具备自主治理能力
 
 **需求**：
-1. **智能 Clarify**
-   - 自动识别缺失信息
-   - 智能提问策略
-   - 上下文感知
-
-2. **Drift Detection**
-   - 承诺漂移检测
-   - 自动触发 Review
-   - 修复建议
-
-3. **学习与优化**
-   - 从用户行为学习
-   - 优化 Clarify 策略
-   - 预测承诺风险
+1. **智能 Clarify** — 🔴待设计
+2. **Drift Detection** — 🔴待设计
+3. **学习与优化** — 🔴待设计
 
 ### 4.3 数据流向设计
+
+> **【目标】** 以下数据流为设计规范，部分路径已可运行。
 
 #### 4.3.1 承诺生命周期数据流
 
 ```
 用户输入
     ↓
-HermesAgent 识别为 Candidate
+HermesAgent 识别为 Candidate                    【现状】人工触发
     ↓
-调用 FlowMind Candidate Ingress API
+调用 FlowMind Candidate Ingress API              【现状】已落地
     ↓
-FlowMind 写入 Candidate Store
+FlowMind 写入 Candidate Store                    【现状】已落地
     ↓
-触发 Clarify Workflow（如需要）
+触发 Clarify Workflow（如需要）                   【目标】拟新增
     ↓
-用户确认 → 提升为 Canonical Truth
+用户确认 → 提升为 Canonical Truth                【现状】已落地（submitDecision）
     ↓
-写入 Truth Store
+写入 Truth Store                                 【现状】已落地
     ↓
-触发 Webhook 通知
+触发 Webhook 通知                                【目标】拟新增（当前仅 SSE 事件）
     ↓
-HermesAgent 接收通知 → 更新记忆
+HermesAgent 接收通知 → 更新记忆                  【目标】拟新增
 ```
 
 #### 4.3.2 Review 工作流数据流
+
+> **【目标】** 整条链路均为拟新增，代码中尚未实现。
 
 ```
 Cron 触发 / 手动触发
@@ -810,53 +639,59 @@ FlowMind 执行变更 → 记录 Provenance
 
 ## 实施路线图
 
+> **【路线图】** 以下为分阶段实施计划。
+
 ### 5.1 Phase 1: 基础搭建（2 周）
 
 **Week 1**：
-- [ ] 安装核心插件
-- [ ] 配置 SOUL.md（各专家角色）
-- [ ] 设置基础 Cron 任务（5 个核心任务）
-- [ ] 实现 Candidate Ingress API 调用
+- [x] 安装核心插件（🟢已完成：flowmind-candidate-ingress、flowmind-pilot、feishu 相关）
+- [ ] 配置 SOUL.md（各专家角色定义）🔴待实施
+- [ ] 设置基础 Cron 任务（5 个核心任务）🔴待实施
+- [x] 实现 Candidate Ingress API 调用（🟢已落地）
 
 **Week 2**：
-- [ ] 实现 Truth Query API 调用
-- [ ] 配置飞书消息推送
-- [ ] 测试承诺生命周期
-- [ ] 文档化工作流
+- [x] 实现 Truth Query API 调用（🟢已落地，⚠️需补 UT）
+- [x] 实现 Context Compilation API 调用（🟢已落地，⚠️需补 UT）
+- [ ] 实现 Truth Change Feedback 自动联动 🔴P0 进行中
+- [ ] 配置飞书消息推送（🟢基础能力已有）
+- [ ] 测试承诺生命周期 🔴待实施
+- [ ] 文档化工作流 🔴待实施
 
 ### 5.2 Phase 2: 能力扩展（2 周）
 
 **Week 3**：
-- [ ] 实现 Clarify Workflow
-- [ ] 配置 Webhook 回调
-- [ ] 扩展 Cron 任务（10+ 任务）
-- [ ] 实现三态通信协议
+- [ ] 实现 Clarify Workflow 🔴待设计
+- [ ] 配置 Webhook 回调 🔴待设计
+- [ ] 扩展 Cron 任务（10+ 任务）🔴待实施
+- [ ] 实现三态通信协议 🔴待设计
 
 **Week 4**：
-- [ ] 实现记忆体系
-- [ ] 配置自动反思
-- [ ] 测试多 Agent 协作
-- [ ] 性能优化
+- [ ] 完善记忆体系（L3-L5）🔴待实施
+- [ ] 配置自动反思 🔴待实施
+- [ ] 测试多 Agent 协作 🔴待实施
+- [ ] 性能优化 🔴待实施
 
 ### 5.3 Phase 3: 生产就绪（2 周）
 
 **Week 5**：
-- [ ] 实现 Review 工作流
-- [ ] 配置告警与恢复
-- [ ] 实现审计追溯
-- [ ] 压力测试
+- [ ] 实现 Review 工作流 🔴待设计
+- [ ] 配置告警与恢复 🔴待实施
+- [ ] 实现审计追溯 🔴待设计
+- [ ] 压力测试 🔴待实施
 
 **Week 6**：
-- [ ] 文档完善
-- [ ] 用户培训
-- [ ] 上线部署
-- [ ] 监控与优化
+- [ ] 文档完善 🔴待实施
+- [ ] 用户培训 🔴待实施
+- [ ] 上线部署 🔴待实施
+- [ ] 监控与优化 🔴待实施
 
 ---
 
 ## 附录：参考架构
 
 ### A.1 文章核心配置参考
+
+> **【目标】** 以下为 OpenClaw 文章推荐的配置范例，供设计参考。
 
 ```json
 {
@@ -892,6 +727,8 @@ FlowMind 执行变更 → 记录 Provenance
 
 ### A.2 三态通信协议模板
 
+> **【目标】** 协议模板，代码中尚未实现。
+
 ```markdown
 # 请求
 @专家B [state=request] [ack_id=topic-YYYYMMDDHHMM]
@@ -913,11 +750,11 @@ FlowMind 执行变更 → 记录 Provenance
 ### A.3 技能安装检查清单
 
 ```bash
-# 检查核心插件是否安装
-skills_list | grep -E "flowmind|webhook|feishu|blogwatcher|arxiv"
+# 检查已安装技能
+hermes skills list | grep -E "flowmind|webhook|feishu|blogwatcher|arxiv"
 
 # 检查 Cron 任务是否配置
-cronjob list
+hermes cron list
 
 # 检查记忆配置
 cat ~/.hermes/config.yaml | grep -A 10 "memory:"
@@ -928,29 +765,19 @@ ls -la ~/.hermes/profiles/*/SOUL.md
 
 ---
 
-## 待与 Codex CLI 讨论的要点
+## 落地状态汇总
 
-1. **FlowMind API 接口设计**
-   - Candidate Ingress 的请求/响应格式
-   - Clarify Workflow 的状态机设计
-   - Truth Query 的查询语法
-
-2. **多 Agent 协作协议**
-   - 三态协议的实现细节
-   - 冲突检测与解决机制
-   - 审计追溯的数据结构
-
-3. **记忆体系集成**
-   - FlowMind 如何与 HermesAgent 记忆同步
-   - 承诺变更如何触发记忆更新
-   - Review 结果如何沉淀为经验
-
-4. **部署架构**
-   - FlowMind API 的部署方式
-   - 与 HermesAgent 的通信协议
-   - 监控与告警配置
+| 分类 | 🟢已落地 | 🟡已验证未安装 | 🔴计划开发 |
+|------|---------|---------------|-----------|
+| API 接口 | 4 个（四类桥接） | 0 | 4 个（Clarify/Review/Mutation/Provenance） |
+| 插件 | 5 个 | 8 个 | 0 |
+| 技能 | 0 | 0 | 15+ 个（全部技能目录） |
+| Cron 任务 | 0 | 0 | 14 个 |
+| 记忆层级 | L1+L2 | L3+L5部分 | L4 |
 
 ---
 
-**文档状态**: 初稿完成，待与 Codex CLI 同步定稿  
-**下一步**: 推送到远端仓库，@Codex CLI 进行讨论
+**文档状态**: 第二稿（CrazyAgentsManage 仓库），待 Codex CLI 最终签字  
+**下一步**: @Codex CLI 签字确认后，合并到 CrazyAgentsManage `feature/sprint4-search-responsive` 分支  
+**v2.0 修订依据**: Codex CLI 评审 4 点意见  
+**仓库归属**: CrazyAgentsManage（HermesAgent 运营宿主层基线文档）
