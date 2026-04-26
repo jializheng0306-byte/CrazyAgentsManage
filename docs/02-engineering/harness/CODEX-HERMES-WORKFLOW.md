@@ -9,6 +9,12 @@ Replace the old `codebuddy ↔ qodercli` dual-lane model with a role-split model
 
 The collaboration surface is a Feishu group conversation using `@` mentions, but the durable truth must live in repository artifacts.
 
+This file defines the workflow shape.
+
+For the finalized post-discussion collaboration contract, also read:
+
+- `docs/02-engineering/harness/CODEX-HERMES-COLLABORATION-MECHANISM.md`
+
 ## Role Contract
 
 ### Codex
@@ -95,4 +101,3 @@ Do not:
 - skip the handoff packet and ask HermesAgent vague questions
 - write durable project truth only into `.omx/`
 - let HermesAgent directly redefine development architecture without a repo artifact
-

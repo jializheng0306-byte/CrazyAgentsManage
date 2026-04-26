@@ -14,12 +14,13 @@ Read these files in order before substantial work:
 
 1. `docs/02-engineering/harness/HARNESS-ENTRY.md`
 2. `docs/02-engineering/harness/CODEX-HERMES-WORKFLOW.md`
-3. `docs/codex-hermes-role-design.md`
+3. `docs/02-engineering/harness/CODEX-HERMES-COLLABORATION-MECHANISM.md`
+4. `docs/codex-hermes-role-design.md`
 
 If the task explicitly involves `HermesAgent`, Feishu group collaboration, handoff packets, or runtime state sync, also read:
 
-4. `docs/02-engineering/harness/HERMESAGENT-ENTRY.md`
-5. `.codex/skills/hermes-group-dual/SKILL.md`
+5. `docs/02-engineering/harness/HERMESAGENT-ENTRY.md`
+6. `.codex/skills/hermes-group-dual/SKILL.md`
 
 ## Working Rules
 
@@ -48,4 +49,3 @@ Before claiming completion for workflow changes:
 - validate script syntax
 - verify referenced paths exist
 - confirm harness and docs layers stay separated from `.omx/`
-
