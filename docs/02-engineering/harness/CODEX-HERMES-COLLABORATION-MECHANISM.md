@@ -115,6 +115,16 @@ python3 scripts/runtime/closeout_writeback.py \
   --artifacts docs/codex-hermes-role-design.md
 ```
 
+### Phase 5.5: Documentation Closeout
+
+If the iteration changed shared product truth, Codex must also update:
+
+- `docs/prd/technical-implementation-prd.md`
+- `docs/prd/operations-implementation-prd.md`
+- `docs/roadmap/prd-execution-roadmap.md`
+
+HermesAgent then reviews whether the operations-facing document state matches the actual round outcome.
+
 ## Escalation Rules
 
 ### When Codex must ask HermesAgent
@@ -205,3 +215,12 @@ The current collaboration model is:
 - stable enough to execute
 - no longer in debate mode
 - ready to move into implementation and operations acceptance
+
+## PRD Governance
+
+The split PRD system is part of the harness contract.
+
+- Technical scope changes must update the technical PRD.
+- Operations-facing scope changes must update the operations PRD.
+- Phase and sequencing changes must update the execution roadmap.
+- No shared branch should be considered ready for merge if the repository truth changed but the PRD system did not.
