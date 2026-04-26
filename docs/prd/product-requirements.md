@@ -1,12 +1,5 @@
 # CrazyAgentsManage PRD (Product Requirements Document)
 
-> Legacy / Background Only
-> This file remains a useful historical input, but it is no longer the sole canonical PRD baseline.
-> Active planning should now default to:
-> - `docs/prd/technical-implementation-prd.md`
-> - `docs/prd/operations-implementation-prd.md`
-> - `docs/roadmap/prd-execution-roadmap.md`
-
 ## 版本信息
 
 | 字段 | 内容 |

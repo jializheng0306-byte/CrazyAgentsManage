@@ -1,10 +1,5 @@
 # CrazyAgentsManage 路线图 (Roadmap)
 
-> Legacy / Background Only
-> This roadmap remains a historical planning input, but the active execution tracker is now:
-> - `docs/roadmap/prd-execution-roadmap.md`
-> Use the split PRD system plus that roadmap as the canonical planning baseline.
-
 ## 版本规划
 
 ### v0.1.0 — 基础架构 (预计 2-3 周)
