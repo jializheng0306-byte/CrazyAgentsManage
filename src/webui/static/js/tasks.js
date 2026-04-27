@@ -58,6 +58,11 @@ function filterTasks(status) {
 }
 
 function renderDAG(tasks) {
+  if (typeof renderDAGView === 'function') {
+    renderDAGView(tasks, '.dag-container');
+    return;
+  }
+
   const container = document.querySelector('.dag-visualization') || document.querySelector('.dag-container');
   if (!container) return;
 

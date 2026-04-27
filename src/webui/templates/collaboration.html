@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>协作面 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/collaboration.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+</head>
+<body>
+  {% set active_nav = 'collaboration' %}
+  {% include 'ia-nav.html' %}
+
+  <main id="cl-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+
+    <div class="cl-hero">
+      <h1 class="cl-hero-title">
+        <span class="cl-hero-icon">🤝</span>
+        协作面
+      </h1>
+      <p class="cl-hero-subtitle">Codex 与 HermesAgent、FlowMind 与外部系统之间的协作链路与执行动态</p>
+    </div>
+
+    <div class="cl-metrics-strip">
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="cl-handoff-count">--</div>
+        <div class="cl-metric-label">交接包</div>
+      </div>
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="cl-trace-count">--</div>
+        <div class="cl-metric-label">追踪记录</div>
+      </div>
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="cl-closeout-count">--</div>
+        <div class="cl-metric-label">失败记录</div>
+      </div>
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="cl-snapshot-count">--</div>
+        <div class="cl-metric-label">运行态快照</div>
+      </div>
+    </div>
+
+    <div class="cl-subpages">
+      <a class="cl-subpage-card" href="{{ BASE }}/collaboration/tasks">
+        <span class="cl-subpage-icon">📋</span>
+        <span class="cl-subpage-title">任务编排</span>
+        <span class="cl-subpage-desc">会话任务执行状态与依赖关系可视化</span>
+      </a>
+      <a class="cl-subpage-card" href="{{ BASE }}/runtime/sessions">
+        <span class="cl-subpage-icon">🔴</span>
+        <span class="cl-subpage-title">会话链路</span>
+        <span class="cl-subpage-desc">跨智能体会话追踪与数据流向</span>
+      </a>
+      <a class="cl-subpage-card" href="{{ BASE }}/governance/graph">
+        <span class="cl-subpage-icon">🔗</span>
+        <span class="cl-subpage-title">关系图谱</span>
+        <span class="cl-subpage-desc">智能体间关系与协作拓扑</span>
+      </a>
+    </div>
+
+    <section class="cl-section">
+      <div class="cl-section-header">
+        <h2 class="cl-section-title">
+          <span class="cl-section-icon">📤</span>
+          交接包
+        </h2>
+      </div>
+      <div class="cl-handoff-list" id="cl-handoff-list">
+        <div class="cl-empty"><div class="cl-empty-icon">⏳</div><p>加载中...</p></div>
+      </div>
+    </section>
+
+    <section class="cl-section">
+      <div class="cl-section-header">
+        <h2 class="cl-section-title">
+          <span class="cl-section-icon">📋</span>
+          Harness 追踪
+        </h2>
+      </div>
+      <div class="cl-trace-grid" id="cl-trace-grid">
+        <div class="cl-empty"><div class="cl-empty-icon">⏳</div><p>加载中...</p></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/collaboration.js"></script>
+</body>
+</html>

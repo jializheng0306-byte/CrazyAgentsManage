@@ -1,202 +1,129 @@
-# CrazyAgentsManage 技术实现 PRD
+# 技术实现 PRD
 
-## 版本信息
+## 文档目的
 
-| 字段 | 内容 |
-|------|------|
-| 产品 | CrazyAgentsManage |
-| 文档类型 | 技术实现 PRD |
-| 版本 | v0.1.0 |
-| 状态 | 当前主基线 |
-| 负责人 | Codex |
-| 运营复核方 | HermesAgent |
-| 最后更新 | 2026-04-26 |
+本文档定义 `CrazyAgentsManage` 的技术实现范围与验收标准，面向 `Codex` 开发 lane。
 
-## 范围
+## 适用范围
 
-本 PRD 定义的是：为了把 `CrazyAgentsManage` 做成真正可用的 Hermes 侧运营控制台，当前需要推进的工程实现工作。
-
-覆盖内容包括：
-
-- 运行时数据接入
-- API 与适配层
+- 架构边界
 - 前后端实现范围
+- 数据契约
+- 运行时集成表面
 - 技术验收标准
-- 分阶段实施顺序
 
-它不负责细化运营策略，运营策略单独由以下文档定义：
+## 架构边界
 
-- `docs/prd/operations-implementation-prd.md`
+### 系统架构
 
-## 产品边界
+- **前端**：基于 HTML/CSS/JavaScript 的 WebUI
+- **后端**：基于 Python 的服务端
+- **数据存储**：文件系统 + 轻量级数据库
+- **集成点**：与 Hermes-Agent 的集成
 
-### 当前已接受的边界
+### 核心模块
 
-- `CrazyAgentsManage` 是 Hermes 运行时 / 运营控制台
-- `FlowMind` 是治理引擎与 canonical truth 层
-- `CrazyAgentsManage` 可以展示、转发、运营化 FlowMind 相关状态
-- `CrazyAgentsManage` 不应擅自重定义 FlowMind 语义
+1. **智能体管理**：智能体的创建、配置和生命周期管理
+2. **任务编排**：任务的创建、调度和执行管理
+3. **共享上下文**：智能体之间的信息共享机制
+4. **团队记忆**：团队级别的记忆存储和检索
+5. **监控系统**：系统健康和性能监控
 
-### 技术上的含义
+## 前后端实现范围
 
-实现时必须把以下三条缝保持清晰：
+### 前端实现
 
-1. Hermes 运行时与 session substrate
-2. CrazyAgentsManage 运营控制台与适配层
-3. FlowMind 治理与 truth 接口
+- **页面**：概览、运行时、治理、运营、协作、架构可视化等
+- **组件**：仪表板、表格、表单、图表、导航等
+- **功能**：实时数据展示、操作控制、告警管理等
+- **技术栈**：HTML5、CSS3、JavaScript、Bootstrap
 
-## 当前技术基线
+### 后端实现
 
-### 已存在的运行时事实
+- **API**：RESTful API 接口
+- **服务**：智能体管理服务、任务编排服务、记忆服务等
+- **工具**：文件操作、系统命令执行、网络请求等
+- **技术栈**：Python 3.11+、Flask、SQLite
 
-- Hermes 运行时数据源已存在且可读取：
-  - `state.db`
-  - `gateway_state.json`
-  - `~/.hermes/skills/`
-  - `~/.hermes/memories/`
-  - cron / 运行进程状态
-- CrazyAgentsManage 已有一套 WebUI/API 观测层 demo
-- `Codex / HermesAgent` 分工已经定稿，实施阶段不应重辩角色边界
+## 数据契约
 
-### 当前仍成立的技术缺口
+### 智能体数据模型
 
-- session stuck / zombie inference 还需要更可靠的技术处理
-- 运行时信号仍需标准化后才能真正给运营使用
-- 部分控制面仍是 mock 或不完整
-- FlowMind 侧接口必须对齐真实 bridge contract，而不是想象中的 API
+```json
+{
+  "id": "agent-001",
+  "name": "研究智能体",
+  "role": "research",
+  "status": "online",
+  "config": {
+    "toolsets": ["web", "file"],
+    "model": "openrouter/deepseek-chat-v3"
+  },
+  "metrics": {
+    "uptime": "10h 30m",
+    "response_time": "2.5s"
+  }
+}
+```
 
-## 实施域
+### 任务数据模型
 
-### 1. 运行时状态适配层
+```json
+{
+  "id": "task-001",
+  "name": "研究项目架构",
+  "agent_id": "agent-001",
+  "status": "completed",
+  "priority": "high",
+  "created_at": "2024-01-01T12:00:00Z",
+  "completed_at": "2024-01-01T12:30:00Z",
+  "result": "项目架构研究报告"
+}
+```
 
-需要构建并加固的读取适配层包括：
+## 运行时集成表面
 
-- session 状态
-- message / token 统计
-- task / delegation lineage
-- skills inventory
-- cron job 状态
-- alerts 与异常指示器
+### 与 Hermes-Agent 集成
 
-验收标准：
+- **通信方式**：文件系统 + API 调用
+- **数据交换**：JSON 格式
+- **事件通知**：基于文件系统的事件触发
 
-- 适配层能容忍缺失/部分存在的运行时文件
-- 适配层能区分“未配置”与“已损坏”
-- 输出能够标准化给前端消费
+### 与外部系统集成
 
-### 2. 任务 / 委派 substrate
+- **Web 服务**：HTTP/HTTPS 调用
+- **文件系统**：本地文件操作
+- **系统命令**：执行系统级命令
 
-需要实现或补完的能力包括：
+## 技术验收标准
 
-- 角色化委派
-- shared context / task state 文件
-- task graph lineage
-- 跨 session 的任务跟踪
+### 功能验收
 
-验收标准：
+1. 所有核心模块能够正常运行
+2. 前后端交互流畅，数据同步准确
+3. 智能体能够正确执行任务
+4. 系统能够处理异常情况
 
-- 委派任务会留下持久状态工件
-- 父子 lineage 可查询、可渲染
-- 失败状态不能靠“沉默推断”，必须有显式状态
+### 性能验收
 
-### 3. Team / Memory substrate
+1. API 响应时间 < 500ms
+2. 智能体任务执行速度满足业务需求
+3. 系统能够支持至少 50 个并发任务
+4. 内存使用合理，无内存泄漏
 
-需要实现仓库侧的以下部分：
+### 可靠性验收
 
-- team memory
-- shared context 目录结构
-- role memory 加载
-- 迭代后的 memory writeback
+1. 系统稳定性 > 99.9%
+2. 数据一致性得到保证
+3. 系统能够从故障中自动恢复
+4. 日志记录完整，便于问题排查
 
-验收标准：
+## 与其他文档的关系
 
-- team / shared-context 结构可预测创建
-- 读写边界明确
-- 记忆更新可追溯、可审阅
+- **上位产品基础文档**：定义产品定位和一级信息架构
+- **运营实现 PRD**：定义运营实现范围和运营验收标准
+- **执行路线图**：定义实施顺序和时间计划
 
-### 4. 运行时控制面
+## 变更管理
 
-需要实现真实可操作的控制面：
-
-- cron 可视化与操作
-- session 检查
-- task dispatch entry
-- bridge 状态检查
-- runtime alert acknowledgement
-
-验收标准：
-
-- UI 暴露的每个控制，都必须对应真实动作，或明确说明其当前不可执行
-- mock endpoint 要么替换，要么清晰标注
-
-### 5. 可观测性 UI
-
-需要实现的运营 UI 包括：
-
-- sessions
-- task graph / lineage
-- runtime health
-- skills inventory
-- cron surfaces
-- token/cost 可见性
-- alerts 与异常
-
-验收标准：
-
-- 无需 shell 访问即可看懂主要运行状态
-- 异常状态具备根因 breadcrumbs
-- 高频页面在大数据量下仍可用
-
-## FlowMind 集成契约
-
-CrazyAgentsManage 必须对齐 `FlowMindDeploy` 里已经存在的真实 FlowMind-facing 接口。
-
-### 当前 bridge 对齐面
-
-- candidate ingress
-- truth query
-- context compilation
-- truth change feedback
-
-### 规则
-
-除非明确标记为“提案”，否则技术规划里不得新造 API 名称替代已实现 bridge surface。
-
-## 非目标
-
-本技术 PRD 不授权以下行为：
-
-- 重定义 FlowMind 产品语义
-- 把 Hermes 当成 canonical truth 的来源
-- 把 HermesAgent 拉回第二开发 lane
-- 只靠聊天做架构决策而不落仓库工件
-
-## 技术验收门槛
-
-### P0
-
-- runtime state adapter 可靠
-- 真实 runtime 信号已暴露
-- session/task 异常可识别
-- 关键运营控制面不再停留在 mock
-
-### P1
-
-- task dispatch entry 可用
-- skill 扫描一致
-- memory/team substrate 可工作
-- 关键页面具备运营可导航性
-
-### P2
-
-- 更高级的自动化与优化层
-- 长尾 dashboard
-- 次级集成与便利性能力
-
-## 变更控制
-
-当任务改变了技术范围时，必须同步更新：
-
-1. 本技术 PRD
-2. `docs/roadmap/prd-execution-roadmap.md`
-3. 如果角色协作状态发生变化，还要更新 harness closeout 工件
+每次技术实现范围发生变化时，应同步更新本文档。变更应经过 `Codex` 审核确认。

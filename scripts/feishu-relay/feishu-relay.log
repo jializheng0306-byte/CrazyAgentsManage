@@ -1,0 +1,331 @@
+[2026-04-27T08:19:25.427Z] === CrazyAgentsManage Feishu Relay starting ===
+[2026-04-27T08:19:25.431Z] App ID: cli_a965b9099e269bc4
+[2026-04-27T08:19:25.432Z] Target Chat: oc_bbde428675a7c267d55c3f0663ca701d
+[2026-04-27T08:19:25.432Z] Inbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-inbox.jsonl
+[2026-04-27T08:19:25.433Z] Outbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-outbox.jsonl
+[2026-04-27T08:19:25.434Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:25.439Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:25.441Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:28.443Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:28.447Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:28.448Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:28.451Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:28.453Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:28.454Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:31.449Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:31.453Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:31.454Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:31.454Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:31.457Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:31.458Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:31.461Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:31.461Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:31.465Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:31.466Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:31.467Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:31.467Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:34.459Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:34.463Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:34.463Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:34.466Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:34.467Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:34.470Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:34.471Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:34.472Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:34.472Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:34.473Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:34.476Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:34.477Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:34.480Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:34.481Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:34.484Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:34.484Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:34.488Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:34.488Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:34.492Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:34.493Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:34.494Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:34.495Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:34.495Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:34.496Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.477Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.480Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.481Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.484Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.484Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.488Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.488Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.491Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.492Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.495Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.496Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.499Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.500Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.501Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.501Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.502Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.503Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.503Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.504Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.506Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.507Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.510Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.511Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.514Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.515Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.518Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.519Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.522Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.522Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.525Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.526Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.529Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.530Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.533Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.534Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.537Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.538Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:19:37.541Z] Subscription error: spawn lark-cli ENOENT. Restarting in 3s...
+[2026-04-27T08:19:37.543Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.544Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.545Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.545Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.546Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.546Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.547Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.547Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.547Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.548Z] Subscription process exited with code -4058. Restarting in 3s...
+[2026-04-27T08:19:37.770Z] Shutting down...
+[2026-04-27T08:19:37.991Z] Shutting down...
+[2026-04-27T08:22:45.132Z] === CrazyAgentsManage Feishu Relay starting ===
+[2026-04-27T08:22:45.135Z] App ID: cli_a965b9099e269bc4
+[2026-04-27T08:22:45.136Z] Target Chat: oc_bbde428675a7c267d55c3f0663ca701d
+[2026-04-27T08:22:45.136Z] Inbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-inbox.jsonl
+[2026-04-27T08:22:45.137Z] Outbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-outbox.jsonl
+[2026-04-27T08:22:45.138Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:22:45.421Z] [SUB-STDERR] [36mConnecting to Lark event WebSocket...[0m
+Listening for: [32mim.message.receive_v1[0m
+[2026-04-27T08:22:45.422Z] [SUB-STDERR] [1m[32mConnected.[0m Waiting for events... (Ctrl+C to stop)
+[2026-04-27T08:22:45.849Z] [SUB-STDERR] [SDK Info] connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7633351556360506586&access_key=5d2283949fccbdcd917a8ae2801b6b68&service_id=33554678&ticket=d281db88-0b0b-4798-bc71-2130499e9c83 [conn_id=7633351556360506586]
+[2026-04-27T08:23:31.693Z] [SUB-STDERR] [33mReceived interrupt, shutting down...[0m (received [1m0[0m events)
+[2026-04-27T08:23:31.694Z] Shutting down...
+[2026-04-27T08:23:31.697Z] Subscription process exited with code null. Restarting in 3s...
+[2026-04-27T08:23:31.911Z] Shutting down...
+[2026-04-27T08:24:18.454Z] === CrazyAgentsManage Feishu Relay starting ===
+[2026-04-27T08:24:18.458Z] App ID: cli_a965b9099e269bc4
+[2026-04-27T08:24:18.459Z] Target Chat: oc_bbde428675a7c267d55c3f0663ca701d
+[2026-04-27T08:24:18.459Z] Inbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-inbox.jsonl
+[2026-04-27T08:24:18.460Z] Outbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-outbox.jsonl
+[2026-04-27T08:24:18.461Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:24:18.633Z] [SUB-STDERR] [36mConnecting to Lark event WebSocket...[0m
+Listening for: [32mim.message.receive_v1[0m
+[2026-04-27T08:24:18.634Z] [SUB-STDERR] [1m[32mConnected.[0m Waiting for events... (Ctrl+C to stop)
+[2026-04-27T08:24:19.115Z] [SUB-STDERR] [SDK Info] connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7633351956258475194&access_key=99a82b06a9e546ece67a59098805769b&service_id=33554678&ticket=f5091632-4e10-46f8-9af0-af2bd48199d2 [conn_id=7633351956258475194]
+[2026-04-27T08:24:37.399Z] [SUB-STDERR] [33mReceived interrupt, shutting down...[0m (received [1m0[0m events)
+[2026-04-27T08:24:37.401Z] Shutting down...
+[2026-04-27T08:24:37.404Z] Subscription process exited with code null. Restarting in 3s...
+[2026-04-27T08:24:37.609Z] Shutting down...
+[2026-04-27T08:25:28.907Z] === CrazyAgentsManage Feishu Relay starting ===
+[2026-04-27T08:25:28.910Z] App ID: cli_a965b9099e269bc4
+[2026-04-27T08:25:28.911Z] Target Chat: oc_bbde428675a7c267d55c3f0663ca701d
+[2026-04-27T08:25:28.911Z] Inbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-inbox.jsonl
+[2026-04-27T08:25:28.912Z] Outbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-outbox.jsonl
+[2026-04-27T08:25:28.913Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:25:29.115Z] [SUB-STDERR] [36mConnecting to Lark event WebSocket...[0m
+Listening for: [32mim.message.receive_v1[0m
+[2026-04-27T08:25:29.117Z] [SUB-STDERR] [1m[32mConnected.[0m Waiting for events... (Ctrl+C to stop)
+[2026-04-27T08:25:29.534Z] [SUB-STDERR] [SDK Info] connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7633352262119115976&access_key=999098b4ba12537f18cb1488b5d4bf4a&service_id=33554678&ticket=0ba543be-9cff-4918-b2cf-8f0c723fcaf9 [conn_id=7633352262119115976]
+[2026-04-27T08:25:44.560Z] Outbox parse error: Unexpected token '群', "群聊。","chat"... is not valid JSON
+[2026-04-27T08:27:31.583Z] Sending reply to oc_bbde428675a7c267d55c3f0663ca701d: "CrazyAgentsManage 飞书闭环测试 - relay 脚本运行正常"
+[2026-04-27T08:27:31.782Z] Reply FAILED (code 1): Error: unknown command "lark-cli" for "lark-cli"
+
+[2026-04-27T08:29:45.551Z] === CrazyAgentsManage Feishu Relay starting ===
+[2026-04-27T08:29:45.554Z] App ID: cli_a965b9099e269bc4
+[2026-04-27T08:29:45.555Z] Target Chat: oc_bbde428675a7c267d55c3f0663ca701d
+[2026-04-27T08:29:45.556Z] Inbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-inbox.jsonl
+[2026-04-27T08:29:45.556Z] Outbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-outbox.jsonl
+[2026-04-27T08:29:45.558Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:29:45.754Z] [SUB-STDERR] [36mConnecting to Lark event WebSocket...[0m
+Listening for: [32mim.message.receive_v1[0m
+[2026-04-27T08:29:45.755Z] [SUB-STDERR] [1m[32mConnected.[0m Waiting for events... (Ctrl+C to stop)
+[2026-04-27T08:29:46.170Z] [SUB-STDERR] [SDK Info] connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7633353347101691099&access_key=8018f56c97a5f345c7d5d4c9119045b1&service_id=33554678&ticket=ce47a036-808d-41ee-aadc-725d0111afb7 [conn_id=7633353347101691099]
+[2026-04-27T08:30:10.504Z] Sending reply to oc_bbde428675a7c267d55c3f0663ca701d: "飞书闭环测试成功！CrazyAgentsManage relay 已正常运行。"
+[2026-04-27T08:30:10.703Z] Reply FAILED (code 1): Error: positional arguments are not supported (got ["relay" "已正常运行。"]); pass values via flags
+
+[2026-04-27T08:31:52.122Z] === CrazyAgentsManage Feishu Relay starting ===
+[2026-04-27T08:31:52.126Z] App ID: cli_a965b9099e269bc4
+[2026-04-27T08:31:52.126Z] Target Chat: oc_bbde428675a7c267d55c3f0663ca701d
+[2026-04-27T08:31:52.127Z] Inbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-inbox.jsonl
+[2026-04-27T08:31:52.127Z] Outbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-outbox.jsonl
+[2026-04-27T08:31:52.129Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T08:31:52.309Z] [SUB-STDERR] [36mConnecting to Lark event WebSocket...[0m
+Listening for: [32mim.message.receive_v1[0m
+[2026-04-27T08:31:52.310Z] [SUB-STDERR] [1m[32mConnected.[0m Waiting for events... (Ctrl+C to stop)
+[2026-04-27T08:31:52.707Z] [SUB-STDERR] [SDK Info] connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7633353911358508227&access_key=317b43cf82f0cecd2dbfca8098263b28&service_id=33554678&ticket=a654dedd-2963-4fd9-bf97-191cb4f78233 [conn_id=7633353911358508227]
+[2026-04-27T08:32:08.808Z] Sending reply to oc_bbde428675a7c267d55c3f0663ca701d: "飞书闭环最终测试 - CrazyAgentsManage relay 正常工作"
+[2026-04-27T08:32:09.939Z] Reply sent OK: om_x100b51c5be5a20bcc3312ac255ca7a8
+[2026-04-27T10:57:06.063Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group id=om_x100b51c05edecc9cb321bbce6cdd0cd text="@_user_1 你现在是用的是哪个模型？"
+[2026-04-27T10:57:06.115Z] [SUB-STDERR] [2m[1][0m im.message.receive_v1
+[2026-04-27T11:02:37.230Z] === CrazyAgentsManage Feishu Relay v2 starting ===
+[2026-04-27T11:02:37.234Z] App ID: cli_a965b9099e269bc4
+[2026-04-27T11:02:37.235Z] Target Chat: oc_bbde428675a7c267d55c3f0663ca701d
+[2026-04-27T11:02:37.235Z] Auto Reply: true
+[2026-04-27T11:02:37.236Z] Handler Cmd: (none - using fallback mode)
+[2026-04-27T11:02:37.237Z] Reply on @mention only: true
+[2026-04-27T11:02:37.237Z] Inbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-inbox.jsonl
+[2026-04-27T11:02:37.237Z] Outbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-outbox.jsonl
+[2026-04-27T11:02:37.239Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T11:02:37.478Z] [SUB-STDERR] [36mConnecting to Lark event WebSocket...[0m
+Listening for: [32mim.message.receive_v1[0m
+[2026-04-27T11:02:37.479Z] [SUB-STDERR] [1m[32mConnected.[0m Waiting for events... (Ctrl+C to stop)
+[2026-04-27T11:02:37.954Z] [SUB-STDERR] [SDK Info] connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7633392777154022610&access_key=2e73e03724380639ceb128af97556cd8&service_id=33554678&ticket=397b3d83-0444-493e-b51d-ff54196c655d [conn_id=7633392777154022610]
+[2026-04-27T11:03:58.522Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c067171444b2df1bd60552c6b text="你现在是用的是哪个模型？"
+[2026-04-27T11:03:58.526Z] Processing message [om_x100b51c067171444b2df1bd60552c6b]: "你现在是用的是哪个模型？"
+[2026-04-27T11:03:58.528Z] Queued reply for [om_x100b51c067171444b2df1bd60552c6b]
+[2026-04-27T11:03:58.529Z] [SUB-STDERR] [2m[1][0m im.message.receive_v1
+[2026-04-27T11:03:58.532Z] Sending reply to oc_bbde428675a7c267d55c3f0663ca701d: "[Trae Agent] 收到你的消息："你现在是用的是哪个模型？"
+
+消息已记录到 inbox。当前使用的是基础模式（未配置 handler），如需智能回复请"
+[2026-04-27T11:03:59.644Z] Reply sent OK: om_x100b51c06738a4a8c14b4b1f44af178
+[2026-04-27T11:25:22.823Z] === CrazyAgentsManage Feishu Relay v2 starting ===
+[2026-04-27T11:25:22.828Z] App ID: cli_a965b9099e269bc4
+[2026-04-27T11:25:22.828Z] Target Chat: oc_bbde428675a7c267d55c3f0663ca701d
+[2026-04-27T11:25:22.829Z] Auto Reply: true
+[2026-04-27T11:25:22.829Z] Handler Cmd: node e:\CrazyAgentsManage\scripts\feishu-relay\handler.cjs
+[2026-04-27T11:25:22.830Z] Reply on @mention only: true
+[2026-04-27T11:25:22.830Z] Inbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-inbox.jsonl
+[2026-04-27T11:25:22.831Z] Outbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-outbox.jsonl
+[2026-04-27T11:25:22.832Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T11:25:23.016Z] [SUB-STDERR] [36mConnecting to Lark event WebSocket...[0m
+Listening for: [32mim.message.receive_v1[0m
+[2026-04-27T11:25:23.017Z] [SUB-STDERR] [1m[32mConnected.[0m Waiting for events... (Ctrl+C to stop)
+[2026-04-27T11:25:23.487Z] [SUB-STDERR] [SDK Info] connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7633398602543058141&access_key=c4343239ce5059281f01e70587595cec&service_id=33554678&ticket=770e0f6f-9b64-4439-888f-588e6606db73 [conn_id=7633398602543058141]
+[2026-04-27T11:27:14.870Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c0cfd330a8b258dad303749da text="你现在是用的是哪个模型？"
+[2026-04-27T11:27:14.873Z] Processing message [om_x100b51c0cfd330a8b258dad303749da]: "你现在是用的是哪个模型？"
+[2026-04-27T11:27:14.985Z] Queued reply for [om_x100b51c0cfd330a8b258dad303749da]
+[2026-04-27T11:27:14.986Z] [SUB-STDERR] [2m[1][0m im.message.receive_v1
+[2026-04-27T11:27:14.987Z] Sending reply to oc_bbde428675a7c267d55c3f0663ca701d: "收到你的消息了，Trae Agent 正在处理中..."
+[2026-04-27T11:27:16.016Z] Reply sent OK: om_x100b51c0cff7188cc389c8fd644ba9c
+[2026-04-27T11:33:55.064Z] Shutting down...
+[2026-04-27T11:33:55.083Z] [SUB-STDERR] [33mReceived interrupt, shutting down...[0m (received [1m1[0m events)
+^C
+[2026-04-27T11:33:55.085Z] Subscription process exited with code 3221225786. Restarting in 3s...
+[2026-04-27T11:33:55.294Z] Shutting down...
+[2026-04-27T11:48:30.271Z] === CrazyAgentsManage Feishu Relay v2 starting ===
+[2026-04-27T11:48:30.287Z] App ID: cli_a965b9099e269bc4
+[2026-04-27T11:48:30.288Z] Target Chat: oc_bbde428675a7c267d55c3f0663ca701d
+[2026-04-27T11:48:30.289Z] Auto Reply: true
+[2026-04-27T11:48:30.289Z] Handler Cmd: node e:\CrazyAgentsManage\scripts\feishu-relay\handler.cjs
+[2026-04-27T11:48:30.290Z] Reply on @mention only: true
+[2026-04-27T11:48:30.290Z] Inbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-inbox.jsonl
+[2026-04-27T11:48:30.291Z] Outbox: e:\CrazyAgentsManage\scripts\feishu-relay\.feishu-outbox.jsonl
+[2026-04-27T11:48:30.292Z] Starting subscription: lark-cli event +subscribe --as bot --event-types im.message.receive_v1
+[2026-04-27T11:48:30.505Z] [SUB-STDERR] [36mConnecting to Lark event WebSocket...[0m
+Listening for: [32mim.message.receive_v1[0m
+[2026-04-27T11:48:30.507Z] [SUB-STDERR] [1m[32mConnected.[0m Waiting for events... (Ctrl+C to stop)
+[2026-04-27T11:48:30.959Z] [SUB-STDERR] [SDK Info] connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7633404557725240505&access_key=37aa44dd16fd6fa3eea90c8adf581b5d&service_id=33554678&ticket=d3be470a-4349-448d-8a88-62e5bc161337 [conn_id=7633404557725240505]
+[2026-04-27T11:48:52.070Z] Sending reply to oc_bbde428675a7c267d55c3f0663ca701d: "你好！我是 CrazyAgentsManage 的 Trae Agent。关于你的问题，我当前使用的是 Trae IDE 内置的智能模型，通过飞书消息代理 re"
+[2026-04-27T11:48:52.987Z] Reply sent OK: om_x100b51c09c87c080c3bf1130818e960
+[2026-04-27T11:51:45.492Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c087846ca8b3e3520026b35c8 text="你现在是用的是哪个模型？"
+[2026-04-27T11:51:45.494Z] Processing message [om_x100b51c087846ca8b3e3520026b35c8]: "你现在是用的是哪个模型？"
+[2026-04-27T11:51:45.717Z] Queued reply for [om_x100b51c087846ca8b3e3520026b35c8]
+[2026-04-27T11:51:45.718Z] [SUB-STDERR] [2m[1][0m im.message.receive_v1
+[2026-04-27T11:55:46.616Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c0a2d140acb2c699d73f5f23e text="定位以下我们在另外一个对话中的内容，接下来的工作我需要你了解那边的上下文：“好的，按照PRD路线图从Phase 1开始实施。让我先深入了解当前代码现状，然后从切片1开始执行。”"
+[2026-04-27T11:55:46.634Z] Processing message [om_x100b51c0a2d140acb2c699d73f5f23e]: "定位以下我们在另外一个对话中的内容，接下来的工作我需要你了解那边的上下文：“好的，按照PRD路线图从Phase 1开始实施。让我先深入了解当前代码现状，然后从切片1开始执行。”"
+[2026-04-27T11:55:46.829Z] Queued reply for [om_x100b51c0a2d140acb2c699d73f5f23e]
+[2026-04-27T11:55:46.830Z] [SUB-STDERR] [2m[2][0m im.message.receive_v1
+[2026-04-27T12:03:37.938Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c1475d0cacb3584a6a472965a text="将这个项目拉取到你本地："https://github.com/AkashiSensei/ai-builders-digest"，测试一下是否能跑，如果能跑就将你当前晚间趋势分析的任务内容替换成使用这"
+[2026-04-27T12:03:37.941Z] [SUB-STDERR] [2m[3][0m im.message.receive_v1
+[2026-04-27T12:03:37.942Z] Processing message [om_x100b51c1475d0cacb3584a6a472965a]: "将这个项目拉取到你本地："https://github.com/AkashiSensei/ai-builders-digest"，测试一下是否能跑，如果能跑就将你当前晚间趋势分析的任务内容替换成使用这"
+[2026-04-27T12:03:38.036Z] Queued reply for [om_x100b51c1475d0cacb3584a6a472965a]
+[2026-04-27T12:03:39.677Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 3cd2a0a9-14be-4417-a2d4-9b31b92013c7, trace_id: be8ab4cbab102a9edc3f6fde6099ff69, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:03:55.408Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 296bb52d-0925-46f1-9dec-6df436018fd0, trace_id: be8ab4cbab102a9edc3f6fde6099ff69, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:07:54.857Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c1576db8a4b4bcdce82dbaf08 text="/stop"
+[2026-04-27T12:07:54.897Z] Processing message [om_x100b51c1576db8a4b4bcdce82dbaf08]: "/stop"
+[2026-04-27T12:07:55.040Z] Queued reply for [om_x100b51c1576db8a4b4bcdce82dbaf08]
+[2026-04-27T12:07:55.041Z] [SUB-STDERR] [2m[4][0m im.message.receive_v1
+[2026-04-27T12:07:58.744Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 4fad18a0-6cb9-4437-a55c-08aa0afb607b, trace_id: 699626f47417d2e3934ec1f511e1663f, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:08:14.363Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 6cf36dea-60d0-48cd-8b24-970840de213a, trace_id: 699626f47417d2e3934ec1f511e1663f, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:08:55.541Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 7917cde2-0f71-4825-9a3e-bf51d0c5772e, trace_id: be8ab4cbab102a9edc3f6fde6099ff69, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:09:20.017Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c1503e6cb0b24f0b818feb5b4 text="你改写晚间趋势分析的时候，将结果文档不要放在你本地推上来，像以前一样，放到飞书云盘中专门的目录下，记得参考之前放置的时候的权限设置"
+[2026-04-27T12:09:20.021Z] Processing message [om_x100b51c1503e6cb0b24f0b818feb5b4]: "你改写晚间趋势分析的时候，将结果文档不要放在你本地推上来，像以前一样，放到飞书云盘中专门的目录下，记得参考之前放置的时候的权限设置"
+[2026-04-27T12:09:20.130Z] Queued reply for [om_x100b51c1503e6cb0b24f0b818feb5b4]
+[2026-04-27T12:09:20.132Z] [SUB-STDERR] [2m[5][0m im.message.receive_v1
+[2026-04-27T12:09:22.837Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 22010fff-1679-46ab-9678-df7f559bcc85, trace_id: 013a5e297c5339362c10958f033021e0, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:09:39.457Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 695228f8-4da8-461e-a221-41e7a851447f, trace_id: 013a5e297c5339362c10958f033021e0, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:13:15.106Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 20c31c53-b445-4847-946d-3a5a54d1ddec, trace_id: 699626f47417d2e3934ec1f511e1663f, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:14:37.424Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 12a55eae-9a28-4629-ad9b-b0a3a332ad33, trace_id: b28745cc4f397ff4c99056ae2c9f9010, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:14:39.225Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: d8562cc4-d436-4ff4-95cf-802d516f260a, trace_id: 013a5e297c5339362c10958f033021e0, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:14:52.547Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 73e0615c-06ca-4bda-90a3-409baecf2f1f, trace_id: b28745cc4f397ff4c99056ae2c9f9010, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:19:52.187Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 267e5c76-50b6-4fbc-a5b1-94c0266113be, trace_id: b28745cc4f397ff4c99056ae2c9f9010, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:33:09.135Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c1368e2508c32f60245fdb7b4 text="查看一下现在HermesAgent和FlowMind的衔接关系，如果我从你的晚间趋势分析或其他的任务中，看到了有价值的信息，应该如何让Hermes-Agent把这个信息传递给FlowMind?"
+[2026-04-27T12:33:09.159Z] Processing message [om_x100b51c1368e2508c32f60245fdb7b4]: "查看一下现在HermesAgent和FlowMind的衔接关系，如果我从你的晚间趋势分析或其他的任务中，看到了有价值的信息，应该如何让Hermes-Agent把这个信息传递给FlowMind?"
+[2026-04-27T12:33:09.301Z] Queued reply for [om_x100b51c1368e2508c32f60245fdb7b4]
+[2026-04-27T12:33:09.302Z] [SUB-STDERR] [2m[6][0m im.message.receive_v1
+[2026-04-27T12:33:10.764Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 334786f6-4bc6-49e1-8397-5a227c66436a, trace_id: 3656e0fca2e6364014d4dba0664daa06, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:33:27.146Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 61fa4fab-466c-4701-8967-56883e4cd4fa, trace_id: 3656e0fca2e6364014d4dba0664daa06, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:34:28.486Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 5764a3e5-2954-4e48-8208-28ca612ae84c, trace_id: 779bd63d12b241b5ff7787534e1f4c89, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:34:43.405Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: ef8fdd7e-e73a-40a8-990c-af094921be39, trace_id: 779bd63d12b241b5ff7787534e1f4c89, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:38:27.271Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 172e598d-d342-4327-989a-57241860388e, trace_id: 3656e0fca2e6364014d4dba0664daa06, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:39:43.259Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: f40b0d33-1d74-47e4-af01-d7fc9adb5cee, trace_id: 779bd63d12b241b5ff7787534e1f4c89, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:51:54.854Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c1f06f8900c3f775858ff0bd5 text="查看上面我与HermesAgent的对话，基于你对FlowMind项目的了解，给我一个你建议的答案"
+[2026-04-27T12:51:54.874Z] Processing message [om_x100b51c1f06f8900c3f775858ff0bd5]: "查看上面我与HermesAgent的对话，基于你对FlowMind项目的了解，给我一个你建议的答案"
+[2026-04-27T12:51:54.992Z] Queued reply for [om_x100b51c1f06f8900c3f775858ff0bd5]
+[2026-04-27T12:51:54.993Z] [SUB-STDERR] [2m[7][0m im.message.receive_v1
+[2026-04-27T12:51:55.562Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 060307b1-33f4-4f5a-87d1-542e0524fdeb, trace_id: 3315af2b692b69ba6006e906393e90b7, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:51:55.669Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 05829ff6-519f-42eb-8ea7-675aa9ab4e29, trace_id: 5e7959f4e090f24f05ab93abaa8b8b5a, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:51:55.795Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 9f194974-f852-42a2-ab88-5d9561f0135f, trace_id: 51552bbc1acac8affc7228e0e97e7402, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:52:12.399Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 99d1d607-d05a-4fae-9c42-828256ff1f64, trace_id: 3315af2b692b69ba6006e906393e90b7, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:52:12.417Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 8cc102ec-16c8-4f29-83ea-af16219275d8, trace_id: 51552bbc1acac8affc7228e0e97e7402, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[SDK Error] handle message failed, message_type: event, message_id: a121c581-ab5e-4bcf-b82f-326e085f12c0, trace_id: 5e7959f4e090f24f05ab93abaa8b8b5a, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:53:08.297Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 2089d290-d257-4c51-b8f0-8dbdbcccdb88, trace_id: 2bf4b0149a7cdcdf76a3cba63a2434e8, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:53:24.209Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 9574c23b-3a8f-44be-8ed6-b8b7652bc711, trace_id: 2bf4b0149a7cdcdf76a3cba63a2434e8, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:57:12.277Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 3ada6e4c-6cea-434b-9b6a-8db2bfad1d36, trace_id: 3315af2b692b69ba6006e906393e90b7, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:57:12.428Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: ad6e91e1-4105-4a1d-a3ea-0615b7b80f2f, trace_id: 51552bbc1acac8affc7228e0e97e7402, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[SDK Error] handle message failed, message_type: event, message_id: d40d8fc8-0146-4d37-a987-e683d52d55f9, trace_id: 5e7959f4e090f24f05ab93abaa8b8b5a, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T12:58:25.236Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 14db309c-3eb1-44ae-9a49-69614c61cdf1, trace_id: 2bf4b0149a7cdcdf76a3cba63a2434e8, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:08:55.385Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: dca58d3d-5385-4c39-8493-37cc2b967066, trace_id: be8ab4cbab102a9edc3f6fde6099ff69, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:13:15.259Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 3b9d9001-24b9-4cdf-8556-5fa8d6d80b88, trace_id: 699626f47417d2e3934ec1f511e1663f, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:14:39.091Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 6b3bd4eb-8dd7-4f91-9672-0d3945585505, trace_id: 013a5e297c5339362c10958f033021e0, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:19:52.175Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: defd0aa8-a0ff-479c-a30d-72ce3fe2521b, trace_id: b28745cc4f397ff4c99056ae2c9f9010, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:23:41.313Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c27b049c70c3669124d43fbeb text="查看一下，刚才我让让你定位的另外一个聊天内容，当前的任务执行情况"
+[2026-04-27T13:23:41.351Z] Processing message [om_x100b51c27b049c70c3669124d43fbeb]: "查看一下，刚才我让让你定位的另外一个聊天内容，当前的任务执行情况"
+[2026-04-27T13:23:41.557Z] Queued reply for [om_x100b51c27b049c70c3669124d43fbeb]
+[2026-04-27T13:23:41.558Z] [SUB-STDERR] [2m[8][0m im.message.receive_v1
+[2026-04-27T13:38:28.095Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: bcaa2f6e-cde5-4b04-a2a7-91d2d5f0df2c, trace_id: 3656e0fca2e6364014d4dba0664daa06, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:39:43.575Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 5443b541-b609-40bf-bb18-22042d963b79, trace_id: 779bd63d12b241b5ff7787534e1f4c89, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:57:13.060Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 12e9e6c7-2d15-4b73-b19e-64ab62bbf4e2, trace_id: 3315af2b692b69ba6006e906393e90b7, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[SDK Error] handle message failed, message_type: event, message_id: d7a221eb-eb77-4d74-9e0d-37dd538a75fc, trace_id: 5e7959f4e090f24f05ab93abaa8b8b5a, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:57:13.228Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: dafec000-fb54-4776-b65e-19cae1d13729, trace_id: 5e7959f4e090f24f05ab93abaa8b8b5a, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[SDK Error] handle message failed, message_type: event, message_id: f8dc975f-5f20-4fff-94a8-1289acd31761, trace_id: 51552bbc1acac8affc7228e0e97e7402, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:57:13.307Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: ab127425-2627-4921-8380-28043748ffb7, trace_id: 3315af2b692b69ba6006e906393e90b7, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:57:13.728Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 5b5b712e-de93-46d3-aa2b-06496c63fdaf, trace_id: 51552bbc1acac8affc7228e0e97e7402, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T13:58:25.963Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 79d6f546-7619-4439-bea4-9597abe5765f, trace_id: 2bf4b0149a7cdcdf76a3cba63a2434e8, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:12:38.558Z] [MSG] from=ou_efa424d3891551778511bd4bb5a7f55e type=group mention=true id=om_x100b51c2a390cca8b26abfb1a8274c9 text="{"title":"","content":[[{"tag":"at","user_id":"","user_name":"codex cli","style":[]},{"tag":"text",""
+[2026-04-27T14:12:38.596Z] Processing message [om_x100b51c2a390cca8b26abfb1a8274c9]: "{"title":"","content":[[{"tag":"at","user_id":"","user_name":"codex cli","style":[]},{"tag":"text",""
+[2026-04-27T14:12:38.745Z] Queued reply for [om_x100b51c2a390cca8b26abfb1a8274c9]
+[2026-04-27T14:12:38.747Z] [SUB-STDERR] [2m[9][0m im.message.receive_v1
+[2026-04-27T14:12:39.393Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: ef82c913-cc81-4921-ad52-733ac1750ed4, trace_id: c121ab808cc2b7ef9525fd03dd395dee, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:12:39.663Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 23e86754-3679-4eca-84a3-7823499402f9, trace_id: bb112ce20972750d56ce2387807bff3c, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:12:40.204Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 17b986f4-9c7b-4e80-aa7f-bbe5a26fb8c2, trace_id: 29a83d985c078719715f58806a90d10a, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:12:54.390Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 9822e093-b034-417a-9de5-0d6cf16e75d4, trace_id: c121ab808cc2b7ef9525fd03dd395dee, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:12:55.192Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 8a601319-2bf3-42e7-ab05-ed6a290cc253, trace_id: 29a83d985c078719715f58806a90d10a, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[SDK Error] handle message failed, message_type: event, message_id: 7d5988d4-84a3-4de6-8249-82054f4f5e82, trace_id: bb112ce20972750d56ce2387807bff3c, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:13:13.161Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: f20a9f78-be66-4f5d-a29b-dfddc800d094, trace_id: b4af9128e1c132445f2cb0d73210cd8c, err: event type: im.message.message_read_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:16:17.562Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: c22ee821-3cce-4c89-adb0-7ad6810cea03, trace_id: 1bcc58af5b1d67adcb08f5c766ac7039, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:16:20.168Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: b69a00b5-7aef-49c4-aaea-cf3c8d1011ea, trace_id: 9cab8518bf11d5eb2389835e51918a49, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:16:33.230Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 32eaaa4f-3aa8-4fcf-b82c-0d34d1087a33, trace_id: 1bcc58af5b1d67adcb08f5c766ac7039, err: event type: im.message.reaction.deleted_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:16:36.092Z] [SUB-STDERR] [SDK Error] handle message failed, message_type: event, message_id: 31faecef-6e86-4d35-9149-1e1555b9c716, trace_id: 9cab8518bf11d5eb2389835e51918a49, err: event type: im.message.reaction.created_v1, not found handler [conn_id=7633404557725240505]
+[2026-04-27T14:16:41.018Z] Shutting down...
+[2026-04-27T14:16:41.032Z] [SUB-STDERR] [33mReceived interrupt, shutting down...[0m (received [1m9[0m events)
+^C
+[2026-04-27T14:16:41.160Z] Subscription process exited with code 3221225786. Restarting in 3s...
+[2026-04-27T14:16:41.344Z] Shutting down...
+[2026-04-27T14:16:41.434Z] Shutting down...
+[2026-04-27T14:16:41.580Z] Shutting down...
+[2026-04-27T14:16:41.817Z] Shutting down...
+[2026-04-27T14:16:42.023Z] Shutting down...
+[2026-04-27T14:16:42.221Z] Shutting down...
+[2026-04-27T14:16:42.439Z] Shutting down...
+[2026-04-27T14:16:42.665Z] Shutting down...

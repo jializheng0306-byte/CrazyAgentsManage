@@ -4,6 +4,10 @@ Task Orchestrator -- DAG-based task execution with 3-state protocol.
 
 Provides task definition, state management, dependency resolution,
 and execution orchestration for multi-agent task workflows.
+
+v0.4.0: Added automatic dependency context injection with compression.
+         Before executing a task, the orchestrator now automatically
+         collects and compresses dependency outputs into the task context.
 """
 
 from __future__ import annotations
@@ -18,6 +22,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from .agent_factory import AgentRole
+from .context_compressor import CompressionStrategy, ContextCompressor
+from .shared_context import SharedContextManager
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +200,12 @@ class TaskGraph:
 # ---------------------------------------------------------------------------
 
 class TaskOrchestrator:
-    """Orchestrates task execution based on DAG dependencies."""
+    """Orchestrates task execution based on DAG dependencies.
+
+    v0.4.0: Automatically injects compressed dependency context before
+    task execution. Uses ContextCompressor to keep dependency outputs
+    within token budget.
+    """
 
     def __init__(self, shared_context_dir: Optional[Path] = None):
         self.graph = TaskGraph()
@@ -204,6 +215,8 @@ class TaskOrchestrator:
         self.tasks_dir.mkdir(parents=True, exist_ok=True)
         self._executor: Optional[Callable] = None
         self._progress_callback: Optional[Callable] = None
+        self._shared_context_manager = SharedContextManager(shared_context_dir)
+        self._compressor = ContextCompressor()
 
     def set_executor(self, executor: Callable) -> None:
         """Set the function that executes individual tasks."""
@@ -241,14 +254,17 @@ class TaskOrchestrator:
         return task
 
     def execute_all(self) -> Dict[str, Any]:
-        """Execute all tasks respecting dependencies."""
+        """Execute all tasks respecting dependencies.
+
+        v0.4.0: Before executing each task, automatically injects
+        compressed dependency outputs into the task context.
+        """
         if not self._executor:
             raise RuntimeError("No executor set. Call set_executor() first.")
 
         while not self.graph.is_complete():
             ready = self.graph.get_ready_tasks()
             if not ready:
-                # Check for circular dependencies or all pending
                 pending = [t for t in self.graph.tasks.values() if t.state == TaskState.PENDING]
                 if pending:
                     logger.error("Circular dependency or blocked tasks detected")
@@ -259,6 +275,8 @@ class TaskOrchestrator:
                 break
 
             for task in ready:
+                self._inject_dependency_context(task)
+
                 task.state = TaskState.RUNNING
                 task.started_at = time.time()
                 self._persist_task(task)
@@ -278,6 +296,51 @@ class TaskOrchestrator:
                 self._notify_progress(task)
 
         return self.graph.to_dict()
+
+    def _inject_dependency_context(self, task: TaskDef) -> None:
+        """Inject compressed dependency outputs into task context.
+
+        v0.4.0: Collects outputs from all completed dependency tasks,
+        compresses them using the dependency compression strategy,
+        and prepends to the task's context field.
+        """
+        if not task.dependencies:
+            return
+
+        dep_outputs = {}
+        for dep_id in task.dependencies:
+            dep_task = self.graph.tasks.get(dep_id)
+            if dep_task and dep_task.state == TaskState.DONE and dep_task.output:
+                dep_outputs[f"dep_{dep_id}"] = dep_task.output
+
+        if not dep_outputs:
+            raw_context = self._shared_context_manager.get_context_for_dependent_task(
+                task.id, task.dependencies
+            )
+            if raw_context:
+                dep_outputs["shared_context"] = raw_context
+
+        if not dep_outputs:
+            return
+
+        _, compressed_ctx, result = self._compressor.compress(
+            memory_layers=dep_outputs,
+            task_context=task.context,
+            strategy=CompressionStrategy.DEPENDENCY,
+            target_tokens=int(self._compressor.max_context_tokens * 0.3),
+        )
+
+        if result.compression_ratio > 0:
+            logger.info(
+                f"Dependency context compressed for task {task.id}: "
+                f"{result.compression_ratio:.1%} reduction, "
+                f"{result.estimated_tokens_saved} tokens saved"
+            )
+
+        dep_summary = compressed_ctx
+        if dep_summary:
+            task.context = f"## Dependency Outputs\n\n{dep_summary}\n\n## Original Context\n\n{task.context}"
+            task.metadata["dependency_compression"] = result.to_dict()
 
     def get_task(self, task_id: str) -> Optional[TaskDef]:
         """Get a task by ID."""

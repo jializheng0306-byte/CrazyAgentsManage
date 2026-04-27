@@ -1,147 +1,160 @@
 # PRD 执行路线图
 
-## 目的
+## 文档目的
 
-这份路线图是拆分 PRD 体系的统一执行跟踪面。
+本文档定义 `CrazyAgentsManage` 的实施顺序和时间计划，确保开发和运营工作的有序进行。
 
-它负责协调：
+## 适用范围
 
-- 技术实现工作
-- 运营实现工作
-- 文档版本管理
-- `Codex / HermesAgent` 的 closeout 更新
+- phase 排序
+- 实施顺序
+- 文档更新节奏
+- 发布与 merge gate
 
-## 规范输入
+## 实施阶段
 
-本路线图必须始终与以下文档保持一致：
+### Phase 1: 基础架构搭建
 
-1. `docs/prd/technical-implementation-prd.md`
-2. `docs/prd/operations-implementation-prd.md`
-3. `docs/codex-hermes-role-design.md`
-4. `docs/02-engineering/harness/CODEX-HERMES-COLLABORATION-MECHANISM.md`
+**时间**：2024 Q1
 
-## 责任归属
+**目标**：搭建系统基础架构，实现核心功能
 
-- `Codex` 负责路线图编辑、节奏排序和文档版本管理
-- `HermesAgent` 负责从运营验收视角复核路线图变化
+**主要工作**：
 
-## 当前产品共识
+1. 智能体工厂实现
+2. 任务编排系统搭建
+3. 共享上下文机制实现
+4. 基础 WebUI 开发
+5. 与 Hermes-Agent 集成
 
-项目目前已经达成的基线共识是：
+**交付物**：
 
-- `CrazyAgentsManage` 是 Hermes 侧的运营控制台
-- `FlowMind` 是治理引擎 / canonical truth 层
-- `Codex` 负责实施规划与交付推进
-- `HermesAgent` 负责运营 framing 与验收
+- 基础架构代码
+- 核心功能测试报告
+- 技术实现 PRD
 
-## 工作流分组
+### Phase 2: 记忆系统增强
 
-### 工作流 A：技术实现
+**时间**：2024 Q2
 
-来源：
+**目标**：实现团队记忆系统，增强智能体能力
 
-- `docs/prd/technical-implementation-prd.md`
+**主要工作**：
 
-关注点：
+1. 团队记忆系统开发
+2. 五层记忆模型实现
+3. 记忆检索和管理功能
+4. WebUI 记忆管理界面
 
-- adapters
-- task / delegation substrate
-- team / shared-context substrate
-- runtime controls
-- observability UI
+**交付物**：
 
-### 工作流 B：运营实现
+- 记忆系统代码
+- 记忆管理功能测试报告
+- 技术实现 PRD 更新
 
-来源：
+### Phase 3: Cron 增强
 
-- `docs/prd/operations-implementation-prd.md`
+**时间**：2024 Q3
 
-关注点：
+**目标**：实现定时任务功能，支持团队和角色绑定
 
-- operator views
-- operator actions
-- alerts / reports
-- FlowMind 关联运营状态
-- acceptance gates
+**主要工作**：
 
-## 执行阶段
+1. Cron 调度系统开发
+2. 任务与团队/角色绑定
+3. 定时任务管理界面
+4. 任务执行结果沉淀
 
-### Phase 0 — 文档基线
+**交付物**：
 
-状态：进行中
+- Cron 系统代码
+- 定时任务测试报告
+- 技术实现 PRD 更新
+- 运营实现 PRD
 
-目标：
+### Phase 4: 上下文管理
 
-- 把 PRD 拆成技术与运营两份文档
-- 建立路线图作为 canonical 执行跟踪面
-- 把文档更新接入 harness 流程
+**时间**：2024 Q4
 
-完成条件：
+**目标**：实现 Harness 和任务监控系统
 
-- 拆分 PRD 文件存在
-- 路线图存在
-- harness 入口已经指向新的文档治理流程
+**主要工作**：
 
-### Phase 1 — Runtime / Substrate Readiness
+1. Harness 系统开发
+2. 任务监控和管理
+3. 健康监控系统
+4. 运营仪表板开发
 
-目标：
+**交付物**：
 
-- 稳定技术 substrate
-- 暴露真实 runtime signals
-- 明确可被运营使用的运行时对象
+- 上下文管理代码
+- 监控系统测试报告
+- 技术实现 PRD 更新
+- 运营实现 PRD 更新
 
-主要产出：
+### Phase 5: WebUI 集成
 
-- adapter hardening
-- task / delegation 可见性
-- runtime signal exposure
+**时间**：2025 Q1
 
-### Phase 2 — Operator Surface Readiness
+**目标**：完善 WebUI 功能，实现完整的运营控制台
 
-目标：
+**主要工作**：
 
-- 让 UI / API 表面对齐真实运行时动作
-- 暴露不依赖 mock 的运营工作流
+1. 页面优化和完善
+2. 交互体验提升
+3. 数据可视化增强
+4. 运营工作流集成
 
-主要产出：
+**交付物**：
 
-- session / task / cron / alert 视图
-- 结构化运营动作
-- 运行时对象间的 cross-linking
+- 完整 WebUI 代码
+- 用户体验测试报告
+- 技术实现 PRD 最终版
+- 运营实现 PRD 最终版
 
-### Phase 3 — Governance / FlowMind Readiness
+## 文档更新节奏
 
-目标：
+| 阶段 | 文档更新内容 | 更新时间 |
+|------|-------------|----------|
+| Phase 1 | 技术实现 PRD | 2024 Q1 末 |
+| Phase 2 | 技术实现 PRD 更新 | 2024 Q2 末 |
+| Phase 3 | 技术实现 PRD 更新、运营实现 PRD | 2024 Q3 末 |
+| Phase 4 | 技术实现 PRD 更新、运营实现 PRD 更新 | 2024 Q4 末 |
+| Phase 5 | 技术实现 PRD 最终版、运营实现 PRD 最终版 | 2025 Q1 末 |
 
-- 让 CrazyAgentsManage 对齐真实 FlowMind bridge surfaces
-- 区分 Hermes runtime truth 与 FlowMind canonical truth
+## 发布与 Merge Gate
 
-主要产出：
+### 发布流程
 
-- bridge-aware operator UX
-- candidate / truth distinction
-- review 与 feedback 可见性
+1. 完成当前阶段所有开发工作
+2. 执行功能测试和性能测试
+3. 更新相关文档
+4. 提交代码审查
+5. 合并到主分支
+6. 发布版本
 
-## 迭代收口规则
+### Merge Gate 条件
 
-每次非平凡迭代结束后，必须同步更新：
+1. **代码质量**：通过代码审查，无严重问题
+2. **功能完整性**：完成当前阶段所有功能
+3. **测试通过**：所有测试用例通过
+4. **文档更新**：相关文档已更新
+5. **运营验收**：通过 HermesAgent 运营验收（Phase 3 及以后）
 
-1. 技术 PRD（若技术范围有变化）
-2. 运营 PRD（若运营语义有变化）
-3. 本路线图（若阶段/状态/优先级有变化）
-4. harness closeout 工件（若 `Codex / HermesAgent` 协作状态有变化）
+## 风险与应对
 
-## 合并门槛
+### 风险因素
 
-一次共享分支上的迭代，只有在以下条件都满足时，才算真正完成：
+1. **技术风险**：某些功能可能需要更复杂的技术实现
+2. **时间风险**：开发进度可能受到各种因素影响
+3. **集成风险**：与 Hermes-Agent 的集成可能遇到问题
 
-1. 受影响的 PRD 文档已更新
-2. 路线图状态已更新
-3. 仓库工件已经反映接受后的真相
-4. HermesAgent 的验收意见已解决，或被明确延期
+### 应对措施
 
-## 当前直接下一步
+1. **技术风险**：提前进行技术调研，制定备选方案
+2. **时间风险**：合理规划时间，设置缓冲区，定期检查进度
+3. **集成风险**：与 Hermes-Agent 团队保持密切沟通，提前测试集成方案
 
-1. 继续把 split PRD set 作为 planning baseline
-2. 新任务必须明确归入技术实现或运营实现
-3. 每次迭代 closeout 都必须触发文档更新
+## 变更管理
+
+路线图的变更应经过 `Codex` 和 `HermesAgent` 双方确认。每次变更后，应更新相关文档并通知所有相关方。

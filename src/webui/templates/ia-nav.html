@@ -1,0 +1,25 @@
+<nav class="global-nav">
+  <div class="container">
+    <div class="global-nav-inner">
+      <div class="nav-left">
+        <a href="{{ BASE }}/overview" class="nav-logo">
+          <div class="nav-logo-icon">⚡</div>
+          FlowMind
+          <span class="nav-version">Hermes</span>
+        </a>
+        <div class="nav-menu">
+          <a href="{{ BASE }}/overview" class="nav-item{% if active_nav == 'overview' %} active{% endif %}">总览</a>
+          <a href="{{ BASE }}/runtime" class="nav-item{% if active_nav == 'runtime' %} active{% endif %}">运行态</a>
+          <a href="{{ BASE }}/operations" class="nav-item{% if active_nav == 'operations' %} active{% endif %}">运营面</a>
+          <a href="{{ BASE }}/governance" class="nav-item{% if active_nav == 'governance' %} active{% endif %}">治理面</a>
+          <a href="{{ BASE }}/collaboration" class="nav-item{% if active_nav == 'collaboration' %} active{% endif %}">协作面</a>
+        </div>
+      </div>
+      <div class="nav-right">
+        <a href="{{ BASE }}/architecture/philosophy" class="nav-item nav-item-sub{% if active_architecture == 'philosophy' %} active{% endif %}">产品哲学</a>
+        <a href="{{ BASE }}/architecture/product" class="nav-item nav-item-sub{% if active_architecture == 'product' %} active{% endif %}">产品架构</a>
+        <a href="{{ BASE }}/architecture/tech" class="nav-item nav-item-sub{% if active_architecture == 'tech' %} active{% endif %}">技术架构</a>
+      </div>
+    </div>
+  </div>
+</nav>

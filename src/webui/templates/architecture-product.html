@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>产品架构展示 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+</head>
+<body>
+  {% set active_architecture = 'product' %}
+  {% include 'ia-nav.html' %}
+
+  <main class="container mt-lg">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+      <h1 class="page-title">产品架构展示页</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
+        对应 `ProductArchitecturePreviewPage.tsx`，承接 FlowMind 的产品结构、运营结构与对外协同结构说明。
+      </p>
+    </div>
+
+    <div class="card" style="padding: var(--spacing-lg);">
+      <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.9; margin: 0; padding-left: 18px;">
+        <li>该展示页已经映射到治理面与运营面。</li>
+        <li>这里作为 WebUI 的目标路由占位，便于后续把设计师页面正式接入。</li>
+        <li>当前以文档体系和 IA 结构作为真实产品约束来源，而不是假设现有 TSX 已完成落地。</li>
+      </ul>
+    </div>
+  </main>
+</body>
+</html>

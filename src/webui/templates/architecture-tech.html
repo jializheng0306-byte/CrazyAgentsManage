@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>技术架构展示 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+</head>
+<body>
+  {% set active_architecture = 'tech' %}
+  {% include 'ia-nav.html' %}
+
+  <main class="container mt-lg">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+      <h1 class="page-title">技术架构展示页</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
+        对应 `TechArchitecturePreviewPage.tsx`，用于展示 FlowMind 与外部系统交互、内部运行链路与实施动态。
+      </p>
+    </div>
+
+    <div class="card" style="padding: var(--spacing-lg);">
+      <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.9; margin: 0; padding-left: 18px;">
+        <li>该展示页已经映射到运行态与协作面。</li>
+        <li>它是“用户直观看到 FlowMind 与外界交互、内部操作实施动态”的核心展示挂载位。</li>
+        <li>当前先以 WebUI 路由和模板占位完成接入，为后续真实前端实现保留稳定入口。</li>
+      </ul>
+    </div>
+  </main>
+</body>
+</html>

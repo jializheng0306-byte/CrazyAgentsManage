@@ -404,6 +404,68 @@
   opacity: 0.5;
 }
 
+/* Toolbar */
+.session-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) 0;
+  margin-bottom: var(--spacing-md);
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* Session List Footer */
+.session-list-footer {
+  border-top: 1px solid var(--color-border);
+  padding: var(--spacing-xs);
+}
+
+/* Tag Styles */
+.tag-success {
+  background: rgba(16,185,129,0.15);
+  color: #10b981;
+  border: 1px solid rgba(16,185,129,0.3);
+}
+
+.tag-running {
+  background: rgba(245,158,11,0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245,158,11,0.3);
+}
+
+.tag-source {
+  background: rgba(99,102,241,0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99,102,241,0.3);
+}
+
+/* Pipeline Trace */
+.pipeline-trace {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.pipeline-node:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.pipeline-node.tool {
+  padding-left: 24px;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .session-layout {
@@ -442,5 +504,10 @@
   
   .stat-number {
     font-size: 22px;
+  }
+
+  .session-toolbar {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

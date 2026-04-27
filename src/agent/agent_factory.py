@@ -5,20 +5,21 @@ Agent Factory -- Role-based subagent creation.
 Provides AgentRole enum and factory functions to create specialized
 child agents based on role configuration. Integrates with the existing
 delegate_tool.py subagent system.
+
+v0.1.0: Core role definitions, toolset mapping, prompt templates
+v0.3.0: Config-driven roles, Cron agent role, team memory integration
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# Role definitions
-# ---------------------------------------------------------------------------
 
 class AgentRole(Enum):
     """Pre-defined agent roles for specialized task delegation."""
@@ -32,10 +33,6 @@ class AgentRole(Enum):
     TEAM = "team"
 
 
-# Default toolset assignments per role.
-# These mirror the toolset restrictions already used in delegate_tool.py,
-# but are expressed as role-level policy so the model can pick the right
-# role for a subtask without needing to manually list toolsets.
 ROLE_TOOLSETS: Dict[AgentRole, List[str]] = {
     AgentRole.EXPERT: ["terminal", "file", "web", "mcp"],
     AgentRole.RESEARCH: ["web", "file"],
@@ -45,7 +42,6 @@ ROLE_TOOLSETS: Dict[AgentRole, List[str]] = {
     AgentRole.TEAM: ["file", "memory", "send_message"],
 }
 
-# Role descriptions used in system prompts and WebUI display.
 ROLE_DESCRIPTIONS: Dict[AgentRole, str] = {
     AgentRole.EXPERT: "Expert analyst for complex reasoning, debugging, and code review.",
     AgentRole.RESEARCH: "Research specialist for web search, information gathering, and synthesis.",
@@ -55,7 +51,6 @@ ROLE_DESCRIPTIONS: Dict[AgentRole, str] = {
     AgentRole.TEAM: "Team coordinator for shared memory management and role coordination.",
 }
 
-# System prompt templates per role.
 ROLE_PROMPTS: Dict[AgentRole, str] = {
     AgentRole.EXPERT: (
         "You are an expert analyst subagent. "
@@ -80,7 +75,8 @@ ROLE_PROMPTS: Dict[AgentRole, str] = {
     AgentRole.CRON: (
         "You are a scheduled task executor subagent. "
         "Focus on periodic jobs, report generation, and system maintenance. "
-        "Always produce structured output suitable for delivery."
+        "Always produce structured output suitable for delivery. "
+        "Write your output to the team memory if a team is specified."
     ),
     AgentRole.TEAM: (
         "You are a team coordinator subagent. "
@@ -89,8 +85,6 @@ ROLE_PROMPTS: Dict[AgentRole, str] = {
     ),
 }
 
-# Tools that are always blocked for child agents (inherited from delegate_tool.py).
-# These are kept in sync with DELEGATE_BLOCKED_TOOLS.
 BLOCKED_TOOLS = frozenset([
     "delegate_task",
     "clarify",
@@ -99,7 +93,6 @@ BLOCKED_TOOLS = frozenset([
     "execute_code",
 ])
 
-# Blocked toolset names (used to strip entire toolsets).
 BLOCKED_TOOLSET_NAMES = frozenset([
     "delegation",
     "clarify",
@@ -107,13 +100,56 @@ BLOCKED_TOOLSET_NAMES = frozenset([
     "code_execution",
 ])
 
+_ROLE_ALIASES: Dict[str, AgentRole] = {
+    "researcher": AgentRole.RESEARCH,
+    "research_agent": AgentRole.RESEARCH,
+    "coding": AgentRole.CODE,
+    "code_agent": AgentRole.CODE,
+    "developer": AgentRole.CODE,
+    "dev": AgentRole.CODE,
+    "operations": AgentRole.OPS,
+    "运维": AgentRole.OPS,
+    "cron_agent": AgentRole.CRON,
+    "scheduler": AgentRole.CRON,
+    "定时": AgentRole.CRON,
+    "team_agent": AgentRole.TEAM,
+    "coordinator": AgentRole.COORDINATOR,
+    "专家": AgentRole.EXPERT,
+    "研究": AgentRole.RESEARCH,
+    "编程": AgentRole.CODE,
+    "团队": AgentRole.TEAM,
+}
 
-# ---------------------------------------------------------------------------
-# Factory functions
-# ---------------------------------------------------------------------------
+
+def _load_config() -> Dict[str, Any]:
+    """Load role configuration from config/schema.yaml if available."""
+    config_path = Path(__file__).resolve().parents[2] / "config" / "schema.yaml"
+    if not config_path.exists():
+        return {}
+    try:
+        import yaml
+        with open(config_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except ImportError:
+        logger.debug("PyYAML not available, using default config")
+        return {}
+    except Exception as e:
+        logger.warning(f"Failed to load config: {e}")
+        return {}
+
+
+def _get_role_config_from_yaml(role_name: str) -> Dict[str, Any]:
+    """Get role-specific config from YAML."""
+    config = _load_config()
+    roles = config.get("multi_agent", {}).get("roles", {})
+    return roles.get(role_name, {})
+
 
 def get_role_toolsets(role: AgentRole) -> List[str]:
-    """Return the toolset list for a given role."""
+    """Return the toolset list for a given role, with config overrides."""
+    yaml_config = _get_role_config_from_yaml(role.value)
+    if yaml_config and "toolsets" in yaml_config:
+        return list(yaml_config["toolsets"])
     return list(ROLE_TOOLSETS.get(role, ["terminal", "file", "web"]))
 
 
@@ -144,29 +180,13 @@ def resolve_role(role_str: str) -> AgentRole:
     """Resolve a role string to an AgentRole enum value.
 
     Supports both exact enum values (e.g. "expert") and common aliases
-    (e.g. "researcher" -> RESEARCH).
+    (e.g. "researcher" -> RESEARCH, "运维" -> OPS).
     """
     role_str = role_str.lower().strip()
-    # Exact match
     for role in AgentRole:
         if role.value == role_str:
             return role
-    # Common aliases
-    aliases: Dict[str, AgentRole] = {
-        "researcher": AgentRole.RESEARCH,
-        "research_agent": AgentRole.RESEARCH,
-        "coding": AgentRole.CODE,
-        "code_agent": AgentRole.CODE,
-        "developer": AgentRole.CODE,
-        "dev": AgentRole.CODE,
-        "operations": AgentRole.OPS,
-        "运维": AgentRole.OPS,
-        "cron_agent": AgentRole.CRON,
-        "scheduler": AgentRole.CRON,
-        "team_agent": AgentRole.TEAM,
-        "coordinator": AgentRole.COORDINATOR,
-    }
-    return aliases.get(role_str, AgentRole.EXPERT)
+    return _ROLE_ALIASES.get(role_str, AgentRole.EXPERT)
 
 
 def build_role_config(
@@ -187,8 +207,10 @@ def build_role_config(
         model (optional), max_iterations.
     """
     toolsets = override_toolsets or get_role_toolsets(role)
-    # Strip blocked toolsets
     toolsets = [t for t in toolsets if t not in BLOCKED_TOOLSET_NAMES]
+
+    yaml_config = _get_role_config_from_yaml(role.value)
+    model = override_model or yaml_config.get("model")
 
     return {
         "role": role.value,
@@ -196,7 +218,7 @@ def build_role_config(
         "context": context,
         "toolsets": toolsets,
         "system_prompt": get_role_prompt(role, goal, context),
-        "model": override_model,
+        "model": model,
         "max_iterations": max_iterations,
     }
 
@@ -207,8 +229,46 @@ def available_roles() -> List[Dict[str, str]]:
         {
             "name": role.value,
             "description": ROLE_DESCRIPTIONS[role],
-            "toolsets": ROLE_TOOLSETS[role],
+            "toolsets": get_role_toolsets(role),
         }
         for role in AgentRole
         if role != AgentRole.COORDINATOR
     ]
+
+
+def create_cron_agent_config(
+    prompt: str,
+    schedule: str,
+    team: str = "",
+    name: str = "",
+    skills: Optional[List[str]] = None,
+    model: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Create a Cron agent configuration for scheduled task execution.
+
+    v0.3.0: Cron-Team binding -- cron agents can be bound to a team
+    and their output is automatically sedimented to team memory.
+
+    Args:
+        prompt: The task prompt for the cron job.
+        schedule: Cron schedule expression (e.g. "0 9 * * *").
+        team: Team name for output sedimentation.
+        name: Optional name for the cron job.
+        skills: Optional list of skill names to enable.
+        model: Optional model override.
+
+    Returns:
+        Complete cron agent configuration dict.
+    """
+    config = build_role_config(
+        role=AgentRole.CRON,
+        goal=prompt,
+        context=f"Schedule: {schedule}" + (f"\nTeam: {team}" if team else ""),
+        override_model=model,
+    )
+    config["schedule"] = schedule
+    config["cron_team"] = team
+    config["cron_name"] = name or f"cron-{os.urandom(3).hex()}"
+    config["skills"] = skills or []
+    config["sediment_to_team"] = bool(team)
+    return config
