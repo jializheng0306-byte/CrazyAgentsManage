@@ -1,17 +1,24 @@
 # CrazyAgentsManage
 
-> 多智能体协作管理平台 — 基于 Hermes-Agent 的智能体团队编排系统
+> 一个以 HermesAgent 为宿主的 FlowMind 运营产品
 
-## 项目概述
+## 产品定位
 
-CrazyAgentsManage 是一个**多智能体协作管理平台**，在 Hermes-Agent 现有能力基础上，引入以下核心能力：
+CrazyAgentsManage 是**一个以 HermesAgent 为宿主的 FlowMind 运营产品**，负责为 AI Agent 运行系统提供运行时可观测性、运营对象管理和治理闭环执行能力。
 
-- **角色化智能体**：6 种专业角色（Expert/Research/Code/Ops/Cron/Team）
-- **任务编排**：DAG 任务图 + 3 状态协议（pending → running → done）
-- **共享上下文**：基于文件的跨智能体通信（shared-context/）
-- **团队记忆**：多层级团队/角色记忆系统（~/.hermes/teams/）
-- **五层记忆**：分层记忆加载 + 自我改进循环
-- **Cron 增强**：定时任务与团队/角色绑定
+- **HermesAgent** 是运行时宿主与运营执行面
+- **FlowMind** 是治理引擎与规范真相层
+- **CrazyAgentsManage** 是产品层，负责让运行态可见、让运营对象可管理、让治理闭环可执行
+
+## 一级信息架构
+
+| 分区 | 职责 | 入口 |
+|------|------|------|
+| **Overview** | 顶层系统健康概览 + 运营注意力聚合 | `/overview` |
+| **Runtime** | Session 流水线 / Trace / Token / 延迟 / 异常 | `/runtime` |
+| **Operations** | Roles / Skills / Team Memory / Cron / Alerts | `/operations` |
+| **Governance** | Candidate / Truth / Review / Drift 状态 | `/governance` |
+| **Collaboration** | Handoff / Closeout / 证据链 | `/collaboration` |
 
 ## 快速开始
 
@@ -27,137 +34,126 @@ CrazyAgentsManage 是一个**多智能体协作管理平台**，在 Hermes-Agent
 git clone https://github.com/jializheng0306-byte/CrazyAgentsManage.git
 cd CrazyAgentsManage
 
-# 安装依赖（与 Hermes-Agent 共享）
+# 安装依赖
 pip install -r requirements.txt
 ```
 
-### 配置
+### 启动 WebUI
 
-```yaml
-# ~/.hermes/config.yaml
-
-multi_agent:
-  enabled: true
-  max_concurrent_agents: 5
-  max_depth: 3
-
-  roles:
-    expert:
-      toolsets: [terminal, file, web, mcp]
-      model: "anthropic/claude-sonnet-4-20250514"
-
-    research:
-      toolsets: [web, file]
-      model: "openrouter/deepseek-chat-v3"
-
-    code:
-      toolsets: [terminal, file, code_execution]
-      model: "anthropic/claude-opus-4.6"
-
-    ops:
-      toolsets: [terminal, file]
-      model: "openrouter/claude-sonnet-4-20250514"
-
-    cron:
-      toolsets: [terminal, file, web, memory]
-      model: "openrouter/claude-sonnet-4-20250514"
-
-    team:
-      toolsets: [file, memory, send_message]
-      model: "openrouter/claude-sonnet-4-20250514"
+```bash
+cd src/webui
+python app.py
+# 访问 http://localhost:5002/manage/overview
 ```
 
 ## 文档
 
 | 文档 | 说明 |
 |------|------|
-| [架构设计](docs/architecture.md) | 完整的多智能体协作架构设计 |
-| [产品需求](docs/prd/product-requirements.md) | PRD 产品需求文档 |
+| [母 PRD](docs/prd/hermesagent-hosted-flowmind-product-foundation.md) | 上位产品基础文档（规范性定位） |
+| [技术实现 PRD](docs/prd/technical-implementation-prd.md) | 技术实施规范 |
+| [运营实现 PRD](docs/prd/operations-implementation-prd.md) | 运营面实施规范 |
 | [路线图](docs/roadmap/roadmap.md) | 版本规划和实施路线 |
+| [总任务计划](docs/roadmap/master-task-plan.md) | 统一任务计划文档 |
 
 ## 项目结构
 
 ```
 CrazyAgentsManage/
-├── docs/                       # 文档
-│   ├── architecture.md         # 架构设计
-│   ├── prd/                    # 产品需求
-│   └── roadmap/                # 路线图
+├── docs/                       # 文档（仓库事实层）
+│   ├── prd/                    # 产品需求（母PRD + 拆分PRD）
+│   ├── 02-engineering/harness/ # Harness 机制文档
+│   └── roadmap/                # 路线图 + 任务计划
 ├── src/                        # 源代码
-│   ├── core/                   # 核心组件
-│   ├── agent/                  # 智能体相关
-│   ├── tools/                  # 工具扩展
-│   ├── memory/                 # 记忆系统
-│   ├── context/                # 上下文管理
-│   ├── scheduler/              # 调度器
-│   ├── monitoring/             # 监控组件
-│   ├── webui/                  # WebUI 扩展
-│   ├── cli/                    # CLI 扩展
-│   ├── gateway/                # Gateway 扩展
-│   └── api/                    # API 扩展
+│   ├── agent/                  # 智能体工厂 + 任务编排 + 上下文压缩
+│   ├── context/                # Harness Manager（上下文生命周期）
+│   ├── memory/                 # 五层记忆系统 + 团队记忆 + 检索
+│   ├── monitoring/             # Task Watcher + Health Monitor
+│   ├── tools/                  # 委派工具 + Cron 工具
+│   ├── webui/                  # Flask WebUI（五大 IA 聚合页）
+│   │   ├── api.py              # 全部 API 端点
+│   │   ├── templates/          # Jinja2 模板
+│   │   ├── static/css/         # Vercel Workflow 风格纯黑主题
+│   │   └── static/js/          # 页面逻辑
+│   ├── config/                 # 配置 Schema
+│   ├── cron/                   # Cron 调度器
+│   └── hermes_cli/             # CLI 命令
 ├── tests/                      # 测试
-├── config/                     # 配置示例
-└── scripts/                    # 工具脚本
+├── harness/                    # Harness 持久化学习层
+├── scripts/                    # Harness 运行时脚本
+└── requirements.txt            # Python 依赖清单
 ```
 
-## 核心功能
+## 核心能力
 
-### 1. 角色化智能体
+以下能力作为从属能力支撑上述五个一级信息架构：
 
-```python
-# 创建研究角色子智能体
-result = delegate_task(
-    role="research",
-    goal="研究项目架构并生成技术方案",
-    context="当前项目使用 Flask + SQLite..."
-)
-```
+### 运行时可观测性 (Runtime)
 
-### 2. 任务编排
+- Session 流水线索引：根会话索引 + 详情面板 + 会话画像
+- Vercel Trace 风格监控仪表板：嵌套树视图 + 实时刷新
+- Token 监控与成本追踪
+- Agent 健康监控与自动恢复
 
-```
-task-001 (research) ──┐
-                      ├──→ task-003 (code) ──→ task-005 (test)
-task-002 (research) ──┘
-```
+### 运营对象管理 (Operations)
 
-### 3. 团队记忆
+- 角色化智能体（7 种角色）：Coordinator / Expert / Research / Code / Ops / Cron / Team
+- DAG 任务编排：3 状态协议 + 依赖注入 + 自动压缩
+- 团队记忆系统：多团队/多角色分层记忆
+- 定时任务管理：Cron 与团队/角色绑定
+- 技能中心与告警管理
 
-```
-~/.hermes/teams/阿里达摩院/
-├── team-memory.md       # 团队共享记忆
-├── docs/                # 团队文档
-│   ├── charter.md
-│   └── specs.md
-└── roles/               # 角色记忆
-    ├── pm.md            # 项目经理
-    ├── dev.md           # 开发者
-    └── test.md          # 测试工程师
-```
+### 治理闭环 (Governance)
+
+- 架构可视化页面：产品哲学 / 产品架构 / 技术架构
+- Harness 机制：上下文快照 / Token 预算分配 / 自动压缩
+- 协作证据链：Handoff packet / Closeout record
+
+### 协作层 (Collaboration)
+
+- Codex ↔ HermesAgent 协作工作流
+- 任务编排可视化（DAG 图）
+- 团队记忆 Web 管理
 
 ## 开发指南
 
 ### 添加新角色
 
-1. 在 `src/agent/agent_factory.py` 中定义角色
+1. 在 `src/agent/agent_factory.py` 中定义 `AgentRole` 枚举值
 2. 配置工具集和提示词模板
-3. 在 config.yaml 中添加角色配置
+3. 在 `config/schema.yaml` 中添加角色配置
 
-### 添加新工具
+### 添加新 API 端点
 
-1. 在 `src/tools/` 中创建工具文件
-2. 使用 `registry.register()` 注册工具
-3. 更新角色工具集配置
+1. 在 `src/webui/api.py` 中添加路由函数
+2. 使用 `_db_query()` 或 `_remote_query()` 访问数据
+3. 对应的前端 JS 文件中添加 fetch 调用
+
+### 添加新页面
+
+1. 在 `src/webui/templates/` 创建 Jinja2 模板
+2. 包含 `{% include 'ia-nav.html' %}` 并设置 `active_nav`
+3. 创建对应的 CSS (`static/css/`) 和 JS (`static/js/`)
+4. 在 `src/webui/app.py` 中注册路由
+
+## 测试
+
+```bash
+cd src/webui
+python -m pytest ../../tests/test_sprint4.py -v
+```
 
 ## 路线图
 
 详见 [路线图](docs/roadmap/roadmap.md)
 
-- **v0.1.0**：基础架构（Agent Factory, Task Orchestrator, Shared Context）
-- **v0.2.0**：记忆系统（团队记忆、五层记忆、自我改进）
-- **v0.3.0**：Cron 增强（团队绑定、输出沉淀）
-- **v0.4.0**：上下文管理（Harness, Task Watcher, Health Monitor）
-- **v0.5.0**：WebUI 集成（任务编排、子代理监控、团队记忆）
+| 版本 | 内容 | 状态 |
+|------|------|------|
+| v0.1.0 | 基础架构（Agent Factory, Task Orchestrator, Shared Context） | 已完成 |
+| v0.2.0 | 记忆系统（团队记忆、五层记忆、自我改进） | 已完成 |
+| v0.3.0 | Cron 增强（团队绑定、输出沉淀） | 已完成 |
+| v0.4.0 | 上下文管理（Harness Manager, Task Watcher, 上下文压缩） | 已完成 |
+| v0.5.0 | WebUI 集成（会话流水线索引、监控仪表板、DAG 可视化） | 已完成 |
 
 ## 贡献
 
@@ -169,4 +165,4 @@ MIT License
 
 ---
 
-*基于 Hermes-Agent 和 OpenClaw 框架设计*
+*基于 Hermes-Agent 运行时 · FlowMind 治理引擎 · Codex ↔ HermesAgent 协作模型*
