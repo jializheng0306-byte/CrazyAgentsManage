@@ -20,5 +20,50 @@
       "notes": "string — 备注"
     }
   },
-  "entries": []
+  "entries": [
+    {
+      "name": "Agent Constitution Pattern (SOUL.md/USER.md/AGENTS.md)",
+      "url": "https://x.com/garrytan/status/2048669695344046090",
+      "source": "x/twitter",
+      "discovered_date": "2026-04-29",
+      "impact_assessment": "Garry Tan 将 agent 人格拆分为三层文件：SOUL.md(声音/价值观)、USER.md(用户模型)、AGENTS.md(执行规则)。此模式直接适用于 HermesAgent 记忆系统的分层架构，可替代当前单一 prompt 堆叠方式，提升记忆可维护性和可迁移性。",
+      "priority": "P1",
+      "action_suggested": "评估将 HermesAgent 记忆系统重构为 SOUL/USER/AGENTS 三层文件结构",
+      "status": "pending",
+      "notes": "来自 YC CEO 的实战配置，OpenClaw 已实现深夜拒绝响应等原则性行为"
+    },
+    {
+      "name": "MCP for Personal Data Read/Write",
+      "url": "https://x.com/petergyang/status/2048611053333041158",
+      "source": "x/twitter",
+      "discovered_date": "2026-04-29",
+      "impact_assessment": "Peter Yang 将 MCP server 接入个人健身数据，使 Claude/Codex 可直接读写训练计划。这一模式表明 MCP 正在从工具调用协议演进为个人数据的 agent 可编程接口，对 CrazyAgentsManage 的 agent 编排有直接参考价值。",
+      "priority": "P2",
+      "action_suggested": "跟踪 MCP 生态中 personal data server 的设计模式，评估是否用于 CrazyAgentsManage 的数据层",
+      "status": "pending",
+      "notes": "信号：agent 工作流向'个人数据可读写'方向推进"
+    },
+    {
+      "name": "Energy-Based Reasoning Model (EBM) / Logical Intelligence",
+      "url": "https://www.youtube.com/watch?v=Q-i8ZSUCtIc",
+      "source": "podcast",
+      "discovered_date": "2026-04-29",
+      "impact_assessment": "Logical Intelligence 的 EBM 架构强调通过 internal/external verifiers 而非事后验收来保证正确性。此验证层思路对 FlowMind 的承诺/任务治理模式有参考意义：在任务执行链中嵌入验证检查点，而非仅在完成时验收。",
+      "priority": "P2",
+      "action_suggested": "关注 EBM 架构的验证层设计，评估 FlowMind 是否需要在任务执行中增加中间验证节点",
+      "status": "pending",
+      "notes": "核心理念：certainty comes from internal verifiers and external verifiers"
+    },
+    {
+      "name": "AWS OpenAI Agent Service",
+      "url": "https://techcrunch.com/2026/04/28/amazon-is-already-offering-new-openai-products-on-aws/",
+      "source": "techcrunch",
+      "discovered_date": "2026-04-29",
+      "impact_assessment": "OpenAI 结束 Microsoft 独占后，AWS 立即上线 OpenAI agent 服务。agent 基础设施的多云竞争格局正在形成，对 CrazyAgentsManage 的部署策略和模型选择有间接影响。",
+      "priority": "P2",
+      "action_suggested": "监控 AWS OpenAI agent 服务的能力边界和定价，作为未来部署选项评估",
+      "status": "pending",
+      "notes": "OpenAI 解除 Microsoft 独占后的第一个多云动作"
+    }
+  ]
 }
