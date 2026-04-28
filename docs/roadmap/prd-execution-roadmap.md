@@ -122,6 +122,49 @@
 - candidate / truth distinction
 - review 与 feedback 可见性
 
+### Phase 4 — 运营体系：情报链路与记忆迭代
+
+状态：🔴 待启动
+
+来源：
+- `docs/prd/operations-implementation-prd.md`（差距审计 1-5）
+- 参考：《OpenClaw 实战》文章描述的完整运营体系
+
+目标：
+- 建立完整的情报采集→评估→决策→落地链路
+- 实现记忆自主迭代循环
+- 补齐 Harness 配置防退化机制
+- 建立 Tech Radar 结构化技术跟踪
+
+主要产出：
+
+**P0 — 情报与记忆基础（本周）**：
+
+| 任务 | 状态 | 说明 |
+|------|------|------|
+| 创建 `shared-context/tech-radar.json` | 🔴 | Adopt/Trial/Assess 三级结构 |
+| 升级晨间/晚间 cron 为 agent 模式 | 🔴 | 从脚本推送原始新闻 → agent 评估后推送结构化摘要 |
+| 创建 `.learnings/` 目录结构 | 🔴 | ERRORS.md / LEARNINGS.md / FEATURE_REQUESTS.md |
+| 升级反思 cron 支持 .learnings/ 审查 | 🔴 | 审查 pending 条目，≥3次 promote 到 MEMORY.md |
+
+**P1 — 记忆与可观测性（下周）**：
+
+| 任务 | 状态 | 说明 |
+|------|------|------|
+| 配置 session Harness 参数 | 🔴 | idleMinutes=30, pruneAfter=7d, maxDiskBytes=100MB |
+| 实现 bootstrap hook 加载历史经验 | 🔴 | 新 session 启动时注入 MEMORY.md + .learnings/ |
+| MEMORY.md 容量管理 | 🔴 | <3000 tokens 硬上限，超限自动精简 |
+| cron 可观测性 | 🔴 | 零产出=失败，不能反思说"正常"就过关 |
+
+**P2 — 完整链路（月底）**：
+
+| 任务 | 状态 | 说明 |
+|------|------|------|
+| 情报→影响分析→行动建议 | 🔴 | 每条有价值情报必须有对现有系统的评估 |
+| Tech Radar 周审查 | 🔴 | Zoe 每周审查 Adopt/Trial/Assess 变化 |
+| 评估→确认→委派编码 | 🔴 | 用户确认后自动 delegate_task 给 Codex/Claude Code |
+| 情报 cron 覆盖午间 | 🔴 | 补充 noon-paper-review 12:00 |
+
 ## 迭代收口规则
 
 每次非平凡迭代结束后，必须同步更新：
