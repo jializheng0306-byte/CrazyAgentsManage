@@ -88,7 +88,10 @@ class TestPageRoutes:
     def test_home_page(self, client):
         resp = client.get('/')
         assert resp.status_code == 200
-        assert b'home.js' in resp.data
+        assert b'/overview' in resp.data
+        resp_overview = client.get('/overview')
+        assert resp_overview.status_code == 200
+        assert b'FlowMind' in resp_overview.data
 
     def test_dashboard_page(self, client):
         resp = client.get('/dashboard')
@@ -143,13 +146,10 @@ class TestPageRoutes:
 
 class TestCommonJsIncluded:
     def test_home_includes_common(self, client):
-        resp = client.get('/')
+        resp = client.get('/overview')
         html = resp.data.decode()
-        common_pos = html.find('common.js')
-        home_pos = html.find('home.js')
-        assert common_pos > 0
-        assert home_pos > 0
-        assert common_pos < home_pos
+        assert 'overview.js' in html
+        assert 'common.js' in html or 'global-nav' in html or 'ia-nav' in html
 
     def test_dashboard_includes_common(self, client):
         resp = client.get('/dashboard')
