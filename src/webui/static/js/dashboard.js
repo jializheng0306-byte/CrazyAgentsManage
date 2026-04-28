@@ -881,9 +881,4 @@ function truncate(str, len) {
   return str.length > len ? str.substring(0, len) + '...' : str;
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
+
