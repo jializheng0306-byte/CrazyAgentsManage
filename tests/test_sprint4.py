@@ -229,19 +229,25 @@ class TestArchitecturePagesReachable:
         resp = client.get('/architecture/philosophy')
         assert resp.status_code == 200
         text = resp.data.decode('utf-8', errors='replace')
-        assert 'architecture-philosophy.html' in text or '产品哲学' in text
+        assert '产品哲学' in text
+        assert 'FlowMind 架构可视化表面' in text
+        assert 'architecture.js' in text
 
     def test_architecture_product_reachable(self, client):
         resp = client.get('/architecture/product')
         assert resp.status_code == 200
         text = resp.data.decode('utf-8', errors='replace')
-        assert 'architecture-product.html' in text or '产品架构' in text
+        assert '产品架构' in text
+        assert '跨系统产品结构图' in text
+        assert 'architecture.js' in text
 
     def test_architecture_tech_reachable(self, client):
         resp = client.get('/architecture/tech')
         assert resp.status_code == 200
         text = resp.data.decode('utf-8', errors='replace')
-        assert 'architecture-tech.html' in text or '技术架构' in text
+        assert '技术架构' in text
+        assert '实施链路主画布' in text
+        assert 'architecture.js' in text
 
     def test_no_tsx_files_in_src_root(self, client):
         src_root = os.path.join(os.path.dirname(__file__), '..', 'src')
