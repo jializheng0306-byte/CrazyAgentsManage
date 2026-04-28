@@ -2,10 +2,12 @@ import pytest
 import json
 import os
 import sys
+import sqlite3
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'webui'))
 
 from app import app
+import api as webui_api
 
 
 @pytest.fixture
@@ -13,6 +15,80 @@ def client():
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
+
+
+@pytest.fixture
+def overview_hermes_home(tmp_path, monkeypatch):
+    db_path = tmp_path / 'state.db'
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        '''CREATE TABLE sessions (
+            id TEXT PRIMARY KEY,
+            source TEXT,
+            model TEXT,
+            started_at REAL,
+            ended_at REAL,
+            end_reason TEXT,
+            title TEXT,
+            message_count INTEGER DEFAULT 0,
+            tool_call_count INTEGER DEFAULT 0,
+            input_tokens INTEGER DEFAULT 0,
+            output_tokens INTEGER DEFAULT 0
+        )'''
+    )
+    conn.execute(
+        '''CREATE TABLE messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,
+            role TEXT,
+            content TEXT,
+            tool_name TEXT,
+            error_message TEXT,
+            tool_duration_ms REAL,
+            tool_result_status TEXT,
+            token_count INTEGER DEFAULT 0,
+            tps REAL,
+            ttft_ms REAL,
+            timestamp REAL
+        )'''
+    )
+    conn.execute(
+        "INSERT INTO sessions (id, source, model, started_at, ended_at, end_reason, title, tool_call_count, input_tokens, output_tokens) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ('sess-active', 'cli', 'gpt-5.4', 1710000000, None, None, 'Active Session', 3, 1200, 300)
+    )
+    conn.execute(
+        "INSERT INTO sessions (id, source, model, started_at, ended_at, end_reason, title, tool_call_count, input_tokens, output_tokens) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ('sess-error', 'feishu', 'gpt-5.4', 1710000100, 1710000200, 'error', 'Error Session', 1, 500, 100)
+    )
+    conn.execute(
+        "INSERT INTO messages (session_id, role, content, tool_name, error_message, tool_duration_ms, tool_result_status, token_count, tps, ttft_ms, timestamp) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ('sess-active', 'tool', 'ok', 'web.search', None, 180, 'ok', 50, 24.5, 320, 1710000150)
+    )
+    conn.execute(
+        "INSERT INTO messages (session_id, role, content, tool_name, error_message, tool_duration_ms, tool_result_status, token_count, tps, ttft_ms, timestamp) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ('sess-error', 'tool', 'failed', 'shell.exec', 'boom', 250, 'error', 20, 12.3, 480, 1710000250)
+    )
+    conn.commit()
+    conn.close()
+
+    (tmp_path / 'memory' / 'ops').mkdir(parents=True, exist_ok=True)
+    (tmp_path / 'memories').mkdir(parents=True, exist_ok=True)
+    (tmp_path / 'memories' / 'note.md').write_text('# note', encoding='utf-8')
+    (tmp_path / 'SOUL.md').write_text('# soul', encoding='utf-8')
+    (tmp_path / 'skills' / 'skill-a').mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+    webui_api._hermes_home = None
+    webui_api._overview_stats_cache = {'data': None, 'timestamp': 0}
+    webui_api._overview_dashboard_cache = {'data': None, 'timestamp': 0}
+    yield tmp_path
+    webui_api._hermes_home = None
+    webui_api._overview_stats_cache = {'data': None, 'timestamp': 0}
+    webui_api._overview_dashboard_cache = {'data': None, 'timestamp': 0}
 
 
 class TestNavSearch:
@@ -117,6 +193,33 @@ class TestIARoutesAccessible:
 
     def test_collaboration_route_200(self, client):
         self._assert_ia_page(client, '/collaboration')
+
+
+class TestOverviewDataBinding:
+    def test_manage_base_path_prefers_forwarded_prefix(self, client):
+        resp = client.get('/overview', headers={'X-Forwarded-Prefix': '/manage'})
+        html = resp.data.decode('utf-8', errors='replace')
+        assert '/manage/static/css/overview.css' in html
+        assert '/manage/overview' in html
+
+    def test_overview_endpoint_shape_survives_stats_cache(self, client, overview_hermes_home):
+        stats_resp = client.get('/api/overview/stats')
+        assert stats_resp.status_code == 200
+        stats = stats_resp.get_json()
+        assert stats['sessions'] == 2
+        assert stats['active_sessions'] == 1
+
+        overview_resp = client.get('/api/overview')
+        assert overview_resp.status_code == 200
+        payload = overview_resp.get_json()
+
+        assert 'metrics' in payload
+        assert payload['metrics']['total_sessions'] == 2
+        assert payload['metrics']['active_sessions'] == 1
+        assert payload['metrics']['total_tool_calls'] == 4
+        assert payload['metrics']['error_count'] == 1
+        assert payload['active_sessions'][0]['id'] == 'sess-error'
+        assert any(item['tool_name'] == 'web.search' for item in payload['tool_usage'])
 
 
 class TestArchitecturePagesReachable:

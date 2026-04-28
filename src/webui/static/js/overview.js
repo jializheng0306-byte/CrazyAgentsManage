@@ -4,7 +4,10 @@
  */
 
 var OVERVIEW_CONFIG = {
-  apiBase: '',
+  apiBase: (function() {
+    var path = window.location.pathname || '';
+    return path === '/manage' || path.indexOf('/manage/') === 0 ? '/manage' : '';
+  })(),
   refreshInterval: 15000,
   maxErrors: 10,
   maxActiveSessions: 12,
