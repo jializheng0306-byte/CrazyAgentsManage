@@ -1,70 +1,157 @@
 /**
- * Dashboard JavaScript - Vercel Workflow Style Timeline Visualization
- * 数据源: /api/dashboard/* (读取 state.db)
- * 渲染: Gantt时间轴 + 任务条 + 树形结构 + 缩放控制
+ * Dashboard JavaScript - Trace Tree View (NestJS/Vercel Trace inspired)
+ * Data: /api/dashboard/* (reads state.db)
+ * Render: Vertical nested tree with expand/collapse, tokens, status
+ *
+ * Design rationale:
+ * - Vercel Gantt charts work for workflows with parallel execution (true startTime/endTime)
+ * - Hermes messages are sequential with near-identical timestamps
+ * - Horizontal timeline is meaningless for our data model
+ * - Solution: Nested tree showing conversation flow (user -> assistant -> tool calls)
  */
 
 let currentSession = null;
 let allSessions = [];
-let zoomLevel = 1;
 let refreshInterval = null;
-const REFRESH_MS = 5000;
+let autoRefreshEnabled = true;
+const REFRESH_MS = 30000;
+let currentSpans = [];
+let expandedNodes = new Set();
+let expandedRounds = new Set();
+let dashboardStatsInterval = null;
+
+const ROLE_ICONS = { user: '👤', assistant: '🤖', system: '⚙️', tool: '🔧' };
+const ROLE_LABELS = { user: '用户消息', assistant: '助手回复', system: '系统提示', tool: '工具调用' };
 
 document.addEventListener('DOMContentLoaded', () => {
   loadLatestSession();
   startAutoRefresh();
+  startDashboardStatsRefresh();
+
+  const metaArea = document.getElementById('metaSource');
+  if (metaArea && !document.getElementById('autoRefreshToggle')) {
+    const btn = document.createElement('button');
+    btn.id = 'autoRefreshToggle';
+    btn.textContent = '⏸️ 暂停';
+    btn.style.cssText = 'padding:4px 12px;background:#334155;color:#cbd5e1;border:1px solid #475569;border-radius:6px;cursor:pointer;font-size:12px;margin-left:8px;';
+    btn.onclick = (e) => { e.stopPropagation(); toggleAutoRefresh(); };
+    metaArea.parentNode.insertBefore(btn, metaArea.nextSibling);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeSidePanel();
+    }
+  });
 });
+
+function startDashboardStatsRefresh() {
+  if (dashboardStatsInterval) clearInterval(dashboardStatsInterval);
+  dashboardStatsInterval = setInterval(refreshDashboardStats, 15000);
+}
+
+async function refreshDashboardStats() {
+  try {
+    const resp = await fetch('./api/agent-dashboard/stats');
+    const data = await resp.json();
+
+    const summaryEl = document.getElementById('traceSummary');
+    if (summaryEl && data.total_tasks > 0) {
+      const runningBadge = data.running_tasks > 0
+        ? `<span class="vw-summary-divider">|</span><span class="vw-summary-item" style="color:#f59e0b;">⏳ ${data.running_tasks} 运行中</span>`
+        : '';
+      const failedBadge = data.failed_tasks > 0
+        ? `<span class="vw-summary-divider">|</span><span class="vw-summary-item vw-summary-error">❌ ${data.failed_tasks} 失败</span>`
+        : '';
+
+      summaryEl.innerHTML = `
+        <span class="vw-summary-item">📊 ${data.total_tasks} 任务</span>
+        <span class="vw-summary-divider">|</span>
+        <span class="vw-summary-item" style="color:#10b981;">✅ ${data.completed_tasks} 完成</span>
+        ${runningBadge}
+        ${failedBadge}
+        <span class="vw-summary-divider">|</span>
+        <span class="vw-summary-item">🤖 ${data.total_agents} 智能体</span>
+      `;
+      summaryEl.style.display = '';
+    }
+  } catch (e) {
+    // Silently fail - stats refresh is non-critical
+  }
+}
 
 function startAutoRefresh() {
   if (refreshInterval) clearInterval(refreshInterval);
+  if (!autoRefreshEnabled) return;
   refreshInterval = setInterval(loadLatestSession, REFRESH_MS);
 }
 
+function toggleAutoRefresh() {
+  autoRefreshEnabled = !autoRefreshEnabled;
+  const btn = document.getElementById('autoRefreshToggle');
+  if (btn) {
+    if (autoRefreshEnabled) {
+      btn.textContent = '⏸️ 暂停';
+      btn.style.background = '#334155';
+      startAutoRefresh();
+    } else {
+      btn.textContent = '▶️ 已暂停';
+      btn.style.background = '#dc2626';
+      if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null; }
+    }
+  }
+}
+
 async function loadLatestSession() {
+  showLoadingSpinner();
   try {
-    const resp = await fetch('/api/dashboard/sessions?limit=5');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/dashboard/sessions?limit=5', { signal: controller.signal });
+    clearTimeout(timeoutId);
     const sessions = await resp.json();
     allSessions = sessions;
-
-    if (sessions.length === 0) {
-      renderEmptyState();
-      return;
-    }
-
+    if (sessions.length === 0) { renderEmptyState(); return; }
     const targetId = currentSession ? currentSession.id : sessions[0].id;
     const target = sessions.find(s => s.id === targetId) || sessions[0];
-
     await loadSessionDetail(target.id);
   } catch (e) {
-    console.error('Failed to load sessions:', e);
+    if (e.name !== 'AbortError') {
+      console.error('Failed to load sessions:', e);
+      renderEmptyState();
+    }
   }
 }
 
 async function loadSessionDetail(sessionId) {
   try {
-    const resp = await fetch(`/api/dashboard/session/${sessionId}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(`./api/dashboard/session/${sessionId}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await resp.json();
-
-    if (data.error) {
+    if (data.error || !data || typeof data.id === 'undefined') {
+      console.warn('Invalid session data:', data);
       renderEmptyState();
       return;
     }
-
     currentSession = data;
     updateHeader(data);
-    buildTimeline(data);
+    buildTraceTree(data);
   } catch (e) {
-    console.error('Failed to load session detail:', e);
+    if (e.name !== 'AbortError') {
+      console.error('Failed to load session detail:', e);
+      renderEmptyState();
+    }
   }
 }
 
 function updateHeader(session) {
-  document.getElementById('sessionRunId').textContent = session.id?.substring(0, 12) || 'unknown';
+  document.getElementById('sessionRunId').textContent = (session?.id || 'unknown').substring(0, 12);
   document.getElementById('taskName').textContent = session.title || 'Hermes 会话追踪';
 
   const pill = document.getElementById('statusPill');
   const statusText = document.getElementById('statusText');
-
   if (session.ended_at) {
     pill.className = 'vw-status-pill vw-status-completed';
     statusText.textContent = 'Completed';
@@ -75,8 +162,8 @@ function updateHeader(session) {
 
   document.getElementById('metaCreated').textContent = formatTimeAgo(session.started_at);
   document.getElementById('metaCompleted').textContent = session.ended_at ? formatTimeAgo(session.ended_at) : '--';
-  
-  const duration = session.ended_at 
+
+  const duration = session.ended_at
     ? (session.ended_at - session.started_at)
     : (Date.now() / 1000 - (session.started_at || 0));
   document.getElementById('metaDuration').textContent = formatDuration(duration);
@@ -87,230 +174,448 @@ function updateHeader(session) {
   document.getElementById('metaSource').textContent = session.source || 'unknown';
 }
 
-function buildTimeline(session) {
+/**
+ * Build the trace tree from session messages
+ * Structure: Round -> [User, Assistant, [Tool calls...]]
+ */
+function buildTraceTree(session) {
   const messages = session.messages || [];
-  if (messages.length === 0) {
-    renderEmptyState();
-    return;
-  }
-
-  const baseTime = messages[0]?.timestamp || (session.started_at || Date.now() / 1000);
-  let maxTime = baseTime;
-
-  const hasTimestamps = messages.some(m => m.timestamp);
-  const sessionDuration = session.ended_at
-    ? (session.ended_at - (session.started_at || baseTime))
-    : (Date.now() / 1000 - (session.started_at || baseTime));
-  const avgMsgDuration = sessionDuration > 0 && messages.length > 1
-    ? sessionDuration / messages.length : 2;
+  if (messages.length === 0) { renderEmptyState(); return; }
 
   const spans = [];
-  let msgIndex = 0;
+  let roundNum = 0;
 
-  while (msgIndex < messages.length) {
-    const msg = messages[msgIndex];
-    
+  // First pass: build flat spans with parent-child relationships
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+
     if (msg.role === 'user') {
-      const startTime = msg.timestamp || baseTime;
-      const nextMsg = messages[msgIndex + 1];
-      const fallbackEnd = startTime + Math.max(avgMsgDuration * 0.3, 0.5);
-      const endTime = nextMsg ? (nextMsg.timestamp || fallbackEnd) : (session.ended_at || fallbackEnd);
-      
+      roundNum++;
       spans.push({
-        id: `msg-${msgIndex}`,
-        label: truncate(msg.content?.substring(0, 60) || '用户消息', 50),
-        type: 'user',
-        startTime,
-        endTime: Math.max(endTime, startTime + 0.5),
+        id: `msg-${i}`,
+        role: 'user',
+        label: truncate(msg.content?.substring(0, 80) || '用户消息', 60),
+        content: msg.content || '',
+        tokenCount: null,
+        status: 'info',
+        round: roundNum,
         level: 0,
-        duration: endTime - startTime,
+        hasChildren: false,
+        raw: msg,
       });
-      maxTime = Math.max(maxTime, endTime);
     } else if (msg.role === 'assistant') {
-      const startTime = msg.timestamp || baseTime;
-      const nextMsg = messages[msgIndex + 1];
-      const fallbackEnd = startTime + Math.max(avgMsgDuration * 0.8, 1);
-      const endTime = nextMsg ? (nextMsg.timestamp || fallbackEnd) : (session.ended_at || fallbackEnd);
-      const contentPreview = msg.content?.substring(0, 60) || '';
+      const isDone = msg.finish_reason === 'stop';
+      // Check if next message is a tool call
+      let nextIsTool = false;
+      if (i + 1 < messages.length && messages[i + 1].role === 'tool') {
+        nextIsTool = true;
+      }
 
       spans.push({
-        id: `msg-${msgIndex}`,
-        label: contentPreview || '助手回复',
-        type: 'assistant',
-        subType: msg.finish_reason === 'stop' ? 'success' : 'running',
-        startTime,
-        endTime: Math.max(endTime, startTime + 1),
-        level: 0,
-        duration: endTime - startTime,
+        id: `msg-${i}`,
+        role: 'assistant',
+        label: truncate(msg.content?.substring(0, 80) || (isDone ? '✅ 完成' : '⏳ 思考中...'), 60),
+        content: msg.content || '',
         tokenCount: msg.token_count,
+        status: isDone ? 'success' : 'running',
+        round: roundNum || 1,
+        level: 0,
+        hasChildren: nextIsTool,
+        raw: msg,
       });
-      maxTime = Math.max(maxTime, endTime);
     } else if (msg.role === 'tool') {
-      const startTime = msg.timestamp || baseTime;
-      const nextMsg = messages[msgIndex + 1];
-      const fallbackEnd = startTime + Math.max(avgMsgDuration * 1.2, 2);
-      const endTime = nextMsg ? (nextMsg.timestamp || fallbackEnd) : (session.ended_at || fallbackEnd);
       const toolName = msg.tool_name || 'tool_call';
-      const contentPreview = msg.content?.substring(0, 50) || '';
+      let contentPreview = msg.content?.substring(0, 50) || '';
+      let toolStatus = 'success';
+
+      try {
+        const parsed = JSON.parse(msg.content || '');
+        if (parsed.output) contentPreview = String(parsed.output).substring(0, 50);
+        else if (parsed.error) { contentPreview = '❌ Error: ' + String(parsed.error).substring(0, 35); toolStatus = 'error'; }
+        else if (parsed.success === false) { contentPreview = '❌ Failed'; toolStatus = 'error'; }
+        else if (parsed.success === true) { contentPreview = '✅ OK' + (parsed.skills ? ` (${parsed.skills.length} skills)` : ''); toolStatus = 'success'; }
+      } catch(e) { /* not JSON */ }
+
+      // Calculate duration from adjacent timestamps
+      let duration = 0;
+      if (msg.timestamp && i + 1 < messages.length && messages[i + 1].timestamp) {
+        duration = messages[i + 1].timestamp - msg.timestamp;
+      }
 
       spans.push({
-        id: `msg-${msgIndex}`,
+        id: `msg-${i}`,
+        role: 'tool',
+        toolName: toolName,
         label: `${toolName}${contentPreview ? ': ' + truncate(contentPreview, 35) : ''}`,
-        type: 'tool',
-        toolName,
-        startTime,
-        endTime: Math.max(endTime, startTime + 2),
+        content: msg.content || '',
+        tokenCount: null,
+        status: toolStatus,
+        round: roundNum || 1,
         level: 1,
-        duration: endTime - startTime,
+        hasChildren: false,
+        duration: duration,
+        raw: msg,
       });
-      maxTime = Math.max(maxTime, endTime);
     } else if (msg.role === 'system') {
       spans.push({
-        id: `msg-${msgIndex}`,
-        label: truncate(msg.content?.substring(0, 60) || '系统提示', 50),
-        type: 'system',
-        startTime: msg.timestamp || baseTime,
-        endTime: (msg.timestamp || baseTime) + 1,
+        id: `msg-${i}`,
+        role: 'system',
+        label: truncate(msg.content?.substring(0, 80) || '系统提示', 60),
+        content: msg.content || '',
+        tokenCount: null,
+        status: 'info',
+        round: 0,
         level: 0,
-        duration: 1,
+        hasChildren: false,
+        raw: msg,
       });
     }
-
-    msgIndex++;
   }
 
-  const totalDuration = Math.max(maxTime - baseTime, 10);
-  renderRuler(baseTime, totalDuration);
-  renderGrid(spans, baseTime, totalDuration);
+  currentSpans = spans;
+  renderTraceTree(spans, session);
+  renderSummaryBar(spans, session);
 }
 
-function renderRuler(startTime, totalDuration) {
-  const rulerTrack = document.getElementById('rulerTrack');
-  if (!rulerTrack) return;
+/**
+ * Render the trace tree as nested HTML
+ */
+function renderTraceTree(spans, session) {
+  const container = document.getElementById('traceTree');
+  if (!container) return;
 
-  rulerTrack.innerHTML = '';
-  const containerWidth = rulerTrack.offsetWidth || 1000;
-  const tickCount = Math.min(Math.max(Math.floor(containerWidth / 80), 6), 20);
-  const tickInterval = totalDuration / tickCount;
+  container.innerHTML = '';
 
-  for (let i = 0; i <= tickCount; i++) {
-    const time = startTime + (i * tickInterval);
-    const pct = (i / tickCount) * 100;
+  // Group by round
+  const rounds = {};
+  const systemMessages = [];
 
-    const tick = document.createElement('div');
-    tick.className = 'vw-ruler-tick';
-    tick.style.left = `${pct}%`;
-    tick.textContent = formatTimelineTick(time - startTime);
-    rulerTrack.appendChild(tick);
-
-    if (i > 0 && i < tickCount) {
-      const gridLine = document.createElement('div');
-      gridLine.className = 'vw-ruler-grid-line';
-      gridLine.style.left = `${pct}%`;
-      rulerTrack.appendChild(gridLine);
+  spans.forEach(span => {
+    if (span.round === 0) {
+      systemMessages.push(span);
+    } else {
+      if (!rounds[span.round]) rounds[span.round] = [];
+      rounds[span.round].push(span);
     }
-  }
-}
+  });
 
-function renderGrid(spans, baseTime, totalDuration) {
-  const grid = document.getElementById('timelineGrid');
-  if (!grid) return;
+  // Render system messages first
+  if (systemMessages.length > 0) {
+    const group = document.createElement('div');
+    group.className = 'vw-round-group';
 
-  grid.innerHTML = '';
-  const containerWidth = grid.parentElement?.offsetWidth || 1200;
-
-  spans.forEach((span, idx) => {
-    const row = document.createElement('div');
-    row.className = `vw-row vw-indent-${span.level}`;
-    row.dataset.spanId = span.id;
-
-    const startPct = ((span.startTime - baseTime) / totalDuration) * 100 * zoomLevel;
-    const widthPct = (span.duration / totalDuration) * 100 * zoomLevel;
-
-    const bar = document.createElement('div');
-    bar.className = getSpanBarClass(span);
-    bar.style.left = `${Math.max(startPct, 0)}%`;
-    bar.style.width = `${Math.min(widthPct, 95)}%`;
-
-    bar.innerHTML = `
-      <span class="vw-span-label">${escapeHtml(span.label)}</span>
-      <span class="vw-span-duration">${formatDuration(span.duration)}</span>
+    const header = document.createElement('div');
+    header.className = 'vw-round-header';
+    header.innerHTML = `
+      <span class="vw-round-chevron">▼</span>
+      <span class="vw-round-label">System</span>
+      <span class="vw-round-badge">${systemMessages.length} message(s)</span>
     `;
+    group.appendChild(header);
 
-    bar.onclick = () => onSpanClick(span);
+    const children = document.createElement('div');
+    children.className = 'vw-round-children';
+    systemMessages.forEach(span => {
+      children.appendChild(createTreeNode(span));
+    });
+    group.appendChild(children);
+    container.appendChild(group);
+  }
 
-    if (span.level > 0 && idx > 0 && spans[idx - 1].level < span.level) {
-      const treeV = document.createElement('div');
-      treeV.className = 'vw-tree-line-v';
-      row.appendChild(treeV);
-    }
+  // Render each round
+  Object.keys(rounds).sort((a, b) => a - b).forEach(roundNum => {
+    const group = document.createElement('div');
+    group.className = 'vw-round-group';
+    group.dataset.round = roundNum;
 
-    row.appendChild(bar);
-    grid.appendChild(row);
+    const roundSpans = rounds[roundNum];
+    const msgCount = roundSpans.length;
+    const toolCount = roundSpans.filter(s => s.role === 'tool').length;
+    const tokenCount = roundSpans.reduce((sum, s) => sum + (s.tokenCount || 0), 0);
+
+    const header = document.createElement('div');
+    header.className = 'vw-round-header';
+    const isExpanded = expandedRounds.has(roundNum);
+    if (!isExpanded) header.classList.add('vw-round-collapsed');
+
+    header.innerHTML = `
+      <span class="vw-round-chevron">${isExpanded ? '▼' : '▶'}</span>
+      <span class="vw-round-label">Round ${roundNum}</span>
+      <span class="vw-round-badge">${msgCount} spans · ${toolCount} tools · ${formatTokenCount(tokenCount)} tokens</span>
+    `;
+    header.onclick = () => toggleRound(roundNum, header);
+    group.appendChild(header);
+
+    const children = document.createElement('div');
+    children.className = 'vw-round-children';
+    if (!isExpanded) children.style.display = 'none';
+
+    roundSpans.forEach(span => {
+      children.appendChild(createTreeNode(span));
+    });
+    group.appendChild(children);
+    container.appendChild(group);
   });
 
   if (spans.length === 0) {
-    grid.innerHTML = '<div class="vw-empty-state">暂无活动数据</div>';
+    container.innerHTML = '<div class="vw-empty-state">暂无活动数据</div>';
   }
 }
 
-function getSpanBarClass(span) {
-  const base = 'vw-span-bar';
+/**
+ * Create a single tree node element
+ */
+function createTreeNode(span) {
+  const wrapper = document.createElement('div');
 
-  if (span.type === 'user') return `${base} vw-span-info`;
-  if (span.type === 'system') return `${base} vw-span-info`;
+  // Main node row
+  const node = document.createElement('div');
+  node.className = `vw-tree-node vw-tree-indent-${Math.min(span.level, 3)}`;
+  node.dataset.spanId = span.id;
 
-  if (span.type === 'assistant') {
-    if (span.subType === 'success') return `${base} vw-span-success`;
-    if (span.subType === 'running') return `${base} vw-span-running`;
-    return `${base} vw-span-info`;
+  const isExpanded = expandedNodes.has(span.id);
+  if (!isExpanded && span.hasChildren) {
+    node.classList.add('vw-tree-node-collapsed');
   }
 
-  if (span.type === 'tool') {
-    const name = (span.toolName || '').toLowerCase();
-    if (name.includes('sleep') || name.includes('wait')) return `${base} vw-span-sleep`;
-    if (name.includes('error') || name.includes('fail')) return `${base} vw-span-error`;
-    if (name.includes('search') || name.includes('fetch')) return `${base} vw-span-waiting`;
-    return `${base} vw-span-running`;
+  // Toggle arrow (only for assistant nodes that have tool children)
+  const toggleEl = span.hasChildren
+    ? `<div class="vw-tree-toggle" onclick="event.stopPropagation(); toggleNode('${span.id}')">
+         <span class="vw-tree-toggle-icon">${isExpanded ? '▼' : '▶'}</span>
+       </div>`
+    : `<div class="vw-tree-toggle-empty"></div>`;
+
+  // Icon
+  const icon = ROLE_ICONS[span.role] || '📌';
+
+  // Label
+  const label = escapeHtml(span.label);
+
+  // Token
+  const tokenHtml = span.tokenCount
+    ? `<span class="vw-tree-token vw-tree-token-highlight">${span.tokenCount}</span>`
+    : `<span class="vw-tree-token">--</span>`;
+
+  // Duration
+  const durationHtml = span.duration
+    ? `<span class="vw-tree-duration">${formatDuration(span.duration)}</span>`
+    : `<span class="vw-tree-duration">--</span>`;
+
+  // Status badge
+  const statusHtml = getStatusBadge(span.status);
+
+  node.innerHTML = `
+    ${toggleEl}
+    <span class="vw-tree-icon">${icon}</span>
+    <span class="vw-tree-label" title="${escapeHtml(span.content?.substring(0, 200) || '')}">${label}</span>
+    ${tokenHtml}
+    ${durationHtml}
+    ${statusHtml}
+  `;
+
+  node.onclick = (e) => {
+    if (e.target.closest('.vw-tree-toggle')) return;
+    onSpanClick(span);
+  };
+
+  wrapper.appendChild(node);
+
+  // Inline detail panel (for expanded assistant nodes)
+  if (span.hasChildren && isExpanded) {
+    const detail = document.createElement('div');
+    detail.className = 'vw-tree-detail';
+    detail.innerHTML = `
+      <div class="vw-tree-detail-inner">
+        <div class="vw-detail-section">
+          <div class="vw-detail-label">消息内容</div>
+          <div class="vw-detail-content"><code>${escapeHtml(span.content || '(空)')}</code></div>
+        </div>
+      </div>
+    `;
+    wrapper.appendChild(detail);
   }
 
-  return `${base} vw-span-info`;
+  return wrapper;
 }
 
+function getStatusBadge(status) {
+  const map = {
+    success: '<span class="vw-node-badge vw-node-badge-success"><span class="vw-node-dot vw-node-dot-success"></span> 成功</span>',
+    running: '<span class="vw-node-badge vw-node-badge-running"><span class="vw-node-dot vw-node-dot-running"></span> 运行中</span>',
+    error: '<span class="vw-node-badge vw-node-badge-error"><span class="vw-node-dot vw-node-dot-error"></span> 失败</span>',
+    info: '<span class="vw-node-badge vw-node-badge-info">信息</span>',
+  };
+  return `<span class="vw-tree-status">${map[status] || map.info}</span>`;
+}
+
+function toggleRound(roundNum, headerEl) {
+  if (expandedRounds.has(roundNum)) {
+    expandedRounds.delete(roundNum);
+    headerEl.classList.add('vw-round-collapsed');
+    headerEl.querySelector('.vw-round-chevron').textContent = '▶';
+    const children = headerEl.nextElementSibling;
+    if (children) children.style.display = 'none';
+  } else {
+    expandedRounds.add(roundNum);
+    headerEl.classList.remove('vw-round-collapsed');
+    headerEl.querySelector('.vw-round-chevron').textContent = '▼';
+    const children = headerEl.nextElementSibling;
+    if (children) children.style.display = '';
+  }
+}
+
+function toggleNode(spanId) {
+  if (expandedNodes.has(spanId)) {
+    expandedNodes.delete(spanId);
+  } else {
+    expandedNodes.add(spanId);
+  }
+  // Re-render
+  if (currentSession) buildTraceTree(currentSession);
+}
+
+/**
+ * Side panel click handler
+ */
 function onSpanClick(span) {
-  console.log('Span clicked:', span);
+  activeDetailSpan = span.id;
+
+  // Highlight active node
+  document.querySelectorAll('.vw-tree-node-active').forEach(el => el.classList.remove('vw-tree-node-active'));
+  const activeNode = document.querySelector(`.vw-tree-node[data-span-id="${span.id}"]`);
+  if (activeNode) activeNode.classList.add('vw-tree-node-active');
+
+  openSidePanel(span);
 }
 
+let activeDetailSpan = null;
+
+function openSidePanel(span) {
+  const overlay = document.getElementById('sidePanelOverlay');
+  const panel = document.getElementById('sidePanel');
+  const iconEl = document.getElementById('spIcon');
+  const titleEl = document.getElementById('spTitle');
+  const badgeEl = document.getElementById('spBadge');
+  const bodyEl = document.getElementById('spBody');
+
+  if (!panel || !bodyEl) return;
+
+  const raw = span.raw || {};
+  const content = raw.content || '';
+  let formattedContent = content;
+  try {
+    const parsed = JSON.parse(content);
+    formattedContent = JSON.stringify(parsed, null, 2);
+  } catch(e) { /* not JSON */ }
+
+  const tokenInfo = span.tokenCount !== undefined
+    ? `<div class="vw-side-panel-row"><span class="vw-spk">Token消耗</span><span class="vw-spv">${span.tokenCount}</span></div>`
+    : '';
+
+  const finishInfo = raw.finish_reason
+    ? `<div class="vw-side-panel-row"><span class="vw-spk">结束原因</span><span class="vw-spv"><code>${raw.finish_reason}</code></span></div>`
+    : '';
+
+  const toolInfo = raw.tool_name
+    ? `<div class="vw-side-panel-row"><span class="vw-spk">工具名称</span><span class="vw-spv"><code>${raw.tool_name}</code></span></div>`
+    : '';
+
+  const reasoningInfo = raw.reasoning
+    ? `<div class="vw-side-panel-section"><div class="vw-side-panel-section-title">推理过程</div><pre class="vw-side-panel-content">${escapeHtml(raw.reasoning)}</pre></div>`
+    : '';
+
+  const timeFormatted = raw.timestamp_iso
+    ? new Date(raw.timestamp_iso).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 })
+    : '--';
+
+  const statusText = span.status === 'error' ? '❌ 失败' : span.status === 'success' ? '✅ 成功' : span.status === 'running' ? '⏳ 运行中' : '信息';
+
+  iconEl.textContent = ROLE_ICONS[span.role] || '📌';
+  titleEl.textContent = span.toolName || ROLE_LABELS[span.role] || '消息详情';
+  badgeEl.textContent = span.duration ? formatDuration(span.duration) : '--';
+
+  bodyEl.innerHTML = `
+    <div class="vw-side-panel-section">
+      <div class="vw-side-panel-section-title">基本信息</div>
+      <div class="vw-side-panel-row"><span class="vw-spk">消息ID</span><span class="vw-spv vw-spv-mono">${raw.id || span.id}</span></div>
+      <div class="vw-side-panel-row"><span class="vw-spk">角色类型</span><span class="vw-spv">${ROLE_LABELS[span.role] || span.role}</span></div>
+      ${toolInfo}
+      <div class="vw-side-panel-row"><span class="vw-spk">状态</span><span class="vw-spv">${statusText}</span></div>
+      ${finishInfo}
+      ${tokenInfo}
+      <div class="vw-side-panel-row"><span class="vw-spk">时间戳</span><span class="vw-spv vw-spv-mono">${timeFormatted}</span></div>
+      ${span.duration ? `<div class="vw-side-panel-row"><span class="vw-spk">持续时间</span><span class="vw-spv">${formatDuration(span.duration)}</span></div>` : ''}
+      <div class="vw-side-panel-row"><span class="vw-spk">所属轮次</span><span class="vw-spv">Round ${span.round || '--'}</span></div>
+    </div>
+    <div class="vw-side-panel-section">
+      <div class="vw-side-panel-section-title">内容详情</div>
+      <pre class="vw-side-panel-content">${escapeHtml(formattedContent) || '(空)'}</pre>
+    </div>
+    ${reasoningInfo}
+  `;
+
+  overlay?.classList.add('visible');
+  panel.classList.add('open');
+}
+
+function closeSidePanel() {
+  const overlay = document.getElementById('sidePanelOverlay');
+  const panel = document.getElementById('sidePanel');
+  overlay?.classList.remove('visible');
+  panel?.classList.remove('open');
+  document.querySelectorAll('.vw-tree-node-active').forEach(el => el.classList.remove('vw-tree-node-active'));
+  activeDetailSpan = null;
+}
+
+/* ════════════════════════════════════════════════════
+   TAB SWITCHING
+   ════════════════════════════════════════════════════ */
 function switchTab(tabName) {
   document.querySelectorAll('.vw-tab').forEach(t => t.classList.remove('vw-tab-active'));
   document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('vw-tab-active');
 
-  const body = document.getElementById('timelineBody');
-  if (!body) return;
+  const traceContainer = document.getElementById('traceContainer');
+  const searchBar = document.querySelector('.vw-search-bar');
+
+  closeSidePanel();
 
   if (tabName === 'events' && currentSession) {
+    if (traceContainer) traceContainer.style.display = 'none';
+    if (searchBar) searchBar.style.display = 'none';
     renderEventsTab(currentSession.messages || []);
-  } else if (tabName === 'trace' && currentSession) {
-    buildTimeline(currentSession);
+  } else if (tabName === 'trace') {
+    if (traceContainer) traceContainer.style.display = 'block';
+    if (searchBar) searchBar.style.display = 'block';
+    const eventsList = document.getElementById('eventsList');
+    if (eventsList) eventsList.remove();
+    if (currentSession && currentSession.id) {
+      loadSessionDetail(currentSession.id);
+    } else {
+      loadLatestSession();
+    }
   } else if (tabName === 'streams') {
+    if (traceContainer) traceContainer.style.display = 'none';
+    if (searchBar) searchBar.style.display = 'none';
     renderStreamsTab();
   }
 }
 
 function renderEventsTab(messages) {
-  const body = document.getElementById('timelineBody');
-  if (!body) return;
+  let list = document.getElementById('eventsList');
+  if (!list) {
+    list = document.createElement('div');
+    list.className = 'vw-events-list';
+    list.id = 'eventsList';
+    document.getElementById('dashboard-app')?.appendChild(list);
+  }
+  list.innerHTML = '';
+  list.style.display = 'block';
 
-  body.innerHTML = `<div class="vw-events-list" id="eventsList"></div>`;
-  const list = document.getElementById('eventsList');
-
-  messages.forEach((msg, i) => {
+  messages.forEach((msg) => {
     const item = document.createElement('div');
     item.className = 'vw-event-item';
-
     const roleLabel = { user: '👤 用户', assistant: '🤖 助手', system: '⚙️ 系统', tool: '🔧 工具' };
     const timeStr = formatTimestamp(msg.timestamp);
-
     item.innerHTML = `
       <span class="vw-event-time">${timeStr}</span>
       <span class="vw-event-role">${roleLabel[msg.role] || msg.role}</span>
@@ -322,37 +627,77 @@ function renderEventsTab(messages) {
 
 function filterTimeline() {
   const query = (document.getElementById('timelineSearch')?.value || '').toLowerCase();
-  const rows = document.querySelectorAll('.vw-row');
-
-  rows.forEach(row => {
-    const label = row.querySelector('.vw-span-label')?.textContent?.toLowerCase() || '';
-    row.style.display = (!query || label.includes(query)) ? '' : 'none';
+  document.querySelectorAll('.vw-tree-node').forEach(node => {
+    const spanId = node.dataset.spanId;
+    const span = currentSpans.find(s => s.id === spanId);
+    const match = !query || (span && (
+      span.label.toLowerCase().includes(query) ||
+      span.role.toLowerCase().includes(query) ||
+      (span.toolName || '').toLowerCase().includes(query) ||
+      (span.content || '').toLowerCase().includes(query)
+    ));
+    node.style.display = match ? '' : 'none';
   });
 }
 
+/* ════════════════════════════════════════════════════
+   SUMMARY BAR
+   ════════════════════════════════════════════════════ */
+function renderSummaryBar(spans, session) {
+  const summaryEl = document.getElementById('traceSummary');
+  if (!summaryEl) return;
+
+  const toolCount = spans.filter(s => s.role === 'tool').length;
+  const errorCount = spans.filter(s => s.status === 'error').length;
+  const totalTokens = spans.reduce((sum, s) => sum + (s.tokenCount || 0), 0);
+  const rounds = new Set(spans.map(s => s.round).filter(r => r > 0)).size;
+  const toolSpans = spans.filter(s => s.role === 'tool');
+  const avgToolDur = toolSpans.length > 0 && toolSpans.some(t => t.duration)
+    ? toolSpans.filter(t => t.duration).reduce((sum, s) => sum + s.duration, 0) / toolSpans.filter(t => t.duration).length
+    : 0;
+
+  summaryEl.innerHTML = `
+    <span class="vw-summary-item" title="对话轮次数">📋 ${rounds} 轮</span>
+    <span class="vw-summary-divider">|</span>
+    <span class="vw-summary-item" title="工具调用次数">🔧 ${toolCount} 次</span>
+    <span class="vw-summary-divider">|</span>
+    ${errorCount > 0 ? `<span class="vw-summary-item vw-summary-error" title="失败的工具调用">❌ ${errorCount} 错误</span><span class="vw-summary-divider">|</span>` : ''}
+    <span class="vw-summary-item" title="总Token消耗">💰 ${formatTokenCount(totalTokens)}</span>
+    <span class="vw-summary-divider">|</span>
+    <span class="vw-summary-item" title="平均工具耗时">⏱️ ${formatDuration(avgToolDur)}</span>
+  `;
+  summaryEl.style.display = '';
+}
+
+/* ════════════════════════════════════════════════════
+   STREAMS TAB
+   ════════════════════════════════════════════════════ */
 let streamEventSource = null;
-let streamEvents = [];
 
 function renderStreamsTab() {
-  const body = document.getElementById('timelineBody');
-  if (!body) return;
+  let container = document.getElementById('streamsContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'streamsContainer';
+    container.style.cssText = 'padding: 16px 24px;';
+    document.getElementById('dashboard-app')?.appendChild(container);
+  }
+  container.innerHTML = '';
+  container.style.display = 'block';
 
-  body.innerHTML = `
-    <div style="padding: 16px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-        <div style="font-size: 14px; color: #94a3b8;">SSE 实时流 — 监控会话活动</div>
-        <button class="vw-btn-outline" onclick="toggleStream()" id="streamToggleBtn" style="font-size: 12px; padding: 4px 12px;">连接</button>
-      </div>
-      <div id="streamStatus" style="font-size: 12px; color: #64748b; margin-bottom: 8px;">未连接</div>
-      <div id="streamEventsList" style="max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+  container.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <div style="font-size: 14px; color: #94a3b8;">SSE 实时流 — 监控会话活动</div>
+      <button class="vw-btn-outline" onclick="toggleStream()" id="streamToggleBtn" style="font-size: 12px; padding: 4px 12px;">连接</button>
     </div>
+    <div id="streamStatus" style="font-size: 12px; color: #64748b; margin-bottom: 8px;">未连接</div>
+    <div id="streamEventsList" style="max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
   `;
 
   if (streamEventSource) {
     streamEventSource.close();
     streamEventSource = null;
   }
-  streamEvents = [];
 }
 
 function toggleStream() {
@@ -368,7 +713,7 @@ function toggleStream() {
   }
 
   try {
-    streamEventSource = new EventSource('/api/dashboard/stream');
+    streamEventSource = new EventSource('./api/dashboard/stream');
     if (btn) btn.textContent = '断开';
     if (status) status.textContent = '连接中...';
 
@@ -389,9 +734,7 @@ function toggleStream() {
         let detail = `活跃会话: ${data.active_sessions || 0}`;
         if (data.latest_session) {
           detail += ` | 最新: ${data.latest_session.title || data.latest_session.id?.substring(0, 12) || '--'}`;
-          if (data.latest_session.ended_at) {
-            detail += ` [已完成]`;
-          }
+          if (data.latest_session.ended_at) detail += ` [已完成]`;
         }
 
         const entry = document.createElement('div');
@@ -401,21 +744,12 @@ function toggleStream() {
           <span style="color: ${typeColor}; white-space: nowrap;">${typeLabel}</span>
           <span style="color: #cbd5e1; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(detail)}</span>
         `;
-
         list.insertBefore(entry, list.firstChild);
+        while (list.children.length > 100) list.removeChild(list.lastChild);
 
-        while (list.children.length > 100) {
-          list.removeChild(list.lastChild);
-        }
-
-        if (data.type === 'new_session') {
-          loadLatestSession();
-        }
-
+        if (data.type === 'new_session') loadLatestSession();
         if (status) status.textContent = `已连接 — ${time}`;
-      } catch (e) {
-        console.error('Stream parse error:', e);
-      }
+      } catch (e) { console.error('Stream parse error:', e); }
     };
 
     streamEventSource.onerror = () => {
@@ -426,12 +760,12 @@ function toggleStream() {
   }
 }
 
+/* ════════════════════════════════════════════════════
+   MENU
+   ════════════════════════════════════════════════════ */
 function toggleMenu() {
   let menu = document.getElementById('vwContextMenu');
-  if (menu) {
-    menu.remove();
-    return;
-  }
+  if (menu) { menu.remove(); return; }
 
   menu = document.createElement('div');
   menu.id = 'vwContextMenu';
@@ -439,12 +773,10 @@ function toggleMenu() {
 
   const items = [
     { label: '🔄 刷新数据', action: () => loadLatestSession() },
-    { label: '🔍 适应视图', action: () => fitToView() },
     { label: '📊 查看全部会话', action: () => window.location.href = '/sessions' },
     { label: '⏱️ 自动刷新: 开', action: (el) => {
       if (refreshInterval) {
-        clearInterval(refreshInterval);
-        refreshInterval = null;
+        clearInterval(refreshInterval); refreshInterval = null;
         el.textContent = '⏱️ 自动刷新: 关';
       } else {
         startAutoRefresh();
@@ -467,40 +799,30 @@ function toggleMenu() {
   });
 
   document.body.appendChild(menu);
-
   const closeHandler = (e) => {
-    if (!menu.contains(e.target)) {
-      menu.remove();
-      document.removeEventListener('click', closeHandler);
-    }
+    if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', closeHandler); }
   };
   setTimeout(() => document.addEventListener('click', closeHandler), 10);
 }
 
-/* ── Zoom Controls ── */
-function zoomIn() {
-  zoomLevel = Math.min(zoomLevel * 1.5, 5);
-  if (currentSession) buildTimeline(currentSession);
-}
-
-function zoomOut() {
-  zoomLevel = Math.max(zoomLevel / 1.5, 0.2);
-  if (currentSession) buildTimeline(currentSession);
-}
-
-function fitToView() {
-  zoomLevel = 1;
-  if (currentSession) buildTimeline(currentSession);
-}
-
-/* ── Utilities ── */
-function renderEmptyState() {
-  const grid = document.getElementById('timelineGrid');
-  if (grid) {
-    grid.innerHTML = '<div class="vw-empty-state">🔍 暂无会话数据<br><small style="color:#333;margin-top:8px;">启动 Hermes Agent 后，此处将显示实时追踪时间轴</small></div>';
+/* ════════════════════════════════════════════════════
+   UTILITIES
+   ════════════════════════════════════════════════════ */
+function showLoadingSpinner() {
+  const container = document.getElementById('traceTree');
+  if (!container) return;
+  container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:80px 20px;flex-direction:column;gap:12px;"><div style="width:40px;height:40px;border:4px solid #334155;border-top:#667eea solid;border-radius:50%;animation:vwDashSpin 0.8s linear infinite;"></div><span style="color:#94a3b8;font-size:14px;">正在加载数据...</span></div>';
+  if (!document.getElementById('vwDashSpinStyle')) {
+    const s = document.createElement('style');
+    s.id = 'vwDashSpinStyle';
+    s.textContent = '@keyframes vwDashSpin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(s);
   }
-  const rulerTrack = document.getElementById('rulerTrack');
-  if (rulerTrack) rulerTrack.innerHTML = '';
+}
+
+function renderEmptyState() {
+  const container = document.getElementById('traceTree');
+  if (container) container.innerHTML = '<div class="vw-empty-state">🔍 暂无会话数据</div>';
 
   document.getElementById('taskName').textContent = 'Hermes 会话追踪';
   document.getElementById('statusPill').className = 'vw-status-pill vw-status-warning';
@@ -509,6 +831,8 @@ function renderEmptyState() {
     const el = document.getElementById(id);
     if (el) el.textContent = '--';
   });
+  const summaryEl = document.getElementById('traceSummary');
+  if (summaryEl) summaryEl.style.display = 'none';
 }
 
 function formatTimeAgo(timestamp) {
@@ -526,7 +850,7 @@ function formatTimeAgo(timestamp) {
 }
 
 function formatDuration(seconds) {
-  if (!seconds || seconds <= 0) return '0s';
+  if (!seconds || seconds < 0.5) return '--';
   if (seconds < 60) return `${Math.round(seconds)}s`;
   if (seconds < 3600) {
     const m = Math.floor(seconds / 60);
@@ -538,24 +862,6 @@ function formatDuration(seconds) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-function formatTimelineTick(seconds) {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) {
-    const m = Math.floor(seconds / 60);
-    const s = Math.round(seconds % 60);
-    return `${m}:${String(s).padStart(2, '0')}s`;
-  }
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}:${String(m).padStart(2, '0')}`;
-}
-
-function formatTokenCount(n) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-  return String(n);
-}
-
 function formatTimestamp(timestamp) {
   if (!timestamp) return '--';
   const d = new Date(typeof timestamp === 'number' ? timestamp * 1000 : timestamp);
@@ -563,14 +869,16 @@ function formatTimestamp(timestamp) {
   return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 2 });
 }
 
+function formatTokenCount(count) {
+  if (!count || count === 0) return '0';
+  if (count < 1000) return String(count);
+  if (count < 1000000) return `${(count / 1000).toFixed(1)}K`;
+  return `${(count / 1000000).toFixed(1)}M`;
+}
+
 function truncate(str, len) {
   if (!str) return '';
   return str.length > len ? str.substring(0, len) + '...' : str;
 }
 
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+
