@@ -124,7 +124,7 @@
 
 ### Phase 4 — 运营体系：情报链路与记忆迭代
 
-状态：🔴 待启动
+状态：🟡 进行中（P0+P1 已落地，P2 待实施）
 
 来源：
 - `docs/prd/operations-implementation-prd.md`（差距审计 1-5）
@@ -142,19 +142,19 @@
 
 | 任务 | 状态 | 说明 |
 |------|------|------|
-| 创建 `shared-context/tech-radar.json` | 🔴 | Adopt/Trial/Assess 三级结构 |
-| 升级晨间/晚间 cron 为 agent 模式 | 🔴 | 从脚本推送原始新闻 → agent 评估后推送结构化摘要 |
-| 创建 `.learnings/` 目录结构 | 🔴 | ERRORS.md / LEARNINGS.md / FEATURE_REQUESTS.md |
-| 升级反思 cron 支持 .learnings/ 审查 | 🔴 | 审查 pending 条目，≥3次 promote 到 MEMORY.md |
+| 创建 `shared-context/tech-radar.json` | 🟢已落地 | Adopt/Trial/Assess 三级结构 |
+| 升级晨间/晚间 cron 为 agent 模式 | 🟢已落地 | 08:30/20:00 agent 模式，5星评估+影响分析+Tech Radar更新 |
+| 创建 `.learnings/` 目录结构 | 🟢已落地 | harness/learnings/{ERRORS,LEARNINGS,FEATURE_REQUESTS}.md |
+| 升级反思 cron 支持 .learnings/ 审查 | 🟢已落地 | 审查 pending 条目，≥3次 promote 到 MEMORY.md |
 
 **P1 — 记忆与可观测性（下周）**：
 
 | 任务 | 状态 | 说明 |
 |------|------|------|
-| 配置 session Harness 参数 | 🔴 | idleMinutes=30, pruneAfter=7d, maxDiskBytes=100MB |
-| 实现 bootstrap hook 加载历史经验 | 🔴 | 新 session 启动时注入 MEMORY.md + .learnings/ |
-| MEMORY.md 容量管理 | 🔴 | <3000 tokens 硬上限，超限自动精简 |
-| cron 可观测性 | 🔴 | 零产出=失败，不能反思说"正常"就过关 |
+| 配置 session Harness 参数 | 🟢已落地 | auto_prune=true, retention=7d, compression.threshold=0.4 |
+| 实现 bootstrap hook 加载历史经验 | 🟢已落地 | bootstrap-context.sh + prefill_messages_file |
+| MEMORY.md 容量管理 | 🟢已落地 | memory-maintenance.sh + 每周日 cron |
+| cron 可观测性 | 🟢已落地 | cron-health-check.sh + 每日两次 cron |
 
 **P2 — 完整链路（月底）**：
 
