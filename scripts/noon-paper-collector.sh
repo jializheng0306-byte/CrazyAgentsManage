@@ -1,0 +1,81 @@
+#!/bin/bash
+# noon-paper-collector.sh - 午间论文数据采集
+# 由 cron agent 调用，搜索最新 AI/Agent 学术论文
+
+set -e
+
+TODAY=$(date +%Y-%m-%d)
+INTEL_DIR="$HOME/.hermes/intel"
+LOG_DIR="$HOME/.hermes/logs"
+mkdir -p "$INTEL_DIR" "$LOG_DIR"
+
+LOG_FILE="$LOG_DIR/noon-paper-$(date +%Y%m%d).log"
+REPORT_FILE="$INTEL_DIR/noon-paper-$TODAY.md"
+
+echo "=== 午间论文采集 $(date) ===" | tee "$LOG_FILE"
+
+cat > "$REPORT_FILE" << EOF
+# 午间论文摘要 $TODAY
+
+采集时间: $(date)
+EOF
+
+# 1. AI Agent 论文
+echo "1. 搜索 AI Agent 论文..." | tee -a "$LOG_FILE"
+{
+    echo ""
+    echo "## AI Agent 论文"
+    echo ""
+    curl -s --max-time 60 \
+        "https://export.arxiv.org/api/query?search_query=all:AI+agent+OR+multi-agent+OR+LLM+agent+OR+tool-use+agent&max_results=8&sortBy=submittedDate&sortOrder=descending" \
+        | python3 -c "
+import sys, xml.etree.ElementTree as ET
+ns = {'a': 'http://www.w3.org/2005/Atom'}
+root = ET.fromstring(sys.stdin.read())
+for entry in root.findall('a:entry', ns):
+    title = entry.find('a:title', ns).text.strip().replace('\n', ' ')
+    arxiv_id = entry.find('a:id', ns).text.strip().split('/abs/')[-1]
+    published = entry.find('a:published', ns).text[:10]
+    authors = ', '.join(a.find('a:name', ns).text for a in entry.findall('a:author', ns)[:3])
+    summary = entry.find('a:summary', ns).text.strip()[:400]
+    cats = [c.get('term') for c in entry.findall('a:category', ns)]
+    print(f'### {title[:100]}')
+    print(f'- ID: {arxiv_id}')
+    print(f'- 作者: {authors}')
+    print(f'- 日期: {published}')
+    print(f'- 分类: {\", \".join(cats[:3])}')
+    print(f'- 摘要: {summary}...')
+    print(f'- 链接: https://arxiv.org/abs/{arxiv_id}')
+    print()
+" 2>/dev/null || echo "（arxiv 采集失败）"
+} >> "$REPORT_FILE" 2>&1
+
+# 2. RAG / Memory / Context Engineering 论文
+echo "2. 搜索 RAG/Memory 论文..." | tee -a "$LOG_FILE"
+{
+    echo ""
+    echo "## RAG / Memory / Context Engineering 论文"
+    echo ""
+    curl -s --max-time 60 \
+        "https://export.arxiv.org/api/query?search_query=all:retrieval+augmented+generation+OR+agent+memory+OR+context+engineering&max_results=5&sortBy=submittedDate&sortOrder=descending" \
+        | python3 -c "
+import sys, xml.etree.ElementTree as ET
+ns = {'a': 'http://www.w3.org/2005/Atom'}
+root = ET.fromstring(sys.stdin.read())
+for entry in root.findall('a:entry', ns):
+    title = entry.find('a:title', ns).text.strip().replace('\n', ' ')
+    arxiv_id = entry.find('a:id', ns).text.strip().split('/abs/')[-1]
+    published = entry.find('a:published', ns).text[:10]
+    summary = entry.find('a:summary', ns).text.strip()[:300]
+    print(f'### {title[:100]}')
+    print(f'- ID: {arxiv_id}')
+    print(f'- 日期: {published}')
+    print(f'- 摘要: {summary}...')
+    print(f'- 链接: https://arxiv.org/abs/{arxiv_id}')
+    print()
+" 2>/dev/null || echo "（arxiv 采集失败）"
+} >> "$REPORT_FILE" 2>&1
+
+echo "=== 午间论文采集完成 ===" | tee -a "$LOG_FILE"
+echo "REPORT_FILE=$REPORT_FILE"
+cat "$REPORT_FILE"
