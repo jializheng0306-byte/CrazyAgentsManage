@@ -1,0 +1,8 @@
+{
+  "name": "original-arch-preview",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  }
+}

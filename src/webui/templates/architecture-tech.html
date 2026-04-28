@@ -6,194 +6,34 @@
   <title>技术架构 - FlowMind</title>
   <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/architecture.css">
+  <style>
+    .arch-preview-shell {
+      min-height: calc(100vh - 72px);
+      padding: 16px 20px 24px;
+      background: #030712;
+    }
+
+    .arch-preview-frame {
+      width: 100%;
+      min-height: calc(100vh - 112px);
+      border: 1px solid #111827;
+      border-radius: 12px;
+      background: #020617;
+      box-shadow: 0 20px 60px rgba(2, 6, 23, 0.35);
+    }
+  </style>
 </head>
-<body data-arch-page="tech">
+<body>
   {% set active_nav = 'runtime' %}
   {% set active_architecture = 'tech' %}
   {% include 'ia-nav.html' %}
 
-  <main class="container arch-shell">
-    <section class="arch-hero">
-      <div class="arch-hero-copy">
-        <div class="arch-eyebrow">FlowMind 架构可视化表面 / 技术架构</div>
-        <h1 class="arch-title">从外部输入到仓库回写，把 FlowMind 的实施动态画成一条可观测、可回溯、可运营的技术链路</h1>
-        <p class="arch-subtitle">
-          这里展示的不只是组件列表，而是实际的数据流和工件流：请求如何进入 Hermes，状态如何落到 session / message / gateway / memory / harness，再如何被 Runtime、Operations、Governance、Collaboration 页面消费。
-        </p>
-      </div>
-      <div class="arch-status-board">
-        <div class="arch-live-card">
-          <div class="arch-live-label">工具调用</div>
-          <div class="arch-live-value" id="arch-runtime-tool-calls">--</div>
-          <div class="arch-live-meta">当前运行面累计执行动作</div>
-        </div>
-        <div class="arch-live-card">
-          <div class="arch-live-label">错误会话</div>
-          <div class="arch-live-value" id="arch-runtime-errors">--</div>
-          <div class="arch-live-meta">最近运行中被识别出的异常数量</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="arch-metrics">
-      <div class="arch-metric">
-        <div class="arch-metric-label">Token 规模</div>
-        <div class="arch-metric-value" id="arch-runtime-tokens">--</div>
-        <div class="arch-metric-note">会话输入输出累积量</div>
-      </div>
-      <div class="arch-metric">
-        <div class="arch-metric-label">活跃会话</div>
-        <div class="arch-metric-value" id="arch-metric-active">--</div>
-        <div class="arch-metric-note">技术链路当前并发执行量</div>
-      </div>
-      <div class="arch-metric">
-        <div class="arch-metric-label">技能能力</div>
-        <div class="arch-metric-value" id="arch-metric-skills">--</div>
-        <div class="arch-metric-note">可被技术链路调用的能力集合</div>
-      </div>
-      <div class="arch-metric">
-        <div class="arch-metric-label">Closeout 异常</div>
-        <div class="arch-metric-value" id="arch-closeout-count">--</div>
-        <div class="arch-metric-note">当前 harness failure traces</div>
-      </div>
-    </section>
-
-    <div class="arch-layout">
-      <div>
-        <section class="arch-section">
-          <div class="arch-section-title">
-            <div>
-              <h2>实施链路主画布</h2>
-              <p>用户真正看到的“和外界交互、内部执行、证据回写”都在这条链上。</p>
-            </div>
-          </div>
-          <div class="arch-map">
-            <div class="arch-map-row">
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot live"></span>输入源</div>
-                <h3>CLI / Feishu / Webhook / Cron / API</h3>
-                <p>多种平台入口把请求送到宿主运行面，是技术链路的上游信号。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot host"></span>Gateway / Session Runtime</div>
-                <h3>Hermes 会话与消息面</h3>
-                <p>生成 sessions、messages、tool_calls、token 数据，并维护 gateway_state 与连接状态。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot host"></span>Tool Dispatch</div>
-                <h3>工具调度与执行</h3>
-                <p>承接文件、终端、网络、MCP 与平台能力调用，形成动作和结果。</p>
-              </div>
-            </div>
-            <div class="arch-map-row">
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot bridge"></span>状态存储</div>
-                <h3>state.db / gateway_state / jobs / memories</h3>
-                <p>把会话、平台连接、定时任务、团队记忆和配置写成产品可消费的数据面。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot bridge"></span>协作与证据</div>
-                <h3>.omx / handoff / harness traces</h3>
-                <p>把运行态转换成协作工件、closeout 记录和仓库学习层，形成可追责证据。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot truth"></span>产品消费面</div>
-                <h3>Runtime / Operations / Governance / Collaboration</h3>
-                <p>所有页面都不直接讲空话，而是消费这条链路的状态和工件来形成可操作视图。</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="arch-section">
-          <div class="arch-section-title">
-            <div>
-              <h2>技术约束与设计判断</h2>
-              <p>这部分说明为什么我们把 TSX demo 直接接成 HTML 页面，而不是继续放空壳。</p>
-            </div>
-          </div>
-          <div class="arch-philo-grid">
-            <div class="arch-principle">
-              <div class="arch-principle-title">约束 1</div>
-              <p>当前仓库只保留了三个 TSX 入口文件，没有随同落库对应组件实现，因此不能继续把它们当作“已经实现”。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">约束 2</div>
-              <p>WebUI 已经有稳定的 Flask 路由和静态资源体系，最短路径是把设计意图翻译成当前体系的正式页面。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">判断 1</div>
-              <p>架构页必须接入真实数据和真实跳转，所以这里优先接 overview/runtime/handoff/skill/cron 等真实 API。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">判断 2</div>
-              <p>不回到底层 API/表结构，不做字段级原型，而是把产品、结构、实施链路这三个视角直接落到可浏览页面。</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="arch-section">
-          <div class="arch-section-title">
-            <div>
-              <h2>证据流与工件流</h2>
-              <p>技术架构最终是否成立，要看是否能回到真实工件。</p>
-            </div>
-          </div>
-          <div class="arch-linkband">
-            <a class="arch-linkcard" href="{{ BASE }}/runtime">
-              <div class="arch-linkcard-title">Runtime</div>
-              <div class="arch-linkcard-meta">回到会话、工具、性能与异常的实时运行面。</div>
-            </a>
-            <a class="arch-linkcard" href="{{ BASE }}/operations">
-              <div class="arch-linkcard-title">Operations</div>
-              <div class="arch-linkcard-meta">回到技能、Cron、记忆和告警这些被运营的对象。</div>
-            </a>
-            <a class="arch-linkcard" href="{{ BASE }}/collaboration">
-              <div class="arch-linkcard-title">Collaboration</div>
-              <div class="arch-linkcard-meta">回到 handoff packet、runtime snapshot 与 closeout 证据。</div>
-            </a>
-            <a class="arch-linkcard" href="{{ BASE }}/governance">
-              <div class="arch-linkcard-title">Governance</div>
-              <div class="arch-linkcard-meta">回到 candidate / truth / review / drift 的治理工作面。</div>
-            </a>
-          </div>
-        </section>
-      </div>
-
-      <aside class="arch-aside">
-        <section class="arch-aside-card">
-          <h3>活跃会话</h3>
-          <div class="arch-kv" id="arch-active-session-list">
-            <div class="arch-empty">加载中</div>
-          </div>
-        </section>
-
-        <section class="arch-aside-card">
-          <h3>高频工具</h3>
-          <div class="arch-kv" id="arch-tool-usage-list">
-            <div class="arch-empty">加载中</div>
-          </div>
-        </section>
-
-        <section class="arch-aside-card">
-          <h3>交接与 closeout</h3>
-          <div class="arch-timeline" id="arch-handoff-list">
-            <div class="arch-empty">加载中</div>
-          </div>
-        </section>
-
-        <section class="arch-aside-card">
-          <h3>运行来源</h3>
-          <div class="arch-pill-list" id="arch-source-pills">
-            <span class="arch-empty">加载中</span>
-          </div>
-        </section>
-      </aside>
-    </div>
+  <main class="arch-preview-shell">
+    <iframe
+      class="arch-preview-frame"
+      src="{{ BASE }}/static/original-arch-preview/index.html?page=tech"
+      title="FlowMind 技术架构原始样例预览"
+    ></iframe>
   </main>
-  <script src="{{ BASE }}/static/js/common.js"></script>
-  <script src="{{ BASE }}/static/js/architecture.js"></script>
 </body>
 </html>

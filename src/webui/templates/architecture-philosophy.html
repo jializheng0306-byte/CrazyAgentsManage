@@ -6,228 +6,34 @@
   <title>产品哲学 - FlowMind</title>
   <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/architecture.css">
+  <style>
+    .arch-preview-shell {
+      min-height: calc(100vh - 72px);
+      padding: 16px 20px 24px;
+      background: #030712;
+    }
+
+    .arch-preview-frame {
+      width: 100%;
+      min-height: calc(100vh - 112px);
+      border: 1px solid #111827;
+      border-radius: 12px;
+      background: #020617;
+      box-shadow: 0 20px 60px rgba(2, 6, 23, 0.35);
+    }
+  </style>
 </head>
-<body data-arch-page="philosophy">
+<body>
   {% set active_nav = 'overview' %}
   {% set active_architecture = 'philosophy' %}
   {% include 'ia-nav.html' %}
 
-  <main class="container arch-shell">
-    <section class="arch-hero">
-      <div class="arch-hero-copy">
-        <div class="arch-eyebrow">FlowMind 架构可视化表面 / 产品哲学</div>
-        <h1 class="arch-title">以 HermesAgent 为宿主，让 FlowMind 成为可运营、可治理、可追责的产品层</h1>
-        <p class="arch-subtitle">
-          这不是一个泛化的 Agent 展示页。这里定义的是产品为什么存在、它治理什么对象、它和 HermesAgent 的边界是什么，以及为什么所有运行态、运营动作和仓库事实都必须被拉到同一条产品叙事里。
-        </p>
-        <div class="arch-tags">
-          <span class="arch-tag"><span class="arch-dot host"></span>HermesAgent = 运行时宿主</span>
-          <span class="arch-tag"><span class="arch-dot truth"></span>FlowMind = 治理真相层</span>
-          <span class="arch-tag"><span class="arch-dot bridge"></span>CrazyAgentsManage = 可操作的产品层</span>
-        </div>
-      </div>
-      <div class="arch-status-board">
-        <div class="arch-live-card">
-          <div class="arch-live-label">当前活跃会话</div>
-          <div class="arch-live-value" id="arch-hero-live">--</div>
-          <div class="arch-live-meta" id="arch-hero-meta">等待实时状态</div>
-        </div>
-        <div class="arch-live-card">
-          <div class="arch-live-label">协作痕迹</div>
-          <div class="arch-live-value" id="arch-handoff-count">--</div>
-          <div class="arch-live-meta">仓库 success trace 数量</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="arch-metrics">
-      <div class="arch-metric">
-        <div class="arch-metric-label">累计会话</div>
-        <div class="arch-metric-value" id="arch-metric-sessions">--</div>
-        <div class="arch-metric-note">当前系统已沉淀的运行对象</div>
-      </div>
-      <div class="arch-metric">
-        <div class="arch-metric-label">活跃运行</div>
-        <div class="arch-metric-value" id="arch-metric-active">--</div>
-        <div class="arch-metric-note">需要运营关注的实时工作量</div>
-      </div>
-      <div class="arch-metric">
-        <div class="arch-metric-label">技能体系</div>
-        <div class="arch-metric-value" id="arch-metric-skills">--</div>
-        <div class="arch-metric-note">当前可被调度和运营的能力面</div>
-      </div>
-      <div class="arch-metric">
-        <div class="arch-metric-label">记忆资产</div>
-        <div class="arch-metric-value" id="arch-metric-memory">--</div>
-        <div class="arch-metric-note">被保留下来的治理和运营知识</div>
-      </div>
-    </section>
-
-    <div class="arch-layout">
-      <div>
-        <section class="arch-section">
-          <div class="arch-section-title">
-            <div>
-              <h2>产品定位堆栈</h2>
-              <p>把宿主、真相层、产品层和运营对象分开，避免叙事打架。</p>
-            </div>
-          </div>
-          <div class="arch-stack">
-            <div class="arch-stack-card">
-              <div class="arch-node-status"><span class="arch-dot host"></span>运行时宿主</div>
-              <h3>HermesAgent</h3>
-              <p>负责执行、接入平台、维持运行时状态、承载会话与工具链，是系统的操作发生地。</p>
-            </div>
-            <div class="arch-stack-card">
-              <div class="arch-node-status"><span class="arch-dot truth"></span>治理真相层</div>
-              <h3>FlowMind</h3>
-              <p>负责定义规范、沉淀母文档、接住 candidate 到 canonical truth 的提升过程，是产品不漂移的约束层。</p>
-            </div>
-            <div class="arch-stack-card">
-              <div class="arch-node-status"><span class="arch-dot bridge"></span>产品层</div>
-              <h3>CrazyAgentsManage</h3>
-              <p>负责把运行态做成用户能读、运营能管、治理能追责的表面，而不是再造一个“Agent 游乐场”。</p>
-            </div>
-            <div class="arch-stack-card">
-              <div class="arch-node-status"><span class="arch-dot live"></span>运营对象</div>
-              <h3>Session / Skill / Memory / Handoff / Truth</h3>
-              <p>这些是产品真正经营的对象。页面、图谱和仪表板都只是它们的呈现方式。</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="arch-section">
-          <div class="arch-section-title">
-            <div>
-              <h2>六条产品原则</h2>
-              <p>直接来自当前母 PRD 的约束，不展开到底层 API 设计。</p>
-            </div>
-          </div>
-          <div class="arch-philo-grid">
-            <div class="arch-principle">
-              <div class="arch-principle-title">运行态先可读</div>
-              <p>先让操作者看清现在发生了什么，再谈更多编排能力。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">运营对象先可管</div>
-              <p>技能、告警、记忆、会话、定时任务都要能被操作，而不只是能被列出来。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">治理闭环必须显式</div>
-              <p>什么是 candidate，什么是 canonical truth，什么还在 review，不能混在一起。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">事实优先于聊天记录</div>
-              <p>群聊和会话不是持久真相，仓库文档、harness 记录与 closeout 证据才是。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">Hermes 与 FlowMind 分工清晰</div>
-              <p>Hermes 负责运行与运营动作，FlowMind 负责规范和治理提升，产品层承接两者。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">页面必须连接实施动态</div>
-              <p>架构页不是静态 PPT，必须能回到真实路由、真实状态和真实证据。</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="arch-section">
-          <div class="arch-section-title">
-            <div>
-              <h2>从意图到仓库事实的产品闭环</h2>
-              <p>产品哲学不是口号，它必须落到实际流转链路上。</p>
-            </div>
-          </div>
-          <div class="arch-map">
-            <div class="arch-map-row">
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot live"></span>输入侧</div>
-                <h3>用户 / 平台事件</h3>
-                <p>来自 CLI、Feishu、Webhook、Cron、API Server 的意图进入 Hermes 运行面。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot host"></span>执行侧</div>
-                <h3>HermesAgent 运行</h3>
-                <p>生成会话、调用工具、更新状态文件与数据库，构成一切运营对象的原始现场。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot bridge"></span>产品表面</div>
-                <h3>CrazyAgentsManage</h3>
-                <p>把运行态抽成 Overview / Runtime / Operations / Governance / Collaboration 五大责任面。</p>
-              </div>
-            </div>
-            <div class="arch-map-row">
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot truth"></span>规范侧</div>
-                <h3>FlowMind 治理真相</h3>
-                <p>把设计稿、PRD、路线图、closeout 结论提升为可复用的规范性事实。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot bridge"></span>协作侧</div>
-                <h3>Codex ↔ HermesAgent</h3>
-                <p>通过 handoff packet、runtime snapshot、harness 记录协作，不让结论只留在聊天里。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot live"></span>沉淀侧</div>
-                <h3>Repo Facts / Harness</h3>
-                <p>最终形成仓库中的持久事实，反过来约束下一轮实施和运营判断。</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <aside class="arch-aside">
-        <section class="arch-aside-card">
-          <h3>边界裁定</h3>
-          <div class="arch-kv">
-            <div class="arch-kv-row"><span class="arch-kv-key">这是</span><span class="arch-kv-value">以 HermesAgent 为宿主的 FlowMind 运营产品</span></div>
-            <div class="arch-kv-row"><span class="arch-kv-key">不是</span><span class="arch-kv-value">通用多智能体 playground</span></div>
-            <div class="arch-kv-row"><span class="arch-kv-key">产品职责</span><span class="arch-kv-value">让运行态可见，让运营对象可管理，让治理闭环可执行</span></div>
-          </div>
-        </section>
-
-        <section class="arch-aside-card">
-          <h3>实时来源分布</h3>
-          <div class="arch-pill-list" id="arch-source-pills">
-            <span class="arch-empty">加载中</span>
-          </div>
-        </section>
-
-        <section class="arch-aside-card">
-          <h3>当前关键运营对象</h3>
-          <div class="arch-kv" id="arch-skill-list">
-            <div class="arch-empty">加载中</div>
-          </div>
-        </section>
-
-        <section class="arch-aside-card">
-          <h3>架构页跳转入口</h3>
-          <div class="arch-linkband">
-            <a class="arch-linkcard" href="{{ BASE }}/overview">
-              <div class="arch-linkcard-title">总览</div>
-              <div class="arch-linkcard-meta">回到顶层运行健康与注意力入口。</div>
-            </a>
-            <a class="arch-linkcard" href="{{ BASE }}/governance">
-              <div class="arch-linkcard-title">治理面</div>
-              <div class="arch-linkcard-meta">查看 truth、candidate、review 与 drift。</div>
-            </a>
-            <a class="arch-linkcard" href="{{ BASE }}/collaboration">
-              <div class="arch-linkcard-title">协作面</div>
-              <div class="arch-linkcard-meta">查看 handoff packet 与 closeout 证据。</div>
-            </a>
-            <a class="arch-linkcard" href="{{ BASE }}/architecture/tech">
-              <div class="arch-linkcard-title">技术架构</div>
-              <div class="arch-linkcard-meta">查看技术链路如何承接这套产品哲学。</div>
-            </a>
-          </div>
-        </section>
-      </aside>
-    </div>
+  <main class="arch-preview-shell">
+    <iframe
+      class="arch-preview-frame"
+      src="{{ BASE }}/static/original-arch-preview/index.html?page=philosophy"
+      title="FlowMind 产品哲学原始样例预览"
+    ></iframe>
   </main>
-  <script src="{{ BASE }}/static/js/common.js"></script>
-  <script src="{{ BASE }}/static/js/architecture.js"></script>
 </body>
 </html>
