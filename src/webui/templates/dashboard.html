@@ -4,45 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>监控仪表板 - CrazyAgentsManage</title>
-  <link rel="stylesheet" href="/static/css/design-system.css">
-  <link rel="stylesheet" href="/static/css/nav.css">
-  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/dashboard.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
 </head>
 <body>
 
-  <!-- Global Navigation Bar - Hermes Style -->
-  <nav class="global-nav">
-    <div class="container">
-      <div class="global-nav-inner">
-        <div class="nav-left">
-          <a href="{{ BASE }}/" class="nav-logo">
-            <div class="nav-logo-icon">⚡</div>
-            Hermes
-            <span class="nav-version">v0.5</span>
-          </a>
-          <div class="nav-menu">
-            <a href="{{ BASE }}/" class="nav-item">📊 概览</a>
-            <a href="{ BASE }/agent" class="nav-item active">🟣 Agent</a>
-            <a href="{ BASE }/tasks" class="nav-item">📋 任务</a>
-            <a href="{ BASE }/dashboard" class="nav-item">📊 监控仪表板</a>
-            <a href="{ BASE }/skills" class="nav-item">⚡ 技能</a>
-            <a href="{ BASE }/team-memory" class="nav-item">📝 团队记忆</a>
-            <a href="{ BASE }/cron" class="nav-item">⏰ 定时任务</a>
-            <a href="{ BASE }/graph" class="nav-item">🔗 图谱</a>
-            <a href="{ BASE }/sessions" class="nav-item pipeline">🔴 流水线</a>
-            <a href="{ BASE }/alerts" class="nav-item">🔔 告警</a>
-            <a href="{ BASE }/tokens" class="nav-item">💰 Token</a>
-          </div>
-        </div>
-        <div class="nav-right">
-          <input type="text" class="nav-search" placeholder="搜索...">
-          <button class="nav-favorite">⭐ 收藏夹</button>
-        </div>
-      </div>
-    </div>
-  </nav>
+{% set active_nav = 'runtime' %}
+{% include 'ia-nav.html' %}
 
-  <!-- Main Content - Vercel Workflow Style -->
+  <!-- Main Content - Vercel Trace Style (Nested Tree, NOT Gantt Chart) -->
   <main id="dashboard-app">
 
     <!-- Breadcrumb / Project Bar -->
@@ -54,7 +26,7 @@
         <span class="vw-breadcrumb-text">Workflows</span>
         <span class="vw-breadcrumb-sep">/</span>
         <span class="vw-breadcrumb-current" id="sessionRunId">session_latest</span>
-        <a class="vw-external-link" href="/sessions" title="查看所有会话">↗</a>
+        <a class="vw-external-link" href="{{ BASE }}/sessions" title="查看所有会话">↗</a>
       </div>
     </div>
 
@@ -68,7 +40,7 @@
         </span>
       </div>
       <div class="vw-task-actions">
-        <button class="vw-btn-outline" onclick="window.location.href='/sessions'">查看全部会话</button>
+        <button class="vw-btn-outline" onclick="window.location.href='{{ BASE }}/sessions'">查看全部会话</button>
         <button class="vw-btn-more" onclick="toggleMenu()">⋮</button>
       </div>
     </div>
@@ -111,27 +83,21 @@
     <!-- Search Bar -->
     <div class="vw-search-bar">
       <svg class="vw-search-icon" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M11 11L14.5 14.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      <input type="text" class="vw-search-input" placeholder="Search spans..." id="timelineSearch" oninput="filterTimeline()">
+      <input type="text" class="vw-search-input" placeholder="Search spans..." id="traceSearch" oninput="filterTrace()">
     </div>
 
-    <!-- Timeline Area (Core) -->
-    <div class="vw-timeline-container" id="timelineContainer">
-      <!-- Time Ruler -->
-      <div class="vw-time-ruler" id="timeRuler">
-        <div class="vw-ruler-track" id="rulerTrack"></div>
-      </div>
+    <!-- Trace Summary Bar -->
+    <div class="vw-summary-bar" id="traceSummary" style="display:none;"></div>
 
-      <!-- Timeline Body (Gantt Chart) -->
-      <div class="vw-timeline-body" id="timelineBody">
-        <div class="vw-timeline-grid" id="timelineGrid"></div>
+    <!-- Trace Tree Area (Nested tree structure - Vercel Trace style) -->
+    <div class="vw-trace-container" id="traceContainer">
+      <div class="vw-trace-header-row">
+        <span class="vw-trace-col-span">SPAN</span>
+        <span class="vw-trace-col-token">Token</span>
+        <span class="vw-trace-col-duration">Duration</span>
+        <span class="vw-trace-col-status">Status</span>
       </div>
-    </div>
-
-    <!-- Zoom Controls -->
-    <div class="vw-zoom-controls">
-      <button class="vw-zoom-btn" onclick="zoomIn()" title="放大">🔍+</button>
-      <button class="vw-zoom-btn" onclick="zoomOut()" title="缩小">🔍−</button>
-      <button class="vw-zoom-btn" onclick="fitToView()" title="适应视图">⊡</button>
+      <div class="vw-trace-tree" id="traceTree"></div>
     </div>
 
     <!-- Footer -->
@@ -141,6 +107,21 @@
 
   </main>
 
-  <script src="/static/js/dashboard.js"></script>
+  <!-- Side Detail Panel (Right Slide-out) -->
+  <div class="vw-side-panel-overlay" id="sidePanelOverlay" onclick="closeSidePanel()"></div>
+  <div class="vw-side-panel" id="sidePanel">
+    <div class="vw-side-panel-header">
+      <div class="vw-side-panel-title-row">
+        <span class="vw-side-panel-icon" id="spIcon">📌</span>
+        <span class="vw-side-panel-title" id="spTitle">详情</span>
+        <span class="vw-side-panel-badge" id="spBadge">--</span>
+      </div>
+      <button class="vw-side-panel-close" onclick="closeSidePanel()">✕</button>
+    </div>
+    <div class="vw-side-panel-body" id="spBody"></div>
+  </div>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/dashboard.js"></script>
 </body>
 </html>

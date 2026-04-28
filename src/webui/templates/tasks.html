@@ -4,42 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>任务编排 - CrazyAgentsManage</title>
-  <link rel="stylesheet" href="/static/css/design-system.css">
-  <link rel="stylesheet" href="/static/css/nav.css">
-  <link rel="stylesheet" href="/static/css/pages.css">
+  <link rel="stylesheet" href="/manage/static/css/design-system.css">
+  <link rel="stylesheet" href="/manage/static/css/nav.css">
+  <link rel="stylesheet" href="/manage/static/css/pages.css">
+  <link rel="stylesheet" href="/manage/static/css/components.css">
 </head>
 <body>
 
-  <nav class="global-nav">
-    <div class="container">
-      <div class="global-nav-inner">
-        <div class="nav-left">
-          <a href="{{ BASE }}/" class="nav-logo">
-            <div class="nav-logo-icon">⚡</div>
-            Hermes
-            <span class="nav-version">v0.5</span>
-          </a>
-          <div class="nav-menu">
-            <a href="{{ BASE }}/" class="nav-item">📊 概览</a>
-            <a href="{ BASE }/agent" class="nav-item">🟣 Agent</a>
-            <a href="{ BASE }/tasks" class="nav-item active">📋 任务</a>
-            <a href="{ BASE }/dashboard" class="nav-item">📊 监控仪表板</a>
-            <a href="{ BASE }/skills" class="nav-item">⚡ 技能</a>
-            <a href="{ BASE }/team-memory" class="nav-item">📝 团队记忆</a>
-            <a href="{ BASE }/cron" class="nav-item">⏰ 定时任务</a>
-            <a href="{ BASE }/graph" class="nav-item">🔗 图谱</a>
-            <a href="{ BASE }/sessions" class="nav-item pipeline">🔴 流水线</a>
-            <a href="{ BASE }/alerts" class="nav-item">🔔 告警</a>
-            <a href="{ BASE }/tokens" class="nav-item">💰 Token</a>
-          </div>
-        </div>
-        <div class="nav-right">
-          <input type="text" class="nav-search" placeholder="搜索...">
-          <button class="nav-favorite">⭐ 收藏夹</button>
-        </div>
-      </div>
-    </div>
-  </nav>
+{% set active_nav = 'collaboration' %}
+{% include 'ia-nav.html' %}
 
   <main class="container mt-lg">
     <div class="page-header" style="margin-bottom: var(--spacing-lg);">
@@ -85,7 +58,8 @@
     </div>
   </main>
 
-  <script src="/static/js/common.js"></script>
-  <script src="/static/js/tasks.js"></script>
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/dag_view.js"></script>
+  <script src="{{ BASE }}/static/js/tasks.js"></script>
 </body>
 </html>

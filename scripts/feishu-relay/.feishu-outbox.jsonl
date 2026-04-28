@@ -1,0 +1,10 @@
+{"action":"reply","text":"你好！我是 CrazyAgentsManage 的 Trae Agent。关于你的问题，我当前使用的是 Trae IDE 内置的智能模型，通过飞书消息代理 relay 与你交互。消息处理流程是：飞书群聊  relay 接收  写入 pending 队列  我处理  回复发送。刚才的确认消息已经发送，现在这个是完整回复。","chatId":null,"ts":1777290532069}
+{"action":"reply","text":"收到你的消息了，Trae Agent 正在处理中...","chatId":"oc_bbde428675a7c267d55c3f0663ca701d","ts":1777290705716}
+{"action":"reply","text":"收到你的消息了，Trae Agent 正在处理中...","chatId":"oc_bbde428675a7c267d55c3f0663ca701d","ts":1777290946828}
+{"action":"reply","text":"收到你的消息了，Trae Agent 正在处理中...","chatId":"oc_bbde428675a7c267d55c3f0663ca701d","ts":1777291418035}
+{"action":"reply","text":"收到你的消息了，Trae Agent 正在处理中...","chatId":"oc_bbde428675a7c267d55c3f0663ca701d","ts":1777291675020}
+{"action":"reply","text":"收到你的消息了，Trae Agent 正在处理中...","chatId":"oc_bbde428675a7c267d55c3f0663ca701d","ts":1777291760129}
+{"action":"reply","text":"收到你的消息了，Trae Agent 正在处理中...","chatId":"oc_bbde428675a7c267d55c3f0663ca701d","ts":1777293189284}
+{"action":"reply","text":"收到你的消息了，Trae Agent 正在处理中...","chatId":"oc_bbde428675a7c267d55c3f0663ca701d","ts":1777294314978}
+{"action":"reply","text":"收到你的消息了，Trae Agent 正在处理中...","chatId":"oc_bbde428675a7c267d55c3f0663ca701d","ts":1777296221555}
+{"action":"reply","text":"收到你的消息了，Trae Agent 正在处理中...","chatId":"oc_bbde428675a7c267d55c3f0663ca701d","ts":1777299158744}

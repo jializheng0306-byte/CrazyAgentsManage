@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>治理面 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/governance.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+</head>
+<body>
+  {% set active_nav = 'governance' %}
+  {% include 'ia-nav.html' %}
+
+  <main id="gv-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+
+    <div class="gv-hero">
+      <h1 class="gv-hero-title">
+        <span class="gv-hero-icon">🏛️</span>
+        治理面
+      </h1>
+      <p class="gv-hero-subtitle">规则、结构与判断口径 — 产品哲学、产品架构与治理图谱</p>
+    </div>
+
+    <div class="gv-metrics-strip">
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-candidate-count">--</div>
+        <div class="gv-metric-label">候选事实</div>
+        <div class="gv-metric-desc">待审核的候选知识条目</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-truth-count">--</div>
+        <div class="gv-metric-label">确认事实</div>
+        <div class="gv-metric-desc">已通过审核的知识条目</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-review-count">--</div>
+        <div class="gv-metric-label">待审阅</div>
+        <div class="gv-metric-desc">等待人工审阅的条目</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-drift-count">--</div>
+        <div class="gv-metric-label">漂移检测</div>
+        <div class="gv-metric-desc">检测到的事实漂移事件</div>
+      </div>
+    </div>
+
+    <section class="gv-section">
+      <div class="gv-section-header">
+        <h2 class="gv-section-title">
+          <span class="gv-section-icon">📐</span>
+          架构展示
+        </h2>
+      </div>
+      <div class="gv-arch-grid">
+        <a class="gv-arch-card" href="{{ BASE }}/architecture/philosophy">
+          <span class="gv-arch-icon">🧭</span>
+          <span class="gv-arch-title">产品哲学</span>
+          <span class="gv-arch-desc">FlowMind 的核心设计理念、价值主张与决策原则</span>
+        </a>
+        <a class="gv-arch-card" href="{{ BASE }}/architecture/product">
+          <span class="gv-arch-icon">🏗️</span>
+          <span class="gv-arch-title">产品架构</span>
+          <span class="gv-arch-desc">系统分层、模块划分与数据流向的架构蓝图</span>
+        </a>
+        <a class="gv-arch-card" href="{{ BASE }}/architecture/tech">
+          <span class="gv-arch-icon">⚙️</span>
+          <span class="gv-arch-title">技术架构</span>
+          <span class="gv-arch-desc">运行信号如何进入产品、技术选型与实现路径</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="gv-section">
+      <div class="gv-section-header">
+        <h2 class="gv-section-title">
+          <span class="gv-section-icon">🔗</span>
+          治理入口
+        </h2>
+      </div>
+      <div class="gv-entry-grid">
+        <a class="gv-entry-card" href="{{ BASE }}/governance/graph">
+          <span class="gv-entry-icon">🔗</span>
+          <span class="gv-entry-title">治理图谱</span>
+          <span class="gv-entry-desc">智能体间关系、任务依赖和数据流向的可视化图谱</span>
+        </a>
+        <a class="gv-entry-card" href="{{ BASE }}/overview">
+          <span class="gv-entry-icon">📊</span>
+          <span class="gv-entry-title">全局总览</span>
+          <span class="gv-entry-desc">系统整体健康状态与关键指标聚合视图</span>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/governance.js"></script>
+</body>
+</html>

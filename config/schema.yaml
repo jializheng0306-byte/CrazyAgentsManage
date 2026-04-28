@@ -1,0 +1,124 @@
+# CrazyAgentsManage Configuration Schema
+# This file defines the configuration structure for the multi-agent system.
+
+multi_agent:
+  enabled: true
+  max_concurrent_agents: 5
+  max_depth: 3
+  default_max_iterations: 50
+
+  roles:
+    coordinator:
+      description: "主协调智能体，拥有全部工具"
+      toolsets: [terminal, file, web, mcp, memory]
+      model: null
+
+    expert:
+      description: "专家，复杂推理/调试/代码审查"
+      toolsets: [terminal, file, web, mcp]
+      model: "anthropic/claude-sonnet-4-20250514"
+
+    research:
+      description: "研究，网络搜索/信息收集"
+      toolsets: [web, file]
+      model: "openrouter/deepseek-chat-v3"
+
+    code:
+      description: "编程，代码编写/测试/调试"
+      toolsets: [terminal, file, code_execution]
+      model: "anthropic/claude-opus-4.6"
+
+    ops:
+      description: "运维，系统运维/部署/监控"
+      toolsets: [terminal, file]
+      model: "openrouter/claude-sonnet-4-20250514"
+
+    cron:
+      description: "定时，定时任务执行/报告生成"
+      toolsets: [terminal, file, web, memory]
+      model: "openrouter/claude-sonnet-4-20250514"
+
+    team:
+      description: "团队，团队记忆管理/角色协调"
+      toolsets: [file, memory, send_message]
+      model: "openrouter/claude-sonnet-4-20250514"
+
+memory:
+  enabled: true
+  base_dir: null  # null means ~/.hermes/
+  layers:
+    L1_instant:
+      description: "瞬时记忆 - 当前对话历史"
+      source: session_db
+    L2_working:
+      description: "工作记忆 - 当前任务相关文件"
+      source: task_files
+    L3_reference:
+      description: "参考记忆 - API文档/项目规范/架构文档"
+      source: references_dir
+      path: references/
+    L4_experience:
+      description: "经验记忆 - 常见模式/历史教训/已验证方案"
+      source: experiences_dir
+      path: experiences/
+    L5_identity:
+      description: "身份记忆 - 角色定义/行为准则/用户偏好"
+      source: identity_file
+      path: identity.md
+
+  team_memory:
+    enabled: true
+    base_dir: null  # null means ~/.hermes/teams/
+    auto_update: true
+    max_role_memories: 10
+
+  self_improvement:
+    enabled: true
+    extract_patterns: true
+    extract_lessons: true
+    update_on_session_end: true
+
+cron:
+  enabled: true
+  team_binding: true
+  output_sedimentation: true
+  default_team: default
+  output_dir: cron/output/
+  agent_role: cron
+
+shared_context:
+  enabled: true
+  base_dir: null  # null means ~/.hermes/shared-context/
+  auto_cleanup: true
+  cleanup_after_days: 30
+
+task_orchestrator:
+  enabled: true
+  max_parallel_tasks: 5
+  retry_on_failure: true
+  max_retries: 2
+  persist_to_disk: true
+
+delegate_tool:
+  enabled: true
+  max_concurrent_children: 3
+  max_depth: 2
+  skip_context_files: true
+  skip_memory: true
+  blocked_tools:
+    - delegate_task
+    - clarify
+    - memory
+    - send_message
+    - execute_code
+  blocked_toolset_names:
+    - delegation
+    - clarify
+    - memory
+    - code_execution
+
+health_monitor:
+  enabled: true
+  interval: 30
+  auto_recover: true
+  max_recovery_attempts: 3

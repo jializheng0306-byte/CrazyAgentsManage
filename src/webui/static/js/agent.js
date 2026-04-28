@@ -2,20 +2,25 @@ document.addEventListener('DOMContentLoaded', () => {
   Promise.all([loadAgentStats(), loadAgentCards()]);
 });
 
+let allAgents = [];
+
 async function loadAgentStats() {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/agents/list');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/agents/list', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const agents = await resp.json();
     if (!Array.isArray(agents)) throw new Error('Invalid response');
+    allAgents = agents;
 
-    const totalAgents = agents.length;
     const running = agents.filter(a => a.platform_state === 'connected').length;
     const idle = agents.filter(a => a.platform_state !== 'connected' && a.platform_state !== 'error' && a.platform_state !== 'fatal').length;
     const errorCount = agents.filter(a => a.platform_state === 'error' || a.platform_state === 'fatal').length;
 
     const statValues = document.querySelectorAll('.stat-value');
-    if (statValues[0]) statValues[0].textContent = totalAgents;
+    if (statValues[0]) statValues[0].textContent = agents.length;
     if (statValues[1]) statValues[1].textContent = running;
     if (statValues[2]) statValues[2].textContent = idle;
     if (statValues[3]) statValues[3].textContent = errorCount;
@@ -25,78 +30,99 @@ async function loadAgentStats() {
   }
 }
 
-async function loadAgentCards() {
+async function loadAgentCards(filterSource) {
   try {
-    const resp = await fetch(window.APP_BASE + '/api/agents/list');
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const agents = await resp.json();
-    if (!Array.isArray(agents)) throw new Error('Invalid response');
-
+    const agents = filterSource ? allAgents.filter(a => a.source === filterSource) : allAgents;
     const container = document.querySelector('.agent-cards') || document.querySelector('.agents-grid');
     if (!container) return;
 
     if (agents.length === 0) {
-      container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b;">暂无智能体数据</div>';
+      container.innerHTML = '<div class="empty-state">暂无智能体数据</div>';
       return;
     }
 
-    container.innerHTML = agents.map(agent => {
+    const sources = [...new Set(allAgents.map(a => a.source))];
+    const filterHtml = sources.length > 1 ? `
+      <div class="filter-bar">
+        <button class="btn ${!filterSource ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="loadAgentCards()">全部</button>
+        ${sources.map(s => `<button class="btn ${filterSource === s ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="loadAgentCards('${s}')">${getSourceEmoji(s)} ${s}</button>`).join('')}
+      </div>
+    ` : '';
+
+    container.innerHTML = filterHtml + '<div class="agents-grid-inner">' + agents.map(agent => {
       const gradients = agent.gradient ? agent.gradient.split(',') : ['#64748b', '#475569'];
       if (gradients.length < 2) gradients.push(gradients[0]);
-      const statusClass = agent.platform_state === 'connected' ? 'active' :
-                          agent.platform_state === 'error' || agent.platform_state === 'fatal' ? 'error' :
-                          agent.session_count > 0 ? 'executing' : 'idle';
-      const statusText = statusClass === 'active' ? '在线' :
-                         statusClass === 'error' ? '异常' :
-                         statusClass === 'executing' ? '活跃' : '空闲';
+      const sc = agent.platform_state === 'connected' ? 'active' :
+                 agent.platform_state === 'error' || agent.platform_state === 'fatal' ? 'error' :
+                 agent.session_count > 0 ? 'running' : 'idle';
+      const st = sc === 'active' ? '在线' : sc === 'error' ? '异常' : sc === 'running' ? '活跃' : '空闲';
+      const successColor = agent.success_rate != null && agent.success_rate < 80 ? '#f59e0b' : '#10b981';
 
-      return '<div class="card agent-card" style="padding:var(--spacing-lg);position:relative;overflow:hidden;">' +
-        '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,' + sanitizeColor(gradients[0]) + ',' + sanitizeColor(gradients[1]) + ');"></div>' +
-        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">' +
-        '<span style="font-size:32px;">' + escapeHtml(agent.icon || '') + '</span>' +
-        '<div style="flex:1;">' +
-        '<h3 style="font-size:16px;font-weight:600;color:white;margin:0;">' + escapeHtml(agent.name) + '</h3>' +
-        '<span style="font-size:12px;padding:2px 8px;border-radius:4px;background:' + (statusClass === 'active' ? '#10b98122' : statusClass === 'error' ? '#ef444422' : '#64748b22') + ';color:' + (statusClass === 'active' ? '#10b981' : statusClass === 'error' ? '#ef4444' : '#94a3b8') + ';">' + statusText + '</span>' +
-        '</div></div>' +
-        '<p style="font-size:13px;color:#94a3b8;margin-bottom:16px;line-height:1.5;">' + escapeHtml(agent.description || '') + '</p>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
-        '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;">' +
-        '<div style="font-size:11px;color:#64748b;margin-bottom:4px;">会话数</div>' +
-        '<div style="font-size:18px;font-weight:600;color:white;">' + (agent.session_count || 0).toLocaleString() + '</div></div>' +
-        '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;">' +
-        '<div style="font-size:11px;color:#64748b;margin-bottom:4px;">成功率</div>' +
-        '<div style="font-size:18px;font-weight:600;color:' + (agent.success_rate != null && agent.success_rate < 80 ? '#f59e0b' : '#10b981') + ';">' + (agent.success_rate != null ? agent.success_rate + '%' : '--') + '</div></div>' +
-        '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;">' +
-        '<div style="font-size:11px;color:#64748b;margin-bottom:4px;">Token 消耗</div>' +
-        '<div style="font-size:14px;font-weight:500;color:#f59e0b;">' + formatTokenCount(agent.total_tokens || 0) + '</div></div>' +
-        '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;">' +
-        '<div style="font-size:11px;color:#64748b;margin-bottom:4px;">工具调用</div>' +
-        '<div style="font-size:14px;font-weight:500;color:#06b6d4;">' + (agent.total_tool_calls || 0).toLocaleString() + '</div></div>' +
-        '</div></div>';
-    }).join('');
+      return `<div class="card agent-card" onclick="showAgentDetail('${escapeHtml(agent.source)}')">
+        <div class="agent-card-gradient-bar" style="background:linear-gradient(90deg,${sanitizeColor(gradients[0])},${sanitizeColor(gradients[1])});"></div>
+        <div class="agent-card-header">
+          <span class="agent-card-icon">${escapeHtml(agent.icon || '')}</span>
+          <div style="flex:1;">
+            <h3 class="agent-card-name">${escapeHtml(agent.name)}</h3>
+            <span class="status-badge status-badge-${sc}">${st}</span>
+          </div>
+        </div>
+        <p class="agent-card-desc">${escapeHtml(agent.description || '')}</p>
+        <div class="agent-card-stats">
+          <div class="agent-stat-cell"><div class="agent-stat-label">会话数</div><div class="agent-stat-value">${(agent.session_count || 0).toLocaleString()}</div></div>
+          <div class="agent-stat-cell"><div class="agent-stat-label">成功率</div><div class="agent-stat-value" style="color:${successColor}">${agent.success_rate != null ? agent.success_rate + '%' : '--'}</div></div>
+          <div class="agent-stat-cell"><div class="agent-stat-label">Token 消耗</div><div class="agent-stat-value-sm detail-value-warning">${formatTokenCount(agent.total_tokens || 0)}</div></div>
+          <div class="agent-stat-cell"><div class="agent-stat-label">工具调用</div><div class="agent-stat-value-sm detail-value-info">${(agent.total_tool_calls || 0).toLocaleString()}</div></div>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
   } catch (e) {
     console.error('Failed to load agent cards:', e);
     const container = document.querySelector('.agent-cards') || document.querySelector('.agents-grid');
-    if (container) container.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444;">加载失败，请刷新重试</div>';
+    if (container) container.innerHTML = '<div class="error-state">加载失败，请刷新重试</div>';
   }
 }
 
-function sanitizeColor(val) {
-  if (!val) return '#64748b';
-  if (/^#[0-9a-fA-F]{6}$/.test(val.trim())) return val.trim();
-  if (/^#[0-9a-fA-F]{3}$/.test(val.trim())) return val.trim();
-  return '#64748b';
-}
+function showAgentDetail(source) {
+  const agent = allAgents.find(a => a.source === source);
+  if (!agent) return;
 
-function formatTokenCount(n) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-  return String(n);
-}
+  const existing = document.getElementById('agentDetailModal');
+  if (existing) existing.remove();
 
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+  const sc = agent.platform_state === 'connected' ? 'active' :
+             agent.platform_state === 'error' || agent.platform_state === 'fatal' ? 'error' : 'idle';
+  const st = sc === 'active' ? '在线' : sc === 'error' ? '异常' : '空闲';
+  const successColor = agent.success_rate != null && agent.success_rate < 80 ? '#f59e0b' : '#10b981';
+
+  const modal = document.createElement('div');
+  modal.id = 'agentDetailModal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <button class="modal-close" onclick="document.getElementById('agentDetailModal').remove()">&times;</button>
+      <div class="modal-header">
+        <span class="modal-icon">${escapeHtml(agent.icon || '')}</span>
+        <div>
+          <h2 class="modal-title">${escapeHtml(agent.name)}</h2>
+          <span class="status-badge status-badge-${sc}">${st}</span>
+        </div>
+      </div>
+      <p class="agent-card-desc" style="margin-bottom:20px;">${escapeHtml(agent.description || '')}</p>
+      <div class="detail-grid">
+        <div class="detail-cell"><div class="detail-label">来源</div><div class="detail-value">${getSourceEmoji(agent.source)} ${escapeHtml(agent.source)}</div></div>
+        <div class="detail-cell"><div class="detail-label">会话数</div><div class="detail-value">${(agent.session_count || 0).toLocaleString()}</div></div>
+        <div class="detail-cell"><div class="detail-label">Token 消耗</div><div class="detail-value-warning">${formatTokenCount(agent.total_tokens || 0)}</div></div>
+        <div class="detail-cell"><div class="detail-label">成功率</div><div class="detail-value" style="color:${successColor}">${agent.success_rate != null ? agent.success_rate + '%' : '--'}</div></div>
+        <div class="detail-cell"><div class="detail-label">消息总数</div><div class="detail-value">${(agent.total_messages || 0).toLocaleString()}</div></div>
+        <div class="detail-cell"><div class="detail-label">工具调用</div><div class="detail-value-info">${(agent.total_tool_calls || 0).toLocaleString()}</div></div>
+        <div class="detail-cell-span2"><div class="detail-label">总费用</div><div class="detail-value-success">$${(agent.total_cost || 0).toFixed(4)}</div></div>
+      </div>
+      <div style="margin-top:16px;text-align:center;">
+        <a href="/sessions?source=${encodeURIComponent(agent.source)}" class="link-more">查看该智能体的所有会话 &rarr;</a>
+      </div>
+    </div>
+  `;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
 }
