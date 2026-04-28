@@ -6,234 +6,34 @@
   <title>产品架构 - FlowMind</title>
   <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/architecture.css">
+  <style>
+    .arch-preview-shell {
+      min-height: calc(100vh - 72px);
+      padding: 16px 20px 24px;
+      background: #030712;
+    }
+
+    .arch-preview-frame {
+      width: 100%;
+      min-height: calc(100vh - 112px);
+      border: 1px solid #111827;
+      border-radius: 12px;
+      background: #020617;
+      box-shadow: 0 20px 60px rgba(2, 6, 23, 0.35);
+    }
+  </style>
 </head>
-<body data-arch-page="product">
+<body>
   {% set active_nav = 'governance' %}
   {% set active_architecture = 'product' %}
   {% include 'ia-nav.html' %}
 
-  <main class="container arch-shell">
-    <section class="arch-hero">
-      <div class="arch-hero-copy">
-        <div class="arch-eyebrow">FlowMind 架构可视化表面 / 产品架构</div>
-        <h1 class="arch-title">围绕五大责任面，把宿主运行、运营动作、治理真相和协作证据组织成同一套产品结构</h1>
-        <p class="arch-subtitle">
-          这张图回答的是“谁和谁发生关系”。它展示用户、Hermes、CrazyAgentsManage、FlowMind、外部平台、仓库事实层之间的跨系统关系，并明确哪些链路已经落地、哪些还处于规划或补强状态。
-        </p>
-      </div>
-      <div class="arch-status-board">
-        <div class="arch-live-card">
-          <div class="arch-live-label">活跃运行对象</div>
-          <div class="arch-live-value" id="arch-hero-live">--</div>
-          <div class="arch-live-meta" id="arch-hero-meta">等待实时状态</div>
-        </div>
-        <div class="arch-live-card">
-          <div class="arch-live-label">当前网关状态</div>
-          <div class="arch-live-value" id="arch-runtime-gateway">--</div>
-          <div class="arch-live-meta">Runtime summary 提供的宿主在线状态</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="arch-metrics">
-      <div class="arch-metric">
-        <div class="arch-metric-label">累计会话</div>
-        <div class="arch-metric-value" id="arch-metric-sessions">--</div>
-        <div class="arch-metric-note">产品当前承接的运行规模</div>
-      </div>
-      <div class="arch-metric">
-        <div class="arch-metric-label">活跃会话</div>
-        <div class="arch-metric-value" id="arch-metric-active">--</div>
-        <div class="arch-metric-note">直接影响运营面和治理面的实时负载</div>
-      </div>
-      <div class="arch-metric">
-        <div class="arch-metric-label">技能数量</div>
-        <div class="arch-metric-value" id="arch-metric-skills">--</div>
-        <div class="arch-metric-note">可被路由和运营的能力集合</div>
-      </div>
-      <div class="arch-metric">
-        <div class="arch-metric-label">工具调用</div>
-        <div class="arch-metric-value" id="arch-runtime-tool-calls">--</div>
-        <div class="arch-metric-note">当前产品实际承接的执行动作量</div>
-      </div>
-    </section>
-
-    <div class="arch-layout">
-      <div>
-        <section class="arch-section">
-          <div class="arch-section-title">
-            <div>
-              <h2>跨系统产品结构图</h2>
-              <p>已落地链路用绿色或蓝紫状态呈现，仍需补强的链路保留为灰色说明。</p>
-            </div>
-          </div>
-          <div class="arch-legend">
-            <span class="arch-legend-item"><span class="arch-dot live"></span>已落地 / 在线</span>
-            <span class="arch-legend-item"><span class="arch-dot host"></span>宿主运行面</span>
-            <span class="arch-legend-item"><span class="arch-dot truth"></span>治理真相层</span>
-            <span class="arch-legend-item"><span class="arch-dot bridge"></span>产品编排层</span>
-            <span class="arch-legend-item"><span class="arch-dot planned"></span>规划补强项</span>
-          </div>
-          <div class="arch-map" style="margin-top: 16px;">
-            <div class="arch-map-row">
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot live"></span>外部输入端</div>
-                <h3>用户 / CLI / Feishu / Webhook / Cron</h3>
-                <p>外部世界通过不同入口把任务、事件、定时动作和运营请求送进宿主。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot host"></span>宿主运行面</div>
-                <h3>HermesAgent Runtime</h3>
-                <p>负责会话、消息、工具调用、平台连接、状态文件与运行时成本，是所有数据的原点。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot bridge"></span>产品责任面</div>
-                <h3>Overview / Runtime / Operations / Governance / Collaboration</h3>
-                <p>CrazyAgentsManage 把底层运行对象重组为五个可理解、可运营、可治理的工作面。</p>
-              </div>
-            </div>
-            <div class="arch-map-row">
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot bridge"></span>协作桥接</div>
-                <h3>Codex ↔ HermesAgent Handoff</h3>
-                <p>把开发决策、运行现场和运营验收通过 handoff、runtime snapshot、closeout 连接起来。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot truth"></span>治理真相层</div>
-                <h3>FlowMind / PRD / Roadmap / Harness</h3>
-                <p>负责定义规范性定位、母文档、后续派生 PRD 与仓库事实，不让系统靠口头记忆运转。</p>
-              </div>
-              <div class="arch-node">
-                <div class="arch-node-status"><span class="arch-dot planned"></span>外部运营联动</div>
-                <h3>平台审批 / 通知 / 审计回写</h3>
-                <p>属于产品的规划性扩展，不再作为独立叙事中心，而是挂在当前五大责任面之下。</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="arch-section">
-          <div class="arch-section-title">
-            <div>
-              <h2>五大责任面如何消费这张产品结构图</h2>
-              <p>同一套结构，在不同页面承担不同产品职责。</p>
-            </div>
-          </div>
-          <div class="arch-philo-grid">
-            <div class="arch-principle">
-              <div class="arch-principle-title">Overview</div>
-              <p>负责把全局健康、未完成协作和关键运行态聚合成运营总览。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">Runtime</div>
-              <p>负责把 session、tool、token、gateway 与异常做成实时运行面。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">Operations</div>
-              <p>负责 skills、cron、alerts、team memory 和连接端点的操作面。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">Governance</div>
-              <p>负责 candidate、truth、review、drift、blocked 状态的判定与闭环。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">Collaboration</div>
-              <p>负责 Codex / HermesAgent 之间的交接、 closeout 和证据链承接。</p>
-            </div>
-            <div class="arch-principle">
-              <div class="arch-principle-title">Architecture Surface</div>
-              <p>负责把上述责任面的关系画出来，让设计与实施动态能够被直观看见。</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="arch-section">
-          <div class="arch-section-title">
-            <div>
-              <h2>已落地对象与补强对象</h2>
-              <p>区分事实与设计，不把规划能力说成现成能力。</p>
-            </div>
-          </div>
-          <div class="arch-map-row">
-            <div class="arch-node">
-              <div class="arch-node-status"><span class="arch-dot live"></span>已落地对象</div>
-              <ul>
-                <li>会话、消息、工具调用、Token 与来源分布</li>
-                <li>技能、Cron、Alerts、Team Memory、Gateway 状态</li>
-                <li>Handoff packet、runtime snapshot、harness traces</li>
-                <li>五大责任面的一级导航与基本可视化面</li>
-              </ul>
-            </div>
-            <div class="arch-node">
-              <div class="arch-node-status"><span class="arch-dot planned"></span>补强对象</div>
-              <ul>
-                <li>治理面更细的 truth / candidate 实时判定</li>
-                <li>跨平台审批、通知与运营动作的闭环回写</li>
-                <li>架构图节点级状态细分与更多证据链接</li>
-                <li>更完整的前端可视化画布与动态交互层</li>
-              </ul>
-            </div>
-            <div class="arch-node">
-              <div class="arch-node-status"><span class="arch-dot bridge"></span>当前执行策略</div>
-              <ul>
-                <li>先把产品结构做成真实页面与真实路由</li>
-                <li>再把动态数据挂进页面，而不是空留 demo 名称</li>
-                <li>用仓库主线、服务器状态和 closeout 证据持续校正</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <aside class="arch-aside">
-        <section class="arch-aside-card">
-          <h3>活跃会话</h3>
-          <div class="arch-kv" id="arch-active-session-list">
-            <div class="arch-empty">加载中</div>
-          </div>
-        </section>
-
-        <section class="arch-aside-card">
-          <h3>技能清单</h3>
-          <div class="arch-kv" id="arch-skill-list">
-            <div class="arch-empty">加载中</div>
-          </div>
-        </section>
-
-        <section class="arch-aside-card">
-          <h3>Cron 运营对象</h3>
-          <div class="arch-kv" id="arch-cron-list">
-            <div class="arch-empty">加载中</div>
-          </div>
-        </section>
-
-        <section class="arch-aside-card">
-          <h3>跳转入口</h3>
-          <div class="arch-linkband">
-            <a class="arch-linkcard" href="{{ BASE }}/operations">
-              <div class="arch-linkcard-title">运营面</div>
-              <div class="arch-linkcard-meta">查看技能、Cron、告警与团队记忆。</div>
-            </a>
-            <a class="arch-linkcard" href="{{ BASE }}/governance">
-              <div class="arch-linkcard-title">治理面</div>
-              <div class="arch-linkcard-meta">承接产品结构中的 truth 与 review 关系。</div>
-            </a>
-            <a class="arch-linkcard" href="{{ BASE }}/architecture/tech">
-              <div class="arch-linkcard-title">技术架构</div>
-              <div class="arch-linkcard-meta">下钻到实施链路和运行态证据。</div>
-            </a>
-            <a class="arch-linkcard" href="{{ BASE }}/collaboration">
-              <div class="arch-linkcard-title">协作面</div>
-              <div class="arch-linkcard-meta">查看跨角色交接是如何沉淀成仓库事实的。</div>
-            </a>
-          </div>
-        </section>
-      </aside>
-    </div>
+  <main class="arch-preview-shell">
+    <iframe
+      class="arch-preview-frame"
+      src="{{ BASE }}/static/original-arch-preview/index.html?page=product"
+      title="FlowMind 产品架构原始样例预览"
+    ></iframe>
   </main>
-  <script src="{{ BASE }}/static/js/common.js"></script>
-  <script src="{{ BASE }}/static/js/architecture.js"></script>
 </body>
 </html>
