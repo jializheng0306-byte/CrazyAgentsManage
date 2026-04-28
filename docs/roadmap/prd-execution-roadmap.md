@@ -124,7 +124,7 @@
 
 ### Phase 4 — 运营体系：情报链路与记忆迭代
 
-状态：🟡 进行中（P0+P1 已落地，P2 待实施）
+状态：🟢 P0+P1+P2 全部落地
 
 来源：
 - `docs/prd/operations-implementation-prd.md`（差距审计 1-5）
@@ -160,10 +160,10 @@
 
 | 任务 | 状态 | 说明 |
 |------|------|------|
-| 情报→影响分析→行动建议 | 🔴 | 每条有价值情报必须有对现有系统的评估 |
-| Tech Radar 周审查 | 🔴 | Zoe 每周审查 Adopt/Trial/Assess 变化 |
-| 评估→确认→委派编码 | 🔴 | 用户确认后自动 delegate_task 给 Codex/Claude Code |
-| 情报 cron 覆盖午间 | 🔴 | 补充 noon-paper-review 12:00 |
+| 情报→影响分析→行动建议 | 🟢已落地 | 晨间/晚间/午间 cron agent prompt 含评估+P0/P1/P2建议 |
+| Tech Radar 周审查 | 🟢已落地 | 每周日 18:00 cron，审查 Adopt/Trial/Assess 变化 |
+| 评估→确认→委派编码 | 🟢已落地 | delegate-discovery.sh + 评估清单 |
+| 情报 cron 覆盖午间 | 🟢已落地 | noon-paper-collector.sh 12:00 cron |
 
 ## 迭代收口规则
 
