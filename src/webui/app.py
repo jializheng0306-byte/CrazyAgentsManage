@@ -16,9 +16,18 @@ def serve_manage_static(filename):
 
 @app.context_processor
 def inject_base():
-    host = request.headers.get('Host', '')
+    configured_base = os.environ.get('APP_BASE_PATH', '').rstrip('/')
+    forwarded_prefix = request.headers.get('X-Forwarded-Prefix', '').rstrip('/')
+
+    if forwarded_prefix:
+        return {'BASE': forwarded_prefix}
+
     if request.path.startswith('/manage'):
         return {'BASE': '/manage'}
+
+    if configured_base:
+        return {'BASE': configured_base}
+
     return {'BASE': ''}
 
 

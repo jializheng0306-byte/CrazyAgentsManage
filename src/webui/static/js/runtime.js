@@ -4,7 +4,10 @@
  */
 
 var RUNTIME_CONFIG = {
-  apiBase: '',
+  apiBase: (function() {
+    var path = window.location.pathname || '';
+    return path === '/manage' || path.indexOf('/manage/') === 0 ? '/manage' : '';
+  })(),
   refreshInterval: 15000,
   maxActiveSessions: 8,
   maxErrors: 8,

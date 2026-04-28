@@ -4,7 +4,10 @@
  */
 
 var OPS_CONFIG = {
-  apiBase: '',
+  apiBase: (function() {
+    var path = window.location.pathname || '';
+    return path === '/manage' || path.indexOf('/manage/') === 0 ? '/manage' : '';
+  })(),
   refreshInterval: 30000,
   maxSkills: 8,
   maxCronJobs: 6,

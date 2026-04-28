@@ -12,6 +12,19 @@ const SOURCE_EMOJI_MAP = {
   homeassistant: '🏠',
 };
 
+function getAppBase() {
+  if (typeof window !== 'undefined' && typeof window.__APP_BASE__ === 'string' && window.__APP_BASE__) {
+    return window.__APP_BASE__.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname || '';
+    if (path === '/manage' || path.indexOf('/manage/') === 0) {
+      return '/manage';
+    }
+  }
+  return '';
+}
+
 function getSourceEmoji(source) {
   return SOURCE_EMOJI_MAP[source] || '📡';
 }
@@ -103,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const query = searchInput.value.trim();
       if (!query) return;
       closeSearchDropdown(searchInput);
-      window.location.href = '/sessions?search=' + encodeURIComponent(query);
+      window.location.href = getAppBase() + '/sessions?search=' + encodeURIComponent(query);
     }
     if (e.key === 'Escape') {
       closeSearchDropdown(searchInput);
@@ -141,18 +154,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function showSearchSuggestions(input, query) {
+  const appBase = getAppBase();
   const pages = [
-    { icon: '📊', title: '概览', url: '/', keywords: 'overview home 概览 首页' },
-    { icon: '🟣', title: '智能体', url: '/agent', keywords: 'agent 智能体' },
-    { icon: '📋', title: '任务', url: '/tasks', keywords: 'task 任务' },
-    { icon: '📊', title: '监控仪表板', url: '/dashboard', keywords: 'dashboard 监控 仪表板' },
-    { icon: '⚡', title: '技能', url: '/skills', keywords: 'skill 技能' },
-    { icon: '📝', title: '团队记忆', url: '/team-memory', keywords: 'memory team 记忆 团队' },
-    { icon: '⏰', title: '定时任务', url: '/cron', keywords: 'cron 定时' },
-    { icon: '🔗', title: '图谱', url: '/graph', keywords: 'graph 图谱 知识' },
-    { icon: '🔴', title: '会话流水线', url: '/sessions', keywords: 'session pipeline 会话 流水线' },
-    { icon: '🔔', title: '告警', url: '/alerts', keywords: 'alert 告警' },
-    { icon: '💰', title: 'Token', url: '/tokens', keywords: 'token 费用' },
+    { icon: '📊', title: '概览', url: appBase + '/', keywords: 'overview home 概览 首页' },
+    { icon: '🟣', title: '智能体', url: appBase + '/agent', keywords: 'agent 智能体' },
+    { icon: '📋', title: '任务', url: appBase + '/tasks', keywords: 'task 任务' },
+    { icon: '📊', title: '监控仪表板', url: appBase + '/dashboard', keywords: 'dashboard 监控 仪表板' },
+    { icon: '⚡', title: '技能', url: appBase + '/skills', keywords: 'skill 技能' },
+    { icon: '📝', title: '团队记忆', url: appBase + '/team-memory', keywords: 'memory team 记忆 团队' },
+    { icon: '⏰', title: '定时任务', url: appBase + '/cron', keywords: 'cron 定时' },
+    { icon: '🔗', title: '图谱', url: appBase + '/graph', keywords: 'graph 图谱 知识' },
+    { icon: '🔴', title: '会话流水线', url: appBase + '/sessions', keywords: 'session pipeline 会话 流水线' },
+    { icon: '🔔', title: '告警', url: appBase + '/alerts', keywords: 'alert 告警' },
+    { icon: '💰', title: 'Token', url: appBase + '/tokens', keywords: 'token 费用' },
   ];
 
   const q = query.toLowerCase();
