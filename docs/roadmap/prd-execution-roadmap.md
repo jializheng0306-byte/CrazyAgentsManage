@@ -1,66 +1,92 @@
 # PRD 执行路线图
 
-## 目的
+## 文档目的
 
-这份路线图是拆分 PRD 体系的统一执行跟踪面。
+本路线图是拆分 PRD 体系下唯一的执行跟踪文档。
 
 它负责协调：
 
 - 技术实现工作
 - 运营实现工作
 - 文档版本管理
-- `Codex / HermesAgent` 的 closeout 更新
+- Codex/HermesAgent closeout 更新
 
-## 规范输入
+## 规范性输入
 
-本路线图必须始终与以下文档保持一致：
+本路线图必须与以下文档保持对齐：
 
-1. `docs/prd/technical-implementation-prd.md`
-2. `docs/prd/operations-implementation-prd.md`
-3. `docs/codex-hermes-role-design.md`
-4. `docs/02-engineering/harness/CODEX-HERMES-COLLABORATION-MECHANISM.md`
+0. `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md`
 
-## 责任归属
+1. `docs/prd/hermesagent-hosted-flowmind-product-foundation.md`
+2. `docs/prd/technical-implementation-prd.md`
+3. `docs/prd/operations-implementation-prd.md`
+4. `docs/prd/runtime-observability-implementation-prd.md`
+5. `docs/prd/governance-surface-implementation-prd.md`
+6. `docs/prd/operations-surface-implementation-prd.md`
+7. `docs/prd/collaboration-workflow-implementation-prd.md`
+8. `docs/prd/governance-operator-workflow-prd.md`
+9. `docs/prd/collaboration-operator-workflow-prd.md`
+10. `docs/prd/pages/overview-page-prd.md`
+11. `docs/prd/pages/runtime-page-prd.md`
+12. `docs/prd/pages/governance-page-prd.md`
+13. `docs/prd/pages/operations-page-prd.md`
+14. `docs/prd/pages/collaboration-page-prd.md`
+15. `docs/prd/pages/architecture-visualization-pages-prd.md`
+16. `docs/prd/pages/webui-route-template-alignment.md`
+17. `docs/codex-hermes-role-design.md`
+18. `docs/02-engineering/harness/CODEX-HERMES-COLLABORATION-MECHANISM.md`
+19. `docs/roadmap/master-task-plan.md`
 
-- `Codex` 负责路线图编辑、节奏排序和文档版本管理
-- `HermesAgent` 负责从运营验收视角复核路线图变化
+## Owner
+
+- `Codex` 负责路线图编辑、阶段排序和文档版本管理
+- `HermesAgent` 从运营验收角度复核路线图变更
 
 ## 当前产品共识
 
-项目目前已经达成的基线共识是：
+项目已经形成以下产品方向共识：
 
-- `CrazyAgentsManage` 是 Hermes 侧的运营控制台
+- `CrazyAgentsManage` 是一个以 HermesAgent 为宿主的 FlowMind 运营产品
 - `FlowMind` 是治理引擎 / canonical truth 层
-- `Codex` 负责实施规划与交付推进
+- `Codex` 负责实施规划与交付
 - `HermesAgent` 负责运营 framing 与验收
 
-## 工作流分组
+## 工作流分道
 
-### 工作流 A：技术实现
+### Workstream A — 技术实现
 
 来源：
 
 - `docs/prd/technical-implementation-prd.md`
+- `docs/prd/runtime-observability-implementation-prd.md`
+- `docs/prd/governance-surface-implementation-prd.md`
+- `docs/prd/operations-surface-implementation-prd.md`
+- `docs/prd/collaboration-workflow-implementation-prd.md`
 
-关注点：
+重点：
 
 - adapters
-- task / delegation substrate
-- team / shared-context substrate
+- task/delegation substrate
+- team/shared-context substrate
 - runtime controls
 - observability UI
+- governance data surfaces
+- operations-state surfaces
+- collaboration evidence surfaces
 
-### 工作流 B：运营实现
+### Workstream B — 运营实现
 
 来源：
 
 - `docs/prd/operations-implementation-prd.md`
+- `docs/prd/governance-operator-workflow-prd.md`
+- `docs/prd/collaboration-operator-workflow-prd.md`
 
-关注点：
+重点：
 
 - operator views
 - operator actions
-- alerts / reports
+- alerts/reports
 - FlowMind 关联运营状态
 - acceptance gates
 
@@ -68,19 +94,21 @@
 
 ### Phase 0 — 文档基线
 
-状态：进行中
+状态：完成
 
 目标：
 
-- 把 PRD 拆成技术与运营两份文档
-- 建立路线图作为 canonical 执行跟踪面
-- 把文档更新接入 harness 流程
+- 建立上位产品基础文档作为顶层规范定义
+- 将 PRD 拆分为技术与运营文档
+- 建立路线图作为规范性执行跟踪器
+- 将文档更新规则绑定到 harness workflow
 
 完成条件：
 
+- 上位产品基础文档存在
 - 拆分 PRD 文件存在
 - 路线图存在
-- harness 入口已经指向新的文档治理流程
+- harness 入口已指向新的治理流程
 
 ### Phase 1 — Runtime / Substrate Readiness
 
@@ -88,103 +116,96 @@
 
 - 稳定技术 substrate
 - 暴露真实 runtime signals
-- 明确可被运营使用的运行时对象
+- 定义 operator-visible runtime objects
 
 主要产出：
 
 - adapter hardening
-- task / delegation 可见性
+- task/delegation visibility
 - runtime signal exposure
+- `Overview` / `Runtime` 一级分区具备真实数据基础
+- Harness 通用核心完成迁移并可作为 substrate closeout/governance 基础设施使用
 
 ### Phase 2 — Operator Surface Readiness
 
 目标：
 
-- 让 UI / API 表面对齐真实运行时动作
-- 暴露不依赖 mock 的运营工作流
+- 让 UI 与 API surface 对齐真实 runtime actions
+- 在没有 mock 歧义的前提下暴露 operator workflows
 
 主要产出：
 
-- session / task / cron / alert 视图
-- 结构化运营动作
-- 运行时对象间的 cross-linking
+- session / task / cron / alert views
+- structured operator actions
+- runtime objects 之间的 cross-linking
+- `Operations` 分区对齐
 
 ### Phase 3 — Governance / FlowMind Readiness
 
 目标：
 
-- 让 CrazyAgentsManage 对齐真实 FlowMind bridge surfaces
+- 让 CrazyAgentsManage 对齐真实存在的 FlowMind bridge surface
 - 区分 Hermes runtime truth 与 FlowMind canonical truth
 
 主要产出：
 
 - bridge-aware operator UX
 - candidate / truth distinction
-- review 与 feedback 可见性
+- review 与 feedback visibility
+- 第一版可用的 `Governance` 分区
 
-### Phase 4 — 运营体系：情报链路与记忆迭代
-
-状态：🟢 P0+P1+P2 全部落地
-
-来源：
-- `docs/prd/operations-implementation-prd.md`（差距审计 1-5）
-- 参考：《OpenClaw 实战》文章描述的完整运营体系
+### Phase 4 — Collaboration Productization
 
 目标：
-- 建立完整的情报采集→评估→决策→落地链路
-- 实现记忆自主迭代循环
-- 补齐 Harness 配置防退化机制
-- 建立 Tech Radar 结构化技术跟踪
+
+- 让 Codex/HermesAgent 协作 artifacts 成为产品可见 workflow state
+- 让 closeout discipline 与 handoff status 可审阅
 
 主要产出：
 
-**P0 — 情报与记忆基础（本周）**：
+- collaboration evidence surfaces
+- handoff / closeout traceability
+- `Collaboration` 分区导航对齐
+- Harness success / failure / critic / closeout 机制进入仓库实际工作流
 
-| 任务 | 状态 | 说明 |
-|------|------|------|
-| 创建 `shared-context/tech-radar.json` | 🟢已落地 | Adopt/Trial/Assess 三级结构 |
-| 升级晨间/晚间 cron 为 agent 模式 | 🟢已落地 | 08:30/20:00 agent 模式，5星评估+影响分析+Tech Radar更新 |
-| 创建 `.learnings/` 目录结构 | 🟢已落地 | harness/learnings/{ERRORS,LEARNINGS,FEATURE_REQUESTS}.md |
-| 升级反思 cron 支持 .learnings/ 审查 | 🟢已落地 | 审查 pending 条目，≥3次 promote 到 MEMORY.md |
+### Phase 5 — Page-System Convergence
 
-**P1 — 记忆与可观测性（下周）**：
+目标：
 
-| 任务 | 状态 | 说明 |
-|------|------|------|
-| 配置 session Harness 参数 | 🟢已落地 | auto_prune=true, retention=7d, compression.threshold=0.4 |
-| 实现 bootstrap hook 加载历史经验 | 🟢已落地 | bootstrap-context.sh + prefill_messages_file |
-| MEMORY.md 容量管理 | 🟢已落地 | memory-maintenance.sh + 每周日 cron |
-| cron 可观测性 | 🟢已落地 | cron-health-check.sh + 每日两次 cron |
+- 把五个一级 IA 分区收敛为正式页面级需求
+- 让架构展示页与真实状态页形成互跳关系
 
-**P2 — 完整链路（月底）**：
+主要产出：
 
-| 任务 | 状态 | 说明 |
-|------|------|------|
-| 情报→影响分析→行动建议 | 🟢已落地 | 晨间/晚间/午间 cron agent prompt 含评估+P0/P1/P2建议 |
-| Tech Radar 周审查 | 🟢已落地 | 每周日 18:00 cron，审查 Adopt/Trial/Assess 变化 |
-| 评估→确认→委派编码 | 🟢已落地 | delegate-discovery.sh + 评估清单 |
-| 情报 cron 覆盖午间 | 🟢已落地 | noon-paper-collector.sh 12:00 cron |
+- Overview / Runtime / Governance / Operations / Collaboration 页面级 PRD
+- Architecture Visualization 页面级 PRD
+- WebUI 路由与模板对齐文档
+- 页面与子 PRD / workflow PRD 的清晰映射
 
 ## 迭代收口规则
 
-每次非平凡迭代结束后，必须同步更新：
+每次非平凡迭代结束后，至少更新：
 
-1. 技术 PRD（若技术范围有变化）
-2. 运营 PRD（若运营语义有变化）
-3. 本路线图（若阶段/状态/优先级有变化）
-4. harness closeout 工件（若 `Codex / HermesAgent` 协作状态有变化）
+1. 如果产品身份、一级 IA 或运营策略变化，更新上位产品基础文档
+2. 如果实现范围变化，更新技术 PRD
+3. 如果 operator-facing 含义变化，更新运营 PRD
+4. 更新本路线图中的 phase / status
+5. 如果 Codex/Hermes 协作状态变化，更新 harness closeout artifacts
 
-## 合并门槛
+## Merge Gate
 
-一次共享分支上的迭代，只有在以下条件都满足时，才算真正完成：
+共享分支上的一次迭代，在以下条件满足前，不应视为完成：
 
-1. 受影响的 PRD 文档已更新
-2. 路线图状态已更新
-3. 仓库工件已经反映接受后的真相
-4. HermesAgent 的验收意见已解决，或被明确延期
+1. 受影响的 PRD 已更新
+2. roadmap 状态已更新
+3. 仓库 artifacts 已反映被接受的事实
+4. HermesAgent 的 acceptance comments 已解决或被显式延后
 
-## 当前直接下一步
+## 当前立即动作
 
-1. 继续把 split PRD set 作为 planning baseline
-2. 新任务必须明确归入技术实现或运营实现
-3. 每次迭代 closeout 都必须触发文档更新
+1. 以上位产品基础文档作为产品身份与 IA 真相来源
+2. 把新工作项显式路由到 technical lane 或 operations lane
+3. 按五个一级 IA 分区继续推导 phase work
+4. 在每次迭代 closeout 时强制执行文档更新
+5. 以 `docs/roadmap/master-task-plan.md` 作为当前阶段的统一任务执行面
+6. 对所有非平凡迭代启用 Harness closeout writeback

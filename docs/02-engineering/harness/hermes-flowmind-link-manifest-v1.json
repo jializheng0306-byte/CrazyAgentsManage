@@ -1,0 +1,92 @@
+{
+  "manifestVersion": "hermes-flowmind-link-v1",
+  "updatedAt": "2026-04-30T00:00:00+08:00",
+  "repoPerspective": "CrazyAgentsManage",
+  "systems": {
+    "crazyagentsmanage": {
+      "repo": "jializheng0306-byte/CrazyAgentsManage",
+      "role": "ops-orchestration",
+      "knownBaseline": {
+        "ref": "PR#11"
+      },
+      "primaryHost": {
+        "alias": "ALI-HERMES",
+        "ip": "47.99.217.1"
+      }
+    },
+    "flowminddeploy": {
+      "repo": "jializheng0306-byte/FlowMindDeploy",
+      "role": "governed-truth-runtime",
+      "knownBaseline": {
+        "branch": "main",
+        "commit": "f9dda9a"
+      },
+      "primaryHost": {
+        "alias": "TX-NEWHOST",
+        "ip": "111.229.194.203"
+      },
+      "rollbackHost": {
+        "alias": "TX-PRIMARY",
+        "ip": "49.232.158.82"
+      }
+    }
+  },
+  "contracts": {
+    "candidateIngress": {
+      "endpoint": "/api/integrations/candidate-ingress",
+      "method": "POST",
+      "auth": "bearer_flowmind_api_key",
+      "requiredFields": [
+        "instanceId",
+        "rawText"
+      ]
+    },
+    "reviewQueue": {
+      "endpoint": "/api/integrations/review-queue",
+      "method": "GET",
+      "auth": "bearer_flowmind_api_key"
+    },
+    "reviewDecision": {
+      "endpoint": "/api/integrations/candidates/:id/confirm|reject|clarify",
+      "method": "POST",
+      "auth": "bearer_flowmind_api_key"
+    },
+    "truthRead": {
+      "endpoint": "/api/bridge/truth",
+      "method": "GET",
+      "auth": [
+        "ui_bearer",
+        "x_instance_token"
+      ]
+    },
+    "feedback": {
+      "recordEndpoint": "/api/bridge/feedback",
+      "pullEndpoint": "/api/bridge/feedback/:instanceId",
+      "auth": "x_instance_token"
+    },
+    "contextPack": {
+      "endpoint": "/api/bridge/context-pack",
+      "method": "POST",
+      "auth": "x_instance_token"
+    }
+  },
+  "runtimeTriggers": {
+    "webhook": {
+      "role": "runtime_trigger_channel",
+      "notRole": "governance_source_of_truth",
+      "mustBeGovernedBy": [
+        "compatibility_matrix",
+        "link_manifest",
+        "handshake_smoke"
+      ]
+    }
+  },
+  "syncMode": {
+    "valueItemToCandidate": "manual_gate_before_capture",
+    "candidateToTruth": "human_review_required"
+  },
+  "knownConditions": [
+    "CrazyAgentsManage flowmind_capture.py is not yet fully aligned with direct-path ingress contract",
+    "FlowMindDeploy issue #27 public domain instability remains separate from direct-path compatibility"
+  ]
+}
