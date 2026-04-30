@@ -1,147 +1,211 @@
-# PRD Execution Roadmap
+# PRD 执行路线图
 
-## Purpose
+## 文档目的
 
-This roadmap is the single execution tracker for the split PRD system.
+本路线图是拆分 PRD 体系下唯一的执行跟踪文档。
 
-It coordinates:
+它负责协调：
 
-- technical implementation work
-- operations implementation work
-- document version management
-- Codex/HermesAgent closeout updates
+- 技术实现工作
+- 运营实现工作
+- 文档版本管理
+- Codex/HermesAgent closeout 更新
 
-## Canonical Inputs
+## 规范性输入
 
-This roadmap must stay aligned with:
+本路线图必须与以下文档保持对齐：
 
-1. `docs/prd/technical-implementation-prd.md`
-2. `docs/prd/operations-implementation-prd.md`
-3. `docs/codex-hermes-role-design.md`
-4. `docs/02-engineering/harness/CODEX-HERMES-COLLABORATION-MECHANISM.md`
+0. `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md`
 
-## Ownership
+1. `docs/prd/hermesagent-hosted-flowmind-product-foundation.md`
+2. `docs/prd/technical-implementation-prd.md`
+3. `docs/prd/operations-implementation-prd.md`
+4. `docs/prd/runtime-observability-implementation-prd.md`
+5. `docs/prd/governance-surface-implementation-prd.md`
+6. `docs/prd/operations-surface-implementation-prd.md`
+7. `docs/prd/collaboration-workflow-implementation-prd.md`
+8. `docs/prd/governance-operator-workflow-prd.md`
+9. `docs/prd/collaboration-operator-workflow-prd.md`
+10. `docs/prd/pages/overview-page-prd.md`
+11. `docs/prd/pages/runtime-page-prd.md`
+12. `docs/prd/pages/governance-page-prd.md`
+13. `docs/prd/pages/operations-page-prd.md`
+14. `docs/prd/pages/collaboration-page-prd.md`
+15. `docs/prd/pages/architecture-visualization-pages-prd.md`
+16. `docs/prd/pages/webui-route-template-alignment.md`
+17. `docs/codex-hermes-role-design.md`
+18. `docs/02-engineering/harness/CODEX-HERMES-COLLABORATION-MECHANISM.md`
+19. `docs/roadmap/master-task-plan.md`
 
-- `Codex` owns roadmap edits, sequencing, and document version management
-- `HermesAgent` reviews roadmap changes from an operations-acceptance perspective
+## Owner
 
-## Current Product Consensus
+- `Codex` 负责路线图编辑、阶段排序和文档版本管理
+- `HermesAgent` 从运营验收角度复核路线图变更
 
-The project has reached baseline agreement on product direction:
+## 当前产品共识
 
-- `CrazyAgentsManage` is the Hermes-side operator console
-- `FlowMind` is the governance engine / canonical truth layer
-- `Codex` drives implementation planning and delivery
-- `HermesAgent` drives operations framing and acceptance
+项目已经形成以下产品方向共识：
 
-## Workstreams
+- `CrazyAgentsManage` 是一个以 HermesAgent 为宿主的 FlowMind 运营产品
+- `FlowMind` 是治理引擎 / canonical truth 层
+- `Codex` 负责实施规划与交付
+- `HermesAgent` 负责运营 framing 与验收
 
-### Workstream A — Technical Implementation
+## 工作流分道
 
-Source:
+### Workstream A — 技术实现
+
+来源：
 
 - `docs/prd/technical-implementation-prd.md`
+- `docs/prd/runtime-observability-implementation-prd.md`
+- `docs/prd/governance-surface-implementation-prd.md`
+- `docs/prd/operations-surface-implementation-prd.md`
+- `docs/prd/collaboration-workflow-implementation-prd.md`
 
-Focus:
+重点：
 
 - adapters
 - task/delegation substrate
 - team/shared-context substrate
 - runtime controls
 - observability UI
+- governance data surfaces
+- operations-state surfaces
+- collaboration evidence surfaces
 
-### Workstream B — Operations Implementation
+### Workstream B — 运营实现
 
-Source:
+来源：
 
 - `docs/prd/operations-implementation-prd.md`
+- `docs/prd/governance-operator-workflow-prd.md`
+- `docs/prd/collaboration-operator-workflow-prd.md`
 
-Focus:
+重点：
 
 - operator views
 - operator actions
 - alerts/reports
-- FlowMind-linked operational states
+- FlowMind 关联运营状态
 - acceptance gates
 
-## Execution Phases
+## 执行阶段
 
-### Phase 0 — Documentation Baseline
+### Phase 0 — 文档基线
 
-Status: in progress
+状态：完成
 
-Goals:
+目标：
 
-- split PRD into technical and operations documents
-- establish roadmap as canonical execution tracker
-- bind document updates into harness workflow
+- 建立上位产品基础文档作为顶层规范定义
+- 将 PRD 拆分为技术与运营文档
+- 建立路线图作为规范性执行跟踪器
+- 将文档更新规则绑定到 harness workflow
 
-Done when:
+完成条件：
 
-- split PRD files exist
-- roadmap exists
-- harness entrypoints point at the new governance flow
+- 上位产品基础文档存在
+- 拆分 PRD 文件存在
+- 路线图存在
+- harness 入口已指向新的治理流程
 
 ### Phase 1 — Runtime / Substrate Readiness
 
-Goals:
+目标：
 
-- stabilize technical substrate
-- expose real runtime signals
-- define operator-visible runtime objects
+- 稳定技术 substrate
+- 暴露真实 runtime signals
+- 定义 operator-visible runtime objects
 
-Primary outputs:
+主要产出：
 
 - adapter hardening
 - task/delegation visibility
 - runtime signal exposure
+- `Overview` / `Runtime` 一级分区具备真实数据基础
+- Harness 通用核心完成迁移并可作为 substrate closeout/governance 基础设施使用
 
 ### Phase 2 — Operator Surface Readiness
 
-Goals:
+目标：
 
-- align UI and API surfaces to real runtime actions
-- expose operator workflows without mock ambiguity
+- 让 UI 与 API surface 对齐真实 runtime actions
+- 在没有 mock 歧义的前提下暴露 operator workflows
 
-Primary outputs:
+主要产出：
 
-- session/task/cron/alert views
+- session / task / cron / alert views
 - structured operator actions
-- cross-linking between runtime objects
+- runtime objects 之间的 cross-linking
+- `Operations` 分区对齐
 
 ### Phase 3 — Governance / FlowMind Readiness
 
-Goals:
+目标：
 
-- align CrazyAgentsManage to real FlowMind bridge surfaces
-- separate Hermes runtime truth from FlowMind canonical truth
+- 让 CrazyAgentsManage 对齐真实存在的 FlowMind bridge surface
+- 区分 Hermes runtime truth 与 FlowMind canonical truth
 
-Primary outputs:
+主要产出：
 
 - bridge-aware operator UX
-- candidate/truth distinction
-- review and feedback visibility
+- candidate / truth distinction
+- review 与 feedback visibility
+- 第一版可用的 `Governance` 分区
 
-## Iteration Closeout Rule
+### Phase 4 — Collaboration Productization
 
-After every non-trivial iteration, update:
+目标：
 
-1. the technical PRD if implementation scope changed
-2. the operations PRD if operator-facing meaning changed
-3. this roadmap with phase/status changes
-4. harness closeout artifacts if the Codex/Hermes collaboration state changed
+- 让 Codex/HermesAgent 协作 artifacts 成为产品可见 workflow state
+- 让 closeout discipline 与 handoff status 可审阅
+
+主要产出：
+
+- collaboration evidence surfaces
+- handoff / closeout traceability
+- `Collaboration` 分区导航对齐
+- Harness success / failure / critic / closeout 机制进入仓库实际工作流
+
+### Phase 5 — Page-System Convergence
+
+目标：
+
+- 把五个一级 IA 分区收敛为正式页面级需求
+- 让架构展示页与真实状态页形成互跳关系
+
+主要产出：
+
+- Overview / Runtime / Governance / Operations / Collaboration 页面级 PRD
+- Architecture Visualization 页面级 PRD
+- WebUI 路由与模板对齐文档
+- 页面与子 PRD / workflow PRD 的清晰映射
+
+## 迭代收口规则
+
+每次非平凡迭代结束后，至少更新：
+
+1. 如果产品身份、一级 IA 或运营策略变化，更新上位产品基础文档
+2. 如果实现范围变化，更新技术 PRD
+3. 如果 operator-facing 含义变化，更新运营 PRD
+4. 更新本路线图中的 phase / status
+5. 如果 Codex/Hermes 协作状态变化，更新 harness closeout artifacts
 
 ## Merge Gate
 
-An iteration is not considered complete for a shared branch until:
+共享分支上的一次迭代，在以下条件满足前，不应视为完成：
 
-1. affected PRD documents are updated
-2. roadmap status is updated
-3. repository artifacts reflect the accepted truth
-4. HermesAgent acceptance comments are resolved or explicitly deferred
+1. 受影响的 PRD 已更新
+2. roadmap 状态已更新
+3. 仓库 artifacts 已反映被接受的事实
+4. HermesAgent 的 acceptance comments 已解决或被显式延后
 
-## Immediate Next Actions
+## 当前立即动作
 
-1. keep the split PRD set as the planning baseline
-2. route new work items into technical vs operations lanes explicitly
-3. require document updates during every iteration closeout
+1. 以上位产品基础文档作为产品身份与 IA 真相来源
+2. 把新工作项显式路由到 technical lane 或 operations lane
+3. 按五个一级 IA 分区继续推导 phase work
+4. 在每次迭代 closeout 时强制执行文档更新
+5. 以 `docs/roadmap/master-task-plan.md` 作为当前阶段的统一任务执行面
+6. 对所有非平凡迭代启用 Harness closeout writeback
