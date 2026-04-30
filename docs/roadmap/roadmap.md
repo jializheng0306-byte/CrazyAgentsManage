@@ -1,5 +1,7 @@
 # CrazyAgentsManage 路线图 (Roadmap)
 
+> **注意**：v0.1.0 ~ v0.5.0 版本阶梯已由 `HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md` 取代为当前活跃主线。本路线图保留作为历史能力清单和 backlog catalog，不再作为实施顺序依据。
+
 ## 版本规划
 
 ### v0.1.0 — 基础架构 (预计 2-3 周)

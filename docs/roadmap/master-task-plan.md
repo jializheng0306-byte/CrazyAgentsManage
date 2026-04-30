@@ -1,5 +1,7 @@
 # CrazyAgentsManage 总任务计划
 
+> **注意**：当前活跃主线已切换为 `HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md`。本文档中的 Workstream 1-4 仍有参考价值，但实施优先级应以联合产品功能基线为准。详见 `docs/roadmap/crazy-side-next-phase-confirmation-2026-04-28.md`。
+
 ## 文档定位
 
 本文档是当前阶段的统一任务计划文档。

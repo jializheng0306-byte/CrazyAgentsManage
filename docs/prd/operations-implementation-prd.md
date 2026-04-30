@@ -1,5 +1,7 @@
 # 运营实现 PRD
 
+> **注意**：本文档中的 Phase 1-5 规划为历史规划，当前活跃阶段见 `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md`。
+
 ## 文档目的
 
 本文档定义 `CrazyAgentsManage` 的运营实现范围与验收标准，面向 `HermesAgent` 运营 lane。
