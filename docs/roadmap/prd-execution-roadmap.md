@@ -1,8 +1,21 @@
 # PRD 执行路线图
 
-## 文档目的
+> **⚠️ 活跃主线说明（2026-04-30）**
+>
+> 本文档的 Phase 0-4 是旧版产品内部分阶段，用于细粒度任务参考。
+> 当前活跃的联合产品执行顺序以以下文档为准：
+>
+> - `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md`
+>
+> Phase 映射关系：
+> - 旧 Phase 0-1（文档基线 + Runtime Readiness）→ 新 Phase 1（Link Hardening）+ Phase 2（Ops Data Plane）
+> - 旧 Phase 2（Operator Surface）→ 新 Phase 4（Operator Console Convergence）
+> - 旧 Phase 3（Governance/FlowMind）→ 新 Phase 3（Governance Roundtrip）
+> - 旧 Phase 4（情报链路）→ 已并入 Phase 2（Ops Data Plane）
 
-本路线图是拆分 PRD 体系下唯一的执行跟踪文档。
+## 目的
+
+这份路线图是拆分 PRD 体系的统一执行跟踪面。
 
 它负责协调：
 
