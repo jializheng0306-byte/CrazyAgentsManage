@@ -168,6 +168,8 @@ class TaskWatcher:
         self.watcher_log = self.monitor_dir / "watcher.log"
         self.audit_log = self.monitor_dir / "audit.log"
         self.dlq_file = self.monitor_dir / "dlq.jsonl"
+        self.status_file = self.monitor_dir / "watcher-status.json"
+        self.heartbeat_file = self.monitor_dir / "watcher-heartbeat.json"
 
     def register_task(self, name: str, adapter: str, check_target: str,
                       priority: TaskPriority = TaskPriority.P1,
@@ -274,6 +276,7 @@ class TaskWatcher:
 
         # Save updated tasks
         self._save_tasks(updated_tasks)
+        self._write_runtime_state(results, updated_tasks)
 
         self._log(f"Check complete: {json.dumps(results)}")
         return results
@@ -300,6 +303,51 @@ class TaskWatcher:
             f.write(task.to_line() + "\n")
         self._audit(f"DLQ {task.task_id}: moved to dead letter queue")
 
+    def _write_runtime_state(self, results: Dict[str, int], tasks: List[MonitoredTask]):
+        """写出机器可读状态，便于外部巡检确认 watcher 真的跑过"""
+        now = datetime.now().isoformat()
+        status_payload = {
+            "checkedAt": now,
+            "results": results,
+            "taskCounts": {
+                "total": len(tasks),
+                "pending": sum(1 for task in tasks if task.status == TaskStatus.PENDING),
+                "in_progress": sum(1 for task in tasks if task.status == TaskStatus.IN_PROGRESS),
+                "completed": sum(1 for task in tasks if task.status == TaskStatus.COMPLETED),
+                "failed": sum(1 for task in tasks if task.status == TaskStatus.FAILED),
+                "timed_out": sum(1 for task in tasks if task.status == TaskStatus.TIMED_OUT),
+            },
+            "tasks": [
+                {
+                    "task_id": task.task_id,
+                    "name": task.name,
+                    "adapter": task.adapter,
+                    "status": task.status.value,
+                    "retry_count": task.retry_count,
+                    "last_check": task.last_check,
+                    "last_result": task.last_result,
+                    "deadline": task.deadline,
+                }
+                for task in tasks
+            ],
+        }
+        heartbeat_payload = {
+            "lastRunAt": now,
+            "ok": results["failed"] == 0 and results["timed_out"] == 0,
+            "checked": results["checked"],
+            "completed": results["completed"],
+            "failed": results["failed"],
+            "timed_out": results["timed_out"],
+        }
+        self.status_file.write_text(
+            json.dumps(status_payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        self.heartbeat_file.write_text(
+            json.dumps(heartbeat_payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
     def _audit(self, message: str):
         """写审计日志"""
         timestamp = datetime.now().isoformat()
@@ -324,6 +372,7 @@ if __name__ == "__main__":
         print("  python task_watcher.py check-all")
         print("  python task_watcher.py list")
         print("  python task_watcher.py timeouts")
+        print("  python task_watcher.py status")
         print()
         print("适配器: file, cron, http, git")
         print("优先级: P0, P1, P2")
@@ -361,3 +410,9 @@ if __name__ == "__main__":
                 print(f"  ⏰ {t.task_id}: 超时! {t.name}")
         else:
             print("  无超时任务")
+
+    elif cmd == "status":
+        if watcher.status_file.exists():
+            print(watcher.status_file.read_text())
+        else:
+            print("  watcher 尚未产出状态文件")

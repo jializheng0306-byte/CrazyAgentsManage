@@ -35,7 +35,7 @@ with open('$RADAR_FILE') as f:
 entries = radar.get('entries', [])
 print(f'总条目: {len(entries)}')
 print()
-for cat in ['adopt', 'trial', 'assess']:
+for cat in ['pending', 'confirmed', 'rejected', 'implemented']:
     items = [e for e in entries if e.get('status') == cat]
     print(f'### {cat.upper()} ({len(items)}条)')
     if items:
@@ -47,6 +47,14 @@ for cat in ['adopt', 'trial', 'assess']:
                 print(f'  影响评估: {e[\"impact_assessment\"]}')
     else:
         print('(暂无)')
+    print()
+
+pending = [e for e in entries if e.get('status') == 'pending']
+if pending:
+    print('## 待推进清单')
+    print()
+    for e in pending:
+        print(f'- {e[\"name\"]} | {e.get(\"priority\", \"N/A\")} | 建议: {e.get(\"action_suggested\", \"\")}')
     print()
 " 2>/dev/null || echo "(Tech Radar 解析失败)"
     else

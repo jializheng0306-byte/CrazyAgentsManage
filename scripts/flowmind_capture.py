@@ -31,7 +31,11 @@ CRAZY_ROOT = Path(os.environ.get("CRAZY_ROOT", os.path.expanduser("~/CrazyAgents
 BITABLE_CONFIG = CRAZY_ROOT / "shared-context" / "bitable-config.json"
 LINK_STATE_FILE = CRAZY_ROOT / "shared-context" / "flowmind-link-state.json"
 
-DEFAULT_FLOWMIND_BASE_URL = os.environ.get("FLOWMIND_BASE_URL", "http://111.229.194.203:3301")
+DEFAULT_FLOWMIND_CONTROL_PLANE_URL = os.environ.get(
+    "FLOWMIND_CONTROL_PLANE_URL",
+    os.environ.get("FLOWMIND_BASE_URL", "http://111.229.194.203:3301"),
+)
+DEFAULT_FLOWMIND_PUBLIC_URL = os.environ.get("FLOWMIND_PUBLIC_URL", "https://www.uncentury.cn")
 DEFAULT_FLOWMIND_API_KEY = os.environ.get("FLOWMIND_API_KEY", "flowmind-dev-token")
 DEFAULT_FLOWMIND_INSTANCE_ID = os.environ.get("FLOWMIND_INSTANCE_ID", "crazyagentsmanage-intel-sentinel")
 DEFAULT_FLOWMIND_SOURCE_AGENT = os.environ.get("FLOWMIND_SOURCE_AGENT", "hermes")
@@ -45,7 +49,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("record_id", nargs="?", help="只同步指定的 Bitable record_id")
     parser.add_argument("--dry-run", action="store_true", help="打印将发送的 payload，不真正调用 FlowMind")
     parser.add_argument("--register-instance", action="store_true", help="在发送前向 FlowMind 注册/刷新 instance 并保存返回的 apiKey")
-    parser.add_argument("--base-url", default=DEFAULT_FLOWMIND_BASE_URL, help="FlowMind base URL")
+    parser.add_argument("--control-plane-url", default=DEFAULT_FLOWMIND_CONTROL_PLANE_URL, help="FlowMind direct control plane URL")
+    parser.add_argument("--public-url", default=DEFAULT_FLOWMIND_PUBLIC_URL, help="FlowMind public URL")
+    parser.add_argument("--base-url", dest="control_plane_url_legacy", default=None, help=argparse.SUPPRESS)
     parser.add_argument("--api-key", default=DEFAULT_FLOWMIND_API_KEY, help="FlowMind bearer token")
     parser.add_argument("--instance-id", default=DEFAULT_FLOWMIND_INSTANCE_ID, help="FlowMind integration instanceId")
     parser.add_argument("--source-agent", default=DEFAULT_FLOWMIND_SOURCE_AGENT, help="FlowMind sourceAgent")
@@ -136,6 +142,93 @@ def normalize_priority(value: Any) -> str:
     return priority if priority in {"P0", "P1", "P2"} else "P2"
 
 
+def unwrap_single_value(value: Any) -> Any:
+    if isinstance(value, list):
+        if not value:
+            return ""
+        if len(value) == 1:
+            return unwrap_single_value(value[0])
+        parts = []
+        for item in value:
+            normalized = unwrap_single_value(item)
+            if normalized not in ("", None):
+                parts.append(str(normalized))
+        return " / ".join(parts)
+    if isinstance(value, dict):
+        for key in ("text", "name", "url", "value"):
+            if key in value and value[key] not in (None, ""):
+                return value[key]
+        return json.dumps(value, ensure_ascii=False)
+    return value
+
+
+def normalize_field_text(value: Any) -> str:
+    unwrapped = unwrap_single_value(value)
+    if unwrapped is None:
+        return ""
+    return str(unwrapped).strip()
+
+
+def get_response_payload(response: dict[str, Any]) -> dict[str, Any]:
+    data = response.get("data")
+    if isinstance(data, dict):
+        return data
+    return response
+
+
+def parse_bitable_list_records(data: dict[str, Any]) -> list[dict[str, Any]]:
+    payload = data.get("data", {})
+    items = payload.get("items")
+    if isinstance(items, list):
+        records = []
+        for rec in items:
+            fields = rec.get("fields", {})
+            if not isinstance(fields, dict):
+                continue
+            records.append(
+                {
+                    "record_id": rec.get("record_id", ""),
+                    "name": normalize_field_text(fields.get("价值点名称")),
+                    "status": normalize_field_text(fields.get("状态")),
+                    "flowmind_sync": normalize_field_text(fields.get("FlowMind同步")),
+                    "priority": normalize_field_text(fields.get("优先级")) or "P2",
+                    "impact": normalize_field_text(fields.get("影响评估")),
+                    "action": normalize_field_text(fields.get("建议行动")),
+                    "source": normalize_field_text(fields.get("来源")),
+                    "url": normalize_field_text(fields.get("关联任务")),
+                    "notes": normalize_field_text(fields.get("备注")),
+                }
+            )
+        return records
+
+    rows = payload.get("data", [])
+    field_names = payload.get("fields", [])
+    record_ids = payload.get("record_id_list", [])
+    records = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, list):
+            continue
+        field_map = {
+            str(field_names[pos]): row[pos] if pos < len(row) else ""
+            for pos in range(len(field_names))
+        }
+        records.append(
+            {
+                "record_id": record_ids[index] if index < len(record_ids) else "",
+                "name": normalize_field_text(field_map.get("价值点名称")),
+                "status": normalize_field_text(field_map.get("状态")),
+                "flowmind_sync": normalize_field_text(field_map.get("FlowMind同步")),
+                "priority": normalize_field_text(field_map.get("优先级")) or "P2",
+                "impact": normalize_field_text(field_map.get("影响评估")),
+                "action": normalize_field_text(field_map.get("建议行动")),
+                "source": normalize_field_text(field_map.get("来源")),
+                "url": normalize_field_text(field_map.get("关联任务")),
+                "notes": normalize_field_text(field_map.get("备注")),
+            }
+        )
+    return records
+
+
 def priority_confidence(priority: str) -> int:
     return {"P0": 85, "P1": 70, "P2": 55}[priority]
 
@@ -205,25 +298,13 @@ def get_pending_records(config: dict[str, Any]) -> list[dict[str, Any]]:
         ]
     )
 
-    records = data.get("data", {}).get("items", [])
+    records = parse_bitable_list_records(data)
     pending = []
     for rec in records:
-        fields = rec.get("fields", {})
-        status = fields.get("状态", "")
-        flowmind = fields.get("FlowMind同步", "")
+        status = rec.get("status", "")
+        flowmind = rec.get("flowmind_sync", "")
         if status == "已确认" and flowmind == "未同步":
-            pending.append(
-                {
-                    "record_id": rec["record_id"],
-                    "name": fields.get("价值点名称", ""),
-                    "priority": fields.get("优先级", "P2"),
-                    "impact": fields.get("影响评估", ""),
-                    "action": fields.get("建议行动", ""),
-                    "source": fields.get("来源", ""),
-                    "url": fields.get("关联任务", ""),
-                    "notes": fields.get("备注", ""),
-                }
-            )
+            pending.append(rec)
     return pending
 
 
@@ -241,19 +322,19 @@ def get_record_by_id(config: dict[str, Any], target_record: str) -> dict[str, An
     fields = data.get("data", {}).get("record", {}).get("fields", {})
     return {
         "record_id": target_record,
-        "name": fields.get("价值点名称", ""),
-        "priority": fields.get("优先级", "P2"),
-        "impact": fields.get("影响评估", ""),
-        "action": fields.get("建议行动", ""),
-        "source": fields.get("来源", ""),
-        "url": fields.get("关联任务", ""),
-        "notes": fields.get("备注", ""),
+        "name": normalize_field_text(fields.get("价值点名称")),
+        "priority": normalize_field_text(fields.get("优先级")) or "P2",
+        "impact": normalize_field_text(fields.get("影响评估")),
+        "action": normalize_field_text(fields.get("建议行动")),
+        "source": normalize_field_text(fields.get("来源")),
+        "url": normalize_field_text(fields.get("关联任务")),
+        "notes": normalize_field_text(fields.get("备注")),
     }
 
 
 def register_instance(runtime: dict[str, str]) -> dict[str, Any]:
     response = flowmind_json_request(
-        base_url=runtime["base_url"],
+        base_url=runtime["control_plane_url"],
         api_key=runtime["api_key"],
         method="POST",
         path="/api/integrations/instances",
@@ -278,7 +359,8 @@ def register_instance(runtime: dict[str, str]) -> dict[str, Any]:
             "serverId": data.get("serverId", runtime["server_id"]),
             "apiKey": data.get("apiKey"),
             "registeredAt": data.get("registeredAt"),
-            "baseUrl": runtime["base_url"],
+            "controlPlaneUrl": runtime["control_plane_url"],
+            "publicUrl": runtime["public_url"],
             "routeId": runtime["route_id"],
         }
     )
@@ -289,13 +371,14 @@ def register_instance(runtime: dict[str, str]) -> dict[str, Any]:
 def send_to_flowmind(record: dict[str, Any], runtime: dict[str, str]) -> tuple[bool, dict[str, Any]]:
     payload = build_candidate_payload(record, runtime)
     response = flowmind_json_request(
-        base_url=runtime["base_url"],
+        base_url=runtime["control_plane_url"],
         api_key=runtime["api_key"],
         method="POST",
         path="/api/integrations/candidate-ingress",
         body=payload,
     )
-    success = bool(response.get("success")) and bool(response.get("data", {}).get("candidateId"))
+    response_payload = get_response_payload(response)
+    success = bool(response.get("success")) and bool(response_payload.get("candidateId"))
     return success, {"request": payload, "response": response}
 
 
@@ -319,8 +402,10 @@ def update_bitable_status(config: dict[str, Any], record_id: str, status: str) -
 
 
 def build_runtime_config(args: argparse.Namespace) -> dict[str, str]:
+    control_plane_url = args.control_plane_url_legacy or args.control_plane_url
     return {
-        "base_url": args.base_url,
+        "control_plane_url": control_plane_url,
+        "public_url": args.public_url,
         "api_key": args.api_key,
         "instance_id": args.instance_id,
         "source_agent": args.source_agent,
@@ -377,7 +462,7 @@ def main() -> int:
 
         if success:
             update_bitable_status(config, record["record_id"], "已同步")
-            response_data = result["response"].get("data", {})
+            response_data = get_response_payload(result["response"])
             print(f"    ✅ 同步成功: candidateId={response_data.get('candidateId')}")
         else:
             failures += 1

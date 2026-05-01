@@ -22,7 +22,9 @@ from flowmind_capture import build_runtime_config, flowmind_json_request, regist
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the first Crazy ↔ FlowMind handshake smoke")
-    parser.add_argument("--base-url", default="http://111.229.194.203:3301")
+    parser.add_argument("--control-plane-url", default="http://111.229.194.203:3301")
+    parser.add_argument("--public-url", default="https://www.uncentury.cn")
+    parser.add_argument("--base-url", dest="control_plane_url_legacy", default=None, help=argparse.SUPPRESS)
     parser.add_argument("--api-key", default="flowmind-dev-token")
     parser.add_argument("--instance-id", default="crazyagentsmanage-intel-sentinel")
     parser.add_argument("--source-agent", default="hermes")
@@ -38,6 +40,8 @@ def now_iso() -> str:
 
 def main() -> int:
     args = parse_args()
+    if args.control_plane_url_legacy:
+        args.control_plane_url = args.control_plane_url_legacy
     runtime = build_runtime_config(args)
 
     registration = register_instance(runtime)
@@ -48,7 +52,7 @@ def main() -> int:
 
     synthetic_title = f"Crazy↔FlowMind handshake smoke {uuid.uuid4().hex[:8]}"
     ingress = flowmind_json_request(
-        base_url=runtime["base_url"],
+        base_url=runtime["control_plane_url"],
         api_key=runtime["api_key"],
         method="POST",
         path="/api/integrations/candidate-ingress",
@@ -76,13 +80,13 @@ def main() -> int:
         },
     )
 
-    candidate = ingress.get("data", {})
+    candidate = ingress.get("data", {}) if isinstance(ingress.get("data"), dict) else ingress
     candidate_id = candidate.get("candidateId")
     if not candidate_id:
         raise RuntimeError(f"candidate ingress failed: {ingress}")
 
     queue = flowmind_json_request(
-        base_url=runtime["base_url"],
+        base_url=runtime["control_plane_url"],
         api_key=runtime["api_key"],
         method="GET",
         path="/api/integrations/review-queue",
@@ -100,7 +104,7 @@ def main() -> int:
         raise RuntimeError(f"candidate {candidate_id} not visible in review queue")
 
     reject = flowmind_json_request(
-        base_url=runtime["base_url"],
+        base_url=runtime["control_plane_url"],
         api_key=runtime["api_key"],
         method="POST",
         path=f"/api/integrations/candidates/{candidate_id}/reject",
@@ -112,7 +116,7 @@ def main() -> int:
     )
 
     feedback_pull = flowmind_json_request(
-        base_url=runtime["base_url"],
+        base_url=runtime["control_plane_url"],
         api_key=runtime["api_key"],
         method="GET",
         path=f"/api/bridge/feedback/{runtime['instance_id']}",
@@ -120,7 +124,7 @@ def main() -> int:
     )
 
     context_pack = flowmind_json_request(
-        base_url=runtime["base_url"],
+        base_url=runtime["control_plane_url"],
         api_key=runtime["api_key"],
         method="POST",
         path="/api/bridge/context-pack",
@@ -134,7 +138,7 @@ def main() -> int:
     )
 
     truth = flowmind_json_request(
-        base_url=runtime["base_url"],
+        base_url=runtime["control_plane_url"],
         api_key=runtime["api_key"],
         method="GET",
         path="/api/bridge/truth?limit=5",
@@ -149,7 +153,7 @@ def main() -> int:
         "reject": reject,
         "feedbackPullCount": len(feedback_pull.get("data", [])),
         "contextPackSummary": context_pack.get("data", {}).get("summary", {}),
-        "truthCount": truth.get("data", {}).get("totalCount"),
+        "truthCount": truth.get("totalCount", truth.get("data", {}).get("totalCount")),
     }
 
     print(json.dumps(report, ensure_ascii=False, indent=2))

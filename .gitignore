@@ -16,6 +16,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+.omx/
 check_*.py
 collect_*.py
 write_templates.py

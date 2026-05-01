@@ -78,21 +78,42 @@ echo "  采集今日文件变更..." | tee -a "$LOG_FILE"
 
 echo "  活动采集完成: $ACTIVITIES_FILE" | tee -a "$LOG_FILE"
 
-# 2. 生成反思报告骨架（具体反思内容由 cron agent 填充）
+# 2. 生成可直接上传的反思报告，避免把骨架文件提前推到飞书
 echo "2. 生成反思报告..." | tee -a "$LOG_FILE"
 REPORT_FILE="$LEARNINGS_DIR/reflection-report-$TODAY.md"
+
+flowmind_commits=$(grep -cE '^[0-9a-f]{7,} ' "$ACTIVITIES_FILE" 2>/dev/null || true)
+cron_logs=$(grep -c '^-' "$ACTIVITIES_FILE" 2>/dev/null || true)
+changed_docs=$(grep -c '^-' "$ACTIVITIES_FILE" 2>/dev/null || true)
 
 cat > "$REPORT_FILE" << EOF
 # 反思报告 $TODAY
 
-> 等待 AI 分析当日活动后填充...
-> 采集数据见: activities-$TODAY.md
+## 当日摘要
+
+- Git 提交记录数（粗略）: ${flowmind_commits:-0}
+- Cron/日志产物条目数（粗略）: ${cron_logs:-0}
+- 今日变更文档/记忆文件数（粗略）: ${changed_docs:-0}
+
+## 运行观察
+
+- 本报告由自动采集脚本直接生成并上传，避免再上传空壳骨架
+- 详细原始数据见：activities-$TODAY.md
+- 如果稍后有 AI 二次分析，应覆盖写回此文件，而不是另起一个占位版本
+
+## 原始活动摘录
+
+EOF
+
+sed -n '1,120p' "$ACTIVITIES_FILE" >> "$REPORT_FILE"
+
+cat >> "$REPORT_FILE" << EOF
 
 ---
 生成时间: $(date)
 EOF
 
-echo "  报告骨架已生成: $REPORT_FILE" | tee -a "$LOG_FILE"
+echo "  报告已生成: $REPORT_FILE" | tee -a "$LOG_FILE"
 
 # 3. 上传到飞书云盘
 echo "3. 上传到飞书云盘..." | tee -a "$LOG_FILE"

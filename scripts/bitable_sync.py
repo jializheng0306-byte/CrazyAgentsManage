@@ -38,7 +38,7 @@ def load_config():
 def load_sync_state():
     if SYNC_STATE_FILE.exists():
         return json.loads(SYNC_STATE_FILE.read_text())
-    return {"synced_ids": []}
+    return {"synced_ids": [], "synced_keys": []}
 
 
 def save_sync_state(state):
@@ -50,6 +50,10 @@ def load_tech_radar():
         return []
     radar = json.loads(RADAR_FILE.read_text())
     return radar.get("entries", [])
+
+
+def entry_sync_key(entry):
+    return f"{entry.get('name', '').strip()}|{entry.get('url', '').strip()}"
 
 
 def create_record(config, entry):
@@ -135,6 +139,8 @@ def notify_feishu(config, new_entries):
 def main():
     config = load_config()
     state = load_sync_state()
+    state.setdefault("synced_ids", [])
+    state.setdefault("synced_keys", [])
     entries = load_tech_radar()
 
     if not entries:
@@ -142,7 +148,12 @@ def main():
         return
 
     # 找出尚未同步的条目
-    new_entries = [e for e in entries if e.get("name") not in state["synced_ids"]]
+    synced_keys = set(state["synced_keys"])
+    synced_names = set(state["synced_ids"])
+    new_entries = [
+        e for e in entries
+        if entry_sync_key(e) not in synced_keys and e.get("name") not in synced_names
+    ]
 
     if not new_entries:
         print("无新条目需要同步")
@@ -151,21 +162,26 @@ def main():
     print(f"发现 {len(new_entries)} 个新条目，同步到 Bitable...")
 
     synced_names = []
+    synced_keys_now = []
+    synced_entries = []
     for entry in new_entries:
         record_id = create_record(config, entry)
         if record_id:
             print(f"  ✅ {entry['name']} → {record_id}")
             synced_names.append(entry["name"])
+            synced_keys_now.append(entry_sync_key(entry))
+            synced_entries.append(entry)
         else:
             print(f"  ❌ {entry['name']} 同步失败")
 
     # 更新同步状态
     state["synced_ids"].extend(synced_names)
+    state["synced_keys"].extend(synced_keys_now)
     state["last_sync"] = datetime.now().isoformat()
     save_sync_state(state)
 
     # 发送 @通知
-    notify_feishu(config, new_entries)
+    notify_feishu(config, synced_entries)
 
     print(f"\n同步完成: {len(synced_names)}/{len(new_entries)} 条")
 
