@@ -189,6 +189,8 @@ scripts/check_cross_repo_prd_sync.sh
 
 ### Phase 5 — Page-System Convergence
 
+状态：进行中
+
 目标：
 
 - 把五个一级 IA 分区收敛为正式页面级需求
@@ -200,6 +202,12 @@ scripts/check_cross_repo_prd_sync.sh
 - Architecture Visualization 页面级 PRD
 - WebUI 路由与模板对齐文档
 - 页面与子 PRD / workflow PRD 的清晰映射
+
+当前进度：
+
+- `Overview` 已切换到五分区 IA 导航壳，并改为 `BASE` 感知的 API / 链接生成
+- 旧功能模板的静态资源路径正在从硬编码 `/manage/static/*` 收口到 `{{ BASE }}/static/*`
+- 治理摘要与协作摘要已进入 `Overview` 入口语义，但真实聚合数据仍待后续 API 补齐
 
 ## 迭代收口规则
 

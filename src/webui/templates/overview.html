@@ -12,39 +12,9 @@
   <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
 </head>
-<body>
-
-  <!-- Global Navigation Bar -->
-  <nav class="global-nav">
-    <div class="container">
-      <div class="global-nav-inner">
-        <div class="nav-left">
-          <a href="{{ BASE }}/" class="nav-logo">
-            <div class="nav-logo-icon">&#9889;</div>
-            Hermes
-            <span class="nav-version">v0.5</span>
-          </a>
-          <div class="nav-menu">
-            <a href="{{ BASE }}/" class="nav-item active">&#128202; 概览</a>
-            <a href="{{ BASE }}/agent" class="nav-item">&#128992; Agent</a>
-            <a href="{{ BASE }}/tasks" class="nav-item">&#128203; 任务</a>
-            <a href="{{ BASE }}/dashboard" class="nav-item">&#128202; 监控仪表板</a>
-            <a href="{{ BASE }}/skills" class="nav-item">&#9889; 技能</a>
-            <a href="{{ BASE }}/team-memory" class="nav-item">&#128221; 团队记忆</a>
-            <a href="{{ BASE }}/cron" class="nav-item">&#9200; 定时任务</a>
-            <a href="{{ BASE }}/graph" class="nav-item">&#128279; 图谱</a>
-            <a href="{{ BASE }}/sessions" class="nav-item pipeline">&#128308; 流水线</a>
-            <a href="{{ BASE }}/alerts" class="nav-item">&#128276; 告警</a>
-            <a href="{{ BASE }}/tokens" class="nav-item">&#128176; Token</a>
-          </div>
-        </div>
-        <div class="nav-right">
-          <input type="text" class="nav-search" placeholder="搜索...">
-          <button class="nav-favorite">&#9733; 收藏夹</button>
-        </div>
-      </div>
-    </div>
-  </nav>
+<body data-base="{{ BASE }}">
+  {% set active_nav = 'overview' %}
+  {% include 'ia-nav.html' %}
 
   <!-- Main Content -->
   <main id="overview-app">
@@ -54,9 +24,9 @@
       <div class="ov-hero-header">
         <h1 class="ov-hero-title">
           <span class="ov-hero-icon">&#129302;</span>
-          Hermes Agent 系统总览
+          HermesAgent × FlowMind 总览
         </h1>
-        <p class="ov-hero-subtitle">多智能体协作 &middot; ReAct Loop &middot; 全链路可观测</p>
+        <p class="ov-hero-subtitle">总入口聚合运行态、运营面、治理面与协作面，先判断异常，再决定下一步动作。</p>
       </div>
 
       <!-- Global Metrics Strip -->
@@ -91,6 +61,47 @@
           <div class="ov-metric-label">平均 TPS</div>
           <div class="ov-metric-trend" id="trend-tps">--</div>
         </div>
+      </div>
+    </section>
+
+    <section class="ov-lane-section">
+      <h2 class="ov-section-title">
+        <span class="ov-section-icon">&#129517;</span>
+        工作分区
+      </h2>
+      <div class="ov-lane-grid">
+        <a class="ov-lane-card" href="{{ BASE }}/runtime">
+          <div class="ov-lane-head">
+            <span class="ov-lane-pill runtime">Runtime</span>
+            <span class="ov-lane-link">进入运行态 →</span>
+          </div>
+          <h3 class="ov-lane-title">运行态健康与证据</h3>
+          <p class="ov-lane-copy">会话、追踪、Token、错误与当前活跃流量。适合先判断系统是不是在正常跑。</p>
+        </a>
+        <a class="ov-lane-card" href="{{ BASE }}/operations">
+          <div class="ov-lane-head">
+            <span class="ov-lane-pill operations">Operations</span>
+            <span class="ov-lane-link">进入运营面 →</span>
+          </div>
+          <h3 class="ov-lane-title">技能、定时任务与团队记忆</h3>
+          <p class="ov-lane-copy">查看可运营对象、例行任务和告警入口，确认 Hermes 宿主侧的动作面是否完整。</p>
+        </a>
+        <a class="ov-lane-card" href="{{ BASE }}/governance">
+          <div class="ov-lane-head">
+            <span class="ov-lane-pill governance">Governance</span>
+            <span class="ov-lane-link">进入治理面 →</span>
+          </div>
+          <h3 class="ov-lane-title">Candidate、Truth 与 Review</h3>
+          <p class="ov-lane-copy">面向 FlowMind 的治理链路摘要。当前仍以过渡页承载，但已经是正式一级入口。</p>
+        </a>
+        <a class="ov-lane-card" href="{{ BASE }}/collaboration">
+          <div class="ov-lane-head">
+            <span class="ov-lane-pill collaboration">Collaboration</span>
+            <span class="ov-lane-link">进入协作面 →</span>
+          </div>
+          <h3 class="ov-lane-title">Handoff、Closeout 与回写</h3>
+          <p class="ov-lane-copy">查看 Codex/Hermes 的协作闭环状态，确认哪些结果已经成为可追踪的仓库事实。</p>
+        </a>
       </div>
     </section>
 
@@ -218,11 +229,38 @@
       </div>
     </section>
 
+    <section class="ov-summary-section">
+      <h2 class="ov-section-title">
+        <span class="ov-section-icon">&#128269;</span>
+        下一步分流
+      </h2>
+      <div class="ov-summary-grid">
+        <div class="ov-summary-card">
+          <div class="ov-summary-label">治理摘要</div>
+          <h3 class="ov-summary-title">FlowMind 治理入口已独立，但聚合指标仍在补齐</h3>
+          <p class="ov-summary-copy">当前版本先通过治理面过渡页承接 candidate / truth / review / feedback 的产品分区，不再把治理状态混在运行态总览里。</p>
+          <a class="ov-summary-action" href="{{ BASE }}/governance">查看治理面</a>
+        </div>
+        <div class="ov-summary-card">
+          <div class="ov-summary-label">协作摘要</div>
+          <h3 class="ov-summary-title">协作闭环与 closeout 已独立成面</h3>
+          <p class="ov-summary-copy">如果当前问题不是运行故障，而是交付、回写或 handoff 漏项，应该直接进入协作面排查，而不是停留在会话视图。</p>
+          <a class="ov-summary-action" href="{{ BASE }}/collaboration">查看协作面</a>
+        </div>
+        <div class="ov-summary-card">
+          <div class="ov-summary-label">架构入口</div>
+          <h3 class="ov-summary-title">产品与技术架构页保留为解释面</h3>
+          <p class="ov-summary-copy">当需要理解五分区如何映射到真实数据对象和工作流时，从这里跳到产品哲学、产品架构和技术架构页面。</p>
+          <a class="ov-summary-action" href="{{ BASE }}/architecture/product">查看架构页</a>
+        </div>
+      </div>
+    </section>
+
     <!-- Active Sessions Overview -->
     <section class="ov-active-sessions">
       <h2 class="ov-section-title">
         <span class="ov-section-icon">&#128994;</span>
-        活跃会话
+        运行态摘要
         <span class="ov-section-badge" id="active-count-badge">0</span>
       </h2>
       <div class="ov-sessions-grid" id="active-sessions-grid">

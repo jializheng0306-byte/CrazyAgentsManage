@@ -4,11 +4,17 @@
  */
 
 const OVERVIEW_CONFIG = {
-  apiBase: '',
+  apiBase: document.body && document.body.dataset ? (document.body.dataset.base || '') : '',
   refreshInterval: 15000,
   maxErrors: 10,
   maxActiveSessions: 12,
 };
+
+function withBase(path) {
+  var base = OVERVIEW_CONFIG.apiBase || '';
+  var normalizedPath = path.startsWith('/') ? path : '/' + path;
+  return base + normalizedPath;
+}
 
 /* ---- Utilities ---- */
 function fmt(n) {
@@ -49,7 +55,7 @@ function relativeTime(ts) {
 }
 
 function fetchJSON(url) {
-  return fetch(OVERVIEW_CONFIG.apiBase + url)
+  return fetch(withBase(url))
     .then(r => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
@@ -101,7 +107,7 @@ function renderActiveSessions(sessions) {
 
     var toolsUsed = s.tool_call_count || 0;
 
-    return '<a class="ov-session-card" href="' + OVERVIEW_CONFIG.apiBase + '/dashboard?session=' + s.id + '">' +
+    return '<a class="ov-session-card" href="' + withBase('/runtime/dashboard') + '?session=' + encodeURIComponent(s.id) + '">' +
       '<div class="ov-session-card-header">' +
         '<h3 class="ov-session-title" title="' + (s.title || s.id) + '">' + (s.title || s.id) + '</h3>' +
         '<span class="ov-session-status ' + statusClass + '">' +
