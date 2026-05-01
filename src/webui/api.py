@@ -20,8 +20,10 @@ _hermes_home = None
 _remote_config = None
 _skills_cache = {'data': None, 'timestamp': 0}
 _skills_cache_ttl = 300
-_overview_cache = {'data': None, 'timestamp': 0}
-_overview_cache_ttl = 60
+_overview_stats_cache = {'data': None, 'timestamp': 0}
+_overview_stats_cache_ttl = 60
+_overview_dashboard_cache = {'data': None, 'timestamp': 0}
+_overview_dashboard_cache_ttl = 60
 _dashboard_cache = {'data': None, 'timestamp': 0}
 _dashboard_cache_ttl = 30
 _local_db_cache = {}
@@ -292,8 +294,8 @@ def _read_optional_json(path):
 @api.route('/overview/stats')
 def overview_stats():
     now = time.time()
-    if _overview_cache['data'] is not None and (now - _overview_cache['timestamp']) < _overview_cache_ttl:
-        return jsonify(_overview_cache['data'])
+    if _overview_stats_cache['data'] is not None and (now - _overview_stats_cache['timestamp']) < _overview_stats_cache_ttl:
+        return jsonify(_overview_stats_cache['data'])
 
     stats = {
         'teams': 0,
@@ -350,8 +352,8 @@ def overview_stats():
     stats['skills'] = len(skills_dirs)
     stats['roles'] = stats['skills']
 
-    _overview_cache['data'] = stats
-    _overview_cache['timestamp'] = now
+    _overview_stats_cache['data'] = stats
+    _overview_stats_cache['timestamp'] = now
     return jsonify(stats)
 
 
@@ -1746,11 +1748,20 @@ def server_info():
 def overview_data():
     """Aggregated overview data for the macro-level monitoring dashboard"""
 
-    if _overview_cache['data'] and (time.time() - _overview_cache['timestamp']) < _overview_cache_ttl:
-        return jsonify(_overview_cache['data'])
+    now = time.time()
+    if _overview_dashboard_cache['data'] and (now - _overview_dashboard_cache['timestamp']) < _overview_dashboard_cache_ttl:
+        return jsonify(_overview_dashboard_cache['data'])
 
     result = {
-        'metrics': {},
+        'metrics': {
+            'total_sessions': 0,
+            'active_sessions': 0,
+            'total_input': 0,
+            'total_output': 0,
+            'total_tool_calls': 0,
+            'error_count': 0,
+            'avg_tps': None,
+        },
         'active_sessions': [],
         'tool_usage': [],
         'performance': {},
@@ -1772,15 +1783,13 @@ def overview_data():
     )
     if totals:
         t = totals[0]
-        result['metrics'] = {
+        result['metrics'].update({
             'total_sessions': t.get('total_sessions', 0) or 0,
             'active_sessions': t.get('active_sessions', 0) or 0,
             'total_input': t.get('total_input', 0) or 0,
             'total_output': t.get('total_output', 0) or 0,
             'total_tool_calls': t.get('total_tool_calls', 0) or 0,
-            'error_count': 0,
-            'avg_tps': None,
-        }
+        })
 
     # Error count
     errors = _db_query(
@@ -1935,6 +1944,6 @@ def overview_data():
     )
     result['tool_registry'] = [{'tool_name': t.get('tool_name', '')} for t in (tools or []) if t.get('tool_name')]
 
-    _overview_cache['data'] = result
-    _overview_cache['timestamp'] = time.time()
+    _overview_dashboard_cache['data'] = result
+    _overview_dashboard_cache['timestamp'] = now
     return jsonify(result)

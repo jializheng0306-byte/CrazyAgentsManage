@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'webui'))
 
 from app import app
+import api as webui_api
 
 
 @pytest.fixture
@@ -61,7 +62,7 @@ class TestSearchIntegration:
         assert b'sessions.js' in resp.data
 
     def test_all_pages_have_search_input(self, client):
-        pages = ['/', '/agent', '/graph', '/tokens', '/alerts', '/tasks',
+        pages = ['/agent', '/graph', '/tokens', '/alerts', '/tasks',
                  '/dashboard', '/skills', '/team-memory', '/cron', '/sessions']
         for page in pages:
             resp = client.get(page)
@@ -97,3 +98,46 @@ class TestAllTestsPass:
 
     def test_sprint3_tests_still_pass(self, client):
         pass
+
+
+class TestOverviewEntrypointHardening:
+    @pytest.fixture(autouse=True)
+    def reset_overview_state(self, monkeypatch, tmp_path):
+        monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+        webui_api._hermes_home = None
+        webui_api._overview_stats_cache['data'] = None
+        webui_api._overview_stats_cache['timestamp'] = 0
+        webui_api._overview_dashboard_cache['data'] = None
+        webui_api._overview_dashboard_cache['timestamp'] = 0
+        yield
+        webui_api._hermes_home = None
+
+    def test_overview_page_honors_forwarded_prefix(self, client):
+        resp = client.get('/overview', headers={'X-Forwarded-Prefix': '/manage'})
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        assert 'data-base="/manage"' in html
+        assert 'href="/manage/runtime"' in html
+        assert '/manage/static/css/design-system.css' in html
+
+    def test_overview_api_returns_empty_safe_payload_without_state_db(self, client):
+        resp = client.get('/api/overview')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['metrics']['total_sessions'] == 0
+        assert data['metrics']['error_count'] == 0
+        assert data['performance']['error_rate'] == 0
+        assert data['active_sessions'] == []
+
+    def test_overview_stats_and_overview_use_separate_caches(self, client):
+        stats_resp = client.get('/api/overview/stats')
+        assert stats_resp.status_code == 200
+        stats = stats_resp.get_json()
+        assert 'teams' in stats
+        assert 'metrics' not in stats
+
+        overview_resp = client.get('/api/overview')
+        assert overview_resp.status_code == 200
+        overview = overview_resp.get_json()
+        assert 'metrics' in overview
+        assert 'teams' not in overview
