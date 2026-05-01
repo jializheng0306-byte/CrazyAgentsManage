@@ -28,6 +28,10 @@ _local_db_cache = {}
 _local_db_lock = threading.Lock()
 
 
+def _get_repo_root():
+    return Path(__file__).resolve().parents[2]
+
+
 def _get_hermes_home():
     global _hermes_home
     if _hermes_home is None:
@@ -272,6 +276,13 @@ def _list_files(base_path, sub_path='', ext='*.md'):
     if not full_path.exists():
         return []
     return [f.name for f in sorted(full_path.glob(ext))]
+
+
+def _read_optional_json(path):
+    try:
+        return json.loads(path.read_text(encoding='utf-8'))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 
 # ═══════════════════════════════════════════
@@ -618,6 +629,85 @@ def dashboard_gateway_status():
             status['running'] = True
 
     return jsonify(status)
+
+
+# ═══════════════════════════════════════════
+# CrazyAgents runtime / handoff APIs
+# ═══════════════════════════════════════════
+
+@api.route('/runtime/state')
+def runtime_state():
+    repo_root = _get_repo_root()
+    state_path = repo_root / '.omx' / 'crazyagents' / 'runtime-state.json'
+    data = _read_optional_json(state_path)
+    if not data:
+        return jsonify({
+            'exists': False,
+            'path': str(state_path),
+            'data': {},
+        })
+    return jsonify({
+        'exists': True,
+        'path': str(state_path),
+        'data': data,
+    })
+
+
+@api.route('/runtime/handoffs')
+def runtime_handoffs():
+    repo_root = _get_repo_root()
+    outbox = repo_root / '.omx' / 'crazyagents' / 'outbox'
+    if not outbox.exists():
+        return jsonify([])
+
+    items = []
+    for path in sorted(outbox.glob('*.md'), reverse=True):
+        try:
+            content = path.read_text(encoding='utf-8')
+        except FileNotFoundError:
+            continue
+        items.append({
+            'name': path.name,
+            'path': str(path),
+            'updated_at': datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat(),
+            'preview': content[:300],
+            'size': len(content),
+        })
+    return jsonify(items[:20])
+
+
+@api.route('/runtime/harness-summary')
+def runtime_harness_summary():
+    repo_root = _get_repo_root()
+    success_dir = repo_root / 'harness' / 'trace' / 'successes'
+    failure_dir = repo_root / 'harness' / 'trace' / 'failures'
+    summary = {
+        'success_count': 0,
+        'failure_count': 0,
+        'latest_success': None,
+        'latest_failure': None,
+    }
+
+    success_files = sorted(
+        [p for p in success_dir.glob('*.json') if p.name != 'TEMPLATE.json'],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    ) if success_dir.exists() else []
+    failure_files = sorted(
+        [p for p in failure_dir.glob('*.json') if p.name != 'TEMPLATE.json'],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    ) if failure_dir.exists() else []
+
+    summary['success_count'] = len(success_files)
+    summary['failure_count'] = len(failure_files)
+
+    if success_files:
+        summary['latest_success'] = _read_optional_json(success_files[0])
+    if failure_files:
+        summary['latest_failure'] = _read_optional_json(failure_files[0])
+
+    return jsonify(summary)
 
 
 # ═══════════════════════════════════════════
@@ -1646,3 +1736,205 @@ def server_info():
         'hermes_home': cfg.get('hermes_home', '/root/.hermes'),
         'connected': True,
     })
+
+
+# ═══════════════════════════════════════════
+# Overview APIs (Macro-level Dashboard)
+# ═══════════════════════════════════════════
+
+@api.route('/overview')
+def overview_data():
+    """Aggregated overview data for the macro-level monitoring dashboard"""
+
+    if _overview_cache['data'] and (time.time() - _overview_cache['timestamp']) < _overview_cache_ttl:
+        return jsonify(_overview_cache['data'])
+
+    result = {
+        'metrics': {},
+        'active_sessions': [],
+        'tool_usage': [],
+        'performance': {},
+        'recent_errors': [],
+        'sources': [],
+        'subagents': [],
+        'tool_registry': [],
+    }
+
+    # ---- Global Metrics ----
+    totals = _db_query(
+        "SELECT "
+        "COUNT(*) as total_sessions, "
+        "COUNT(CASE WHEN ended_at IS NULL THEN 1 END) as active_sessions, "
+        "COALESCE(SUM(input_tokens), 0) as total_input, "
+        "COALESCE(SUM(output_tokens), 0) as total_output, "
+        "COALESCE(SUM(tool_call_count), 0) as total_tool_calls "
+        "FROM sessions"
+    )
+    if totals:
+        t = totals[0]
+        result['metrics'] = {
+            'total_sessions': t.get('total_sessions', 0) or 0,
+            'active_sessions': t.get('active_sessions', 0) or 0,
+            'total_input': t.get('total_input', 0) or 0,
+            'total_output': t.get('total_output', 0) or 0,
+            'total_tool_calls': t.get('total_tool_calls', 0) or 0,
+            'error_count': 0,
+            'avg_tps': None,
+        }
+
+    # Error count
+    errors = _db_query(
+        "SELECT COUNT(DISTINCT session_id) as cnt FROM messages WHERE error_message IS NOT NULL"
+    )
+    if errors:
+        result['metrics']['error_count'] = errors[0].get('cnt', 0) or 0
+
+    # Average TPS
+    tps_data = _db_query(
+        "SELECT AVG(tps) as avg_tps FROM messages WHERE tps IS NOT NULL AND tps > 0"
+    )
+    if tps_data and tps_data[0].get('avg_tps'):
+        result['metrics']['avg_tps'] = round(tps_data[0]['avg_tps'], 1)
+
+    # ---- Active Sessions ----
+    active = _db_query(
+        "SELECT id, source, model, started_at, ended_at, end_reason, title, "
+        "input_tokens, output_tokens, tool_call_count, "
+        "(SELECT GROUP_CONCAT(DISTINCT tool_name) FROM messages WHERE session_id = s.id AND tool_name IS NOT NULL) as tool_names_str "
+        "FROM sessions s "
+        "WHERE ended_at IS NULL OR end_reason = 'error' "
+        "ORDER BY started_at DESC LIMIT 12"
+    )
+    for row in active:
+        tool_names = []
+        if row.get('tool_names_str'):
+            tool_names = [t.strip() for t in row['tool_names_str'].split(',') if t.strip()]
+        result['active_sessions'].append({
+            'id': row.get('id', ''),
+            'source': row.get('source', ''),
+            'model': row.get('model', ''),
+            'title': row.get('title') or row.get('id', '')[:20],
+            'started_at': row.get('started_at'),
+            'ended_at': row.get('ended_at'),
+            'end_reason': row.get('end_reason'),
+            'input_tokens': row.get('input_tokens', 0) or 0,
+            'output_tokens': row.get('output_tokens', 0) or 0,
+            'tool_call_count': row.get('tool_call_count', 0) or 0,
+            'tool_names': tool_names,
+        })
+
+    # ---- Tool Usage ----
+    tool_usage = _db_query(
+        "SELECT tool_name, COUNT(*) as call_count, "
+        "AVG(tool_duration_ms) as avg_duration, "
+        "COUNT(CASE WHEN tool_result_status = 'error' THEN 1 END) as errors, "
+        "COALESCE(SUM(token_count), 0) as total_tokens "
+        "FROM messages "
+        "WHERE role = 'tool' AND tool_name IS NOT NULL "
+        "GROUP BY tool_name "
+        "ORDER BY call_count DESC LIMIT 10"
+    )
+    for row in tool_usage:
+        result['tool_usage'].append({
+            'tool_name': row.get('tool_name', ''),
+            'call_count': row.get('call_count', 0) or 0,
+            'avg_duration': row.get('avg_duration'),
+            'errors': row.get('errors', 0) or 0,
+            'total_tokens': row.get('total_tokens', 0) or 0,
+        })
+
+    # If no tool data from messages, fall back to tool_call analysis
+    if not result['tool_usage']:
+        tc_data = _db_query(
+            "SELECT finish_reason, COUNT(*) as cnt FROM messages GROUP BY finish_reason ORDER BY cnt DESC LIMIT 10"
+        )
+        if tc_data:
+            result['tool_usage'] = [{
+                'tool_name': row.get('finish_reason', 'unknown'),
+                'call_count': row.get('cnt', 0),
+                'avg_duration': None,
+                'errors': 0,
+                'total_tokens': 0,
+            } for row in tc_data]
+
+    # ---- Performance ----
+    perf_ttft = _db_query(
+        "SELECT AVG(ttft_ms) as avg_ttft, MIN(ttft_ms) as min_ttft, MAX(ttft_ms) as max_ttft "
+        "FROM messages WHERE ttft_ms IS NOT NULL AND ttft_ms > 0"
+    )
+    perf_tps = _db_query(
+        "SELECT AVG(tps) as avg_tps FROM messages WHERE tps IS NOT NULL AND tps > 0"
+    )
+    perf_duration = _db_query(
+        "SELECT AVG(CASE WHEN ended_at IS NOT NULL THEN ended_at - started_at END) as avg_duration "
+        "FROM sessions"
+    )
+
+    result['performance'] = {
+        'avg_ttft': perf_ttft[0].get('avg_ttft') if perf_ttft else None,
+        'min_ttft': perf_ttft[0].get('min_ttft') if perf_ttft else None,
+        'max_ttft': perf_ttft[0].get('max_ttft') if perf_ttft else None,
+        'avg_tps': perf_tps[0].get('avg_tps') if perf_tps else None,
+        'avg_duration': perf_duration[0].get('avg_duration') if perf_duration else None,
+        'error_rate': result['metrics']['error_count'] / max(result['metrics']['total_sessions'], 1),
+    }
+
+    # ---- Recent Errors ----
+    recent_err = _db_query(
+        "SELECT m.id, m.session_id, m.role, m.error_message, m.error_traceback, "
+        "m.tool_name, m.timestamp "
+        "FROM messages m "
+        "WHERE m.error_message IS NOT NULL "
+        "ORDER BY m.timestamp DESC LIMIT 10"
+    )
+    for row in recent_err:
+        result['recent_errors'].append({
+            'id': row.get('id'),
+            'session_id': row.get('session_id', ''),
+            'error_message': row.get('error_message', ''),
+            'tool_name': row.get('tool_name', ''),
+            'timestamp': row.get('timestamp'),
+        })
+
+    # If no error data, check sessions with error end_reason
+    if not result['recent_errors']:
+        session_err = _db_query(
+            "SELECT id, end_reason, started_at "
+            "FROM sessions WHERE end_reason IS NOT NULL "
+            "ORDER BY started_at DESC LIMIT 5"
+        )
+        for row in session_err:
+            result['recent_errors'].append({
+                'session_id': row.get('id', ''),
+                'error_message': row.get('end_reason', ''),
+                'timestamp': row.get('started_at'),
+            })
+
+    # ---- Source Distribution ----
+    sources = _db_query(
+        "SELECT COALESCE(source, 'unknown') as src, COUNT(*) as cnt, "
+        "COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens "
+        "FROM sessions GROUP BY source ORDER BY cnt DESC"
+    )
+    for row in sources:
+        result['sources'].append({
+            'src': row.get('src', ''),
+            'cnt': row.get('cnt', 0) or 0,
+            'total_tokens': row.get('total_tokens', 0) or 0,
+        })
+
+    # ---- Subagents ----
+    roles = _db_query(
+        "SELECT DISTINCT SUBSTR(role, 1, 20) as role FROM messages WHERE role != 'user'"
+    )
+    result['subagents'] = [{'role': r.get('role', '')} for r in (roles or []) if r.get('role')]
+
+    # ---- Tool Registry ----
+    tools = _db_query(
+        "SELECT DISTINCT tool_name FROM messages WHERE tool_name IS NOT NULL LIMIT 10"
+    )
+    result['tool_registry'] = [{'tool_name': t.get('tool_name', '')} for t in (tools or []) if t.get('tool_name')]
+
+    _overview_cache['data'] = result
+    _overview_cache['timestamp'] = time.time()
+    return jsonify(result)

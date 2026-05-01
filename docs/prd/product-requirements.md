@@ -36,6 +36,7 @@ CrazyAgentsManage 是一个**多智能体协作管理平台**，在 Hermes-Agent
 | 协作模式 | 父子智能体线性委派 | 共享上下文文件协作 |
 | 定时任务 | Cron 调度 + 本地执行 | Cron + 团队绑定 + 记忆沉淀 |
 | 可视化 | 基础会话画像 | 任务编排/DAG/实时监控 |
+| 可观测性 | 会话级Token聚合 + 消息时间戳 | 全链路追踪：工具耗时/单消息Token/错误详情/性能指标 |
 
 ---
 
@@ -275,9 +276,12 @@ CrazyAgentsManage 是一个**多智能体协作管理平台**，在 Hermes-Agent
 
 **技术实现**：
 - **前端**：基于现有 hermes-webui Flask 模板，使用 CSS Grid + Flexbox 布局
-- **时间线渲染**：使用纯 CSS 实现时间条（无需第三方库）
+- **时间线渲染**：使用嵌套树结构（Vercel Trace 风格），支持展开/折叠
 - **数据源**：
-  - SessionDB（state.db）获取会话和任务记录
+  - SessionDB（state.db）获取会话和消息记录（sessions + messages 表）
+  - 消息级Token：从 messages.token_count 获取（需增强，当前生产数据全为NULL）
+  - 工具调用数据：从 messages.tool_calls JSON 字段提取 tool_name 和 tool_call_id
+  - 工具耗时：从 messages.tool_duration_ms 获取（需增强）
   - shared-context/ 目录获取任务状态和输出
   - HealthMonitor 获取智能体心跳状态
 - **后端 API**：
@@ -713,6 +717,125 @@ Token用量:
   - SessionDB 获取统计数据
 - **路由**：`GET /` → 渲染 `home.html`
 - **导航集成**：所有页面共用同一导航栏组件
+
+#### 2.1.11 运行时可观测性数据体系 (Agent Observability Data)
+
+**需求描述**：
+基于对 Hermes-Agent 生产环境（state.db 32 个会话、1884 条消息、2190 万 Token）的深度代码扫描和数据库探索，发现当前运行时数据捕捉存在重大缺口。本节定义完整的可观测性数据采集体系和增强方案。
+
+**现状数据图谱**（基于生产环境 state.db 实测）：
+
+| 数据维度 | 存储位置 | 覆盖范围 | 关键发现 |
+|---------|---------|---------|---------|
+| **会话级Token** | sessions表 input/output/cache 字段 | 100%（32/32 有数据） | 数据完整但**仅会话级聚合** |
+| **消息级Token** | messages.token_count | **0%（全为NULL）** | 仅对assistant消息赋值，但生产环境全部为NULL |
+| **工具调用记录** | messages.tool_calls(JSON) | 211条tool_calls | 有调用记录但无耗时、无token消耗 |
+| **工具名称** | messages.tool_name | **全为NULL** | 需从tool_calls JSON中提取 |
+| **消息时间戳** | messages.timestamp | 100% | 所有消息**批量写入**，100条消息时间差<0.1秒 |
+| **错误信息** | sessions.end_reason | 仅compression | 无error类型记录，无错误详情 |
+| **会话持续时间** | sessions.started_at/ended_at | 仅6条ended | 平均51分钟，最长3小时 |
+| **模型分布** | sessions.model | glm-5(22次) / mimo-v2-pro(10次) | 多模型切换但无fallback追踪 |
+| **来源分布** | sessions.source | cli(21次) / api_server(11次) | 来源完整 |
+| **成本归因** | sessions.estimated_cost_usd | 有字段值全为0 | 计价模型未实现 |
+
+**关键缺失维度**（按优先级排序）：
+
+| 缺失维度 | 影响 | 数据源 | 增强方案 |
+|---------|------|--------|---------|
+| **工具调用耗时** | 无法定位性能瓶颈 | 工具执行前后 time.time() | 在 handle_function_call 中记录 start/end |
+| **工具Token消耗** | 无法归因工具成本 | API response.usage 中的 tool 部分 | 从 stream_delta 中提取 tool usage |
+| **单消息持续时间** | 无法计算API延迟 | API调用 start/end 时间 | 在 _interruptible_streaming_api_call 中记录 |
+| **TTFT**（首Token时间） | 无法评估响应速度 | 首次 stream_delta 回调时间 | 在 stream_delta_callback 中收集 |
+| **TPS**（每秒Token） | 无法评估吞吐 | 完成时间 / token_count | 自动计算 |
+| **错误详情** | 只有 end_reason | exception 信息、traceback | 记录 error_message 和 stack trace |
+| **工具执行状态** | 无成功/失败标记 | 工具返回值 | 记录 result_status 和 exception |
+| **上下文压缩指标** | 知道发生了但无详情 | compression_ratio、time_saved | 记录压缩比例和节省时间 |
+| **模型切换链路** | 无fallback追踪 | 每次API调用的 model 字段 | 记录 model_switch 事件 |
+| **流式输出指标** | 无中间状态 | stream_delta 事件序列 | 记录 chunk_count 和间隔 |
+
+**增强后的数据模型**（messages 表新增字段）：
+
+```sql
+ALTER TABLE messages ADD COLUMN duration_ms REAL;          -- 消息处理耗时（毫秒）
+ALTER TABLE messages ADD COLUMN ttft_ms REAL;              -- 首Token时间（毫秒）
+ALTER TABLE messages ADD COLUMN tps REAL;                  -- 每秒Token数
+ALTER TABLE messages ADD COLUMN tool_duration_ms REAL;     -- 工具执行耗时
+ALTER TABLE messages ADD COLUMN tool_result_status TEXT;   -- 工具执行状态：success/error
+ALTER TABLE messages ADD COLUMN error_message TEXT;        -- 错误信息详情
+ALTER TABLE messages ADD COLUMN error_traceback TEXT;      -- 错误堆栈
+ALTER TABLE messages ADD COLUMN reasoning_tokens INTEGER;  -- 推理Token数
+ALTER TABLE messages ADD COLUMN compression_ratio REAL;    -- 上下文压缩比例
+ALTER TABLE messages ADD COLUMN model_used TEXT;           -- 实际使用的模型
+```
+
+**增强后的数据模型**（sessions 表新增字段）：
+
+```sql
+ALTER TABLE sessions ADD COLUMN total_tool_duration_ms REAL;   -- 总工具耗时
+ALTER TABLE sessions ADD COLUMN total_api_duration_ms REAL;    -- 总API耗时
+ALTER TABLE sessions ADD COLUMN avg_tps REAL;                  -- 平均TPS
+ALTER TABLE sessions ADD COLUMN min_ttft_ms REAL;              -- 最小TTFT
+ALTER TABLE sessions ADD COLUMN max_ttft_ms REAL;              -- 最大TTFT
+ALTER TABLE sessions ADD COLUMN model_switch_count INTEGER;    -- 模型切换次数
+ALTER TABLE sessions ADD COLUMN compression_count INTEGER;     -- 上下文压缩次数
+ALTER TABLE sessions ADD COLUMN error_details TEXT;            -- 错误详情JSON
+```
+
+**数据采集埋点位置**：
+
+| 埋点位置 | 文件 | 采集内容 |
+|---------|------|---------|
+| API调用入口 | `gateway/run.py:_interruptible_streaming_api_call` | start_time、model_used |
+| 首次Token回调 | `gateway/run.py:stream_delta_callback` | first_token_time、ttft_ms |
+| API调用结束 | `gateway/run.py:run_conversation` | end_time、duration、tps |
+| 工具执行入口 | `run_agent.py:handle_function_call` | tool_start_time、tool_name |
+| 工具执行完成 | `run_agent.py:handle_function_call` | tool_duration、result_status |
+| 异常捕获 | `run_agent.py:except Exception` | error_message、traceback |
+| 上下文压缩 | `agent/context_compressor.py` | compression_ratio、time_saved |
+| 会话结束 | `hermes_state.py:update_session` | 聚合所有指标写入session |
+
+**增强后的 WebUI 展示能力**：
+
+| 展示项 | 数据来源 | 展示方式 |
+|-------|---------|---------|
+| 工具调用耗时分布 | messages.tool_duration_ms | Trace树中的耗时条 |
+| API延迟分布 | messages.duration_ms | 会话画像中的延迟图 |
+| Token成本归因 | messages.token_count（按工具分） | 按工具/角色的成本饼图 |
+| 错误链路追踪 | messages.error_message + parent_session_id | 红色高亮+错误详情弹窗 |
+| 上下文压缩记录 | sessions.compression_count | 时间轴上的压缩标记 |
+| 模型切换记录 | sessions.model_switch_count | 时间轴上的模型标记 |
+| TTFT趋势 | messages.ttft_ms | 折线图 |
+| TPS分布 | messages.tps | 柱状图 |
+
+**用户故事**：
+```
+作为一个运维工程师
+我希望看到完整的运行时数据，包括每个工具调用耗时、每个API调用的Token消耗、
+错误详细信息和性能指标
+这样我可以：
+1. 定位哪个工具调用最慢（性能优化）
+2. 知道哪个工具消耗最多Token（成本控制）
+3. 快速追踪错误根因（故障排查）
+4. 评估API响应速度（服务质量）
+5. 追踪上下文压缩效果（优化上下文窗口使用）
+```
+
+**验收标准**：
+- [ ] messages.token_count 在生产环境中不再为NULL
+- [ ] 工具调用记录包含 tool_name、duration_ms、result_status
+- [ ] 每条消息记录 duration_ms 和 ttft_ms
+- [ ] 错误消息包含 error_message 和 traceback
+- [ ] 会话记录包含压缩次数和模型切换次数
+- [ ] WebUI Trace树展示工具调用耗时条
+- [ ] WebUI 支持按耗时排序和筛选
+- [ ] WebUI 支持错误会话高亮和详情查看
+- [ ] API新增 /api/sessions/<id>/metrics 端点返回性能指标
+
+**技术实现**：
+- **数据采集**：在 gateway/run.py 和 run_agent.py 的关键路径增加 time.time() 埋点
+- **数据存储**：扩展 messages 和 sessions 表结构（migration脚本）
+- **数据聚合**：在 session_store.update_session() 中聚合所有性能指标
+- **前端展示**：在 dashboard.js 中新增耗时条渲染和错误高亮
 
 ---
 
