@@ -16,6 +16,8 @@
 本路线图必须与以下文档保持对齐：
 
 0. `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md`
+0.1 `FlowMindDeploy/docs/01-product/HermesAgent-FlowMind-交互框架设计-2026-04-29.md`
+0.2 `FlowMindDeploy/docs/01-product/HermesAgent-FlowMind-产品功能基线与迭代路线图-2026-04-30.md`
 
 1. `docs/prd/hermesagent-hosted-flowmind-product-foundation.md`
 2. `docs/prd/technical-implementation-prd.md`
@@ -41,6 +43,23 @@
 
 - `Codex` 负责路线图编辑、阶段排序和文档版本管理
 - `HermesAgent` 从运营验收角度复核路线图变更
+
+## Cross-Repo Sync Gate
+
+这份路线图是 Crazy 仓的执行入口，但不是联合产品的 canonical source。
+
+如果 `FlowMindDeploy/docs/01-product/` 下的联合主 PRD / 主路线图发生变化，则在 Crazy 侧 closeout 前必须同时满足：
+
+1. `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md` 已同步
+2. `docs/prd/README.md` 已同步
+3. 本路线图已同步
+4. cross-repo PRD sync checker 已通过
+
+检查命令：
+
+```bash
+scripts/check_cross_repo_prd_sync.sh
+```
 
 ## 当前产品共识
 
@@ -200,6 +219,7 @@
 2. roadmap 状态已更新
 3. 仓库 artifacts 已反映被接受的事实
 4. HermesAgent 的 acceptance comments 已解决或被显式延后
+5. 如果联合主规划发生变化，cross-repo PRD sync checker 已通过
 
 ## 当前立即动作
 

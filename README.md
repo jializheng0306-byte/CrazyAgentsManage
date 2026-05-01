@@ -1,10 +1,18 @@
 # CrazyAgentsManage
 
-> 多智能体协作管理平台 — 基于 Hermes-Agent 的智能体团队编排系统
+> 以 HermesAgent 为宿主的 FlowMind 运营编排系统
 
 ## 项目概述
 
-CrazyAgentsManage 是一个**多智能体协作管理平台**，在 Hermes-Agent 现有能力基础上，引入以下核心能力：
+CrazyAgentsManage 当前的规范性定位是：
+
+- `HermesAgent` 运行时宿主
+- `FlowMind` 下游治理真值层
+- `CrazyAgentsManage` 运营编排、观测、协作与 operator product 层
+
+仓库里仍然保留多智能体协作、共享上下文、任务编排等能力，但它们不再是唯一产品叙事。
+
+当前核心能力包括：
 
 - **角色化智能体**：6 种专业角色（Expert/Research/Code/Ops/Cron/Team）
 - **任务编排**：DAG 任务图 + 3 状态协议（pending → running → done）
@@ -72,8 +80,9 @@ multi_agent:
 | 文档 | 说明 |
 |------|------|
 | [架构设计](docs/architecture.md) | 完整的多智能体协作架构设计 |
-| [产品需求](docs/prd/product-requirements.md) | PRD 产品需求文档 |
-| [路线图](docs/roadmap/roadmap.md) | 版本规划和实施路线 |
+| [PRD 体系说明](docs/prd/README.md) | 当前生效的 PRD 分层入口 |
+| [联合产品镜像基线](docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md) | Crazy 侧镜像的联合产品主线 |
+| [执行路线图](docs/roadmap/prd-execution-roadmap.md) | 当前生效的执行路线图 |
 
 ## 项目结构
 
@@ -151,7 +160,9 @@ task-002 (research) ──┘
 
 ## 路线图
 
-详见 [路线图](docs/roadmap/roadmap.md)
+当前活跃路线图详见 [执行路线图](docs/roadmap/prd-execution-roadmap.md)
+
+旧路线图 [docs/roadmap/roadmap.md](docs/roadmap/roadmap.md) 现在更适合作为历史能力清单，而不是活跃实施顺序。
 
 - **v0.1.0**：基础架构（Agent Factory, Task Orchestrator, Shared Context）
 - **v0.2.0**：记忆系统（团队记忆、五层记忆、自我改进）

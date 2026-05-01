@@ -37,6 +37,13 @@ CrazyAgentsManage 现在使用一套拆分式 PRD 体系，而不再依赖单一
 - 说明旧 `v0.1.0 ~ v0.5.0` 路线图现在更适合作为能力清单，而不是当前实施顺序
 - 对齐 `FlowMindDeploy` 侧已经完成的 phase 5/6 收口与双仓治理包
 
+这个入口本质上是 mirror entrypoint，不是第二套母本。
+
+它必须镜像以下 canonical docs：
+
+- `FlowMindDeploy/docs/01-product/HermesAgent-FlowMind-交互框架设计-2026-04-29.md`
+- `FlowMindDeploy/docs/01-product/HermesAgent-FlowMind-产品功能基线与迭代路线图-2026-04-30.md`
+
 ## 规范性文档
 
 ### 上位产品基础文档
@@ -160,8 +167,24 @@ CrazyAgentsManage 现在使用一套拆分式 PRD 体系，而不再依赖单一
 4. 更新执行路线图
 5. 如果协作状态变化，更新 harness closeout / handoff artifacts
 
+如果迭代触发了 `FlowMindDeploy/docs/01-product/` 下的 canonical 联合 PRD / 路线图变更，还必须同步更新：
+
+1. `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md`
+2. `docs/prd/README.md`
+3. `docs/roadmap/prd-execution-roadmap.md`
+
+必要时还要更新：
+
+4. `README.md`
+
 如果一次迭代只影响 runtime 运营表面，运营 PRD 和 roadmap 仍需更新。
 如果一次迭代只影响工程实现范围，技术 PRD 和 roadmap 仍需更新。
+
+联合规划同步检查命令：
+
+```bash
+scripts/check_cross_repo_prd_sync.sh
+```
 
 ## Merge 规则
 
@@ -170,3 +193,4 @@ CrazyAgentsManage 现在使用一套拆分式 PRD 体系，而不再依赖单一
 1. 受影响的 PRD 已更新
 2. roadmap 状态已更新
 3. Codex/HermesAgent handoff 状态与仓库事实一致
+4. 如果 canonical 联合主文档变化，cross-repo PRD sync checker 已通过

@@ -123,6 +123,16 @@ If the iteration changed shared product truth, Codex must also update:
 - `docs/prd/operations-implementation-prd.md`
 - `docs/roadmap/prd-execution-roadmap.md`
 
+If the iteration also changed FlowMind-side canonical joint planning docs, Codex must additionally:
+
+- update `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md`
+- update `docs/prd/README.md`
+- run:
+
+```bash
+scripts/check_cross_repo_prd_sync.sh
+```
+
 HermesAgent then reviews whether the operations-facing document state matches the actual round outcome.
 
 ## Escalation Rules

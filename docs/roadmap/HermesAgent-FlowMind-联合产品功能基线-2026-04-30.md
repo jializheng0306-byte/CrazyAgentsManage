@@ -1,8 +1,11 @@
 # HermesAgent × FlowMind 联合产品功能基线
 
 > 日期: 2026-04-30  
-> 状态: proposed-active-baseline  
-> 角色: `CrazyAgentsManage` 侧对联合产品主线的镜像规划入口
+> 状态: mirrored-active-baseline  
+> 角色: `CrazyAgentsManage` 侧对联合产品主线的镜像规划入口  
+> canonical source:
+> - `FlowMindDeploy/docs/01-product/HermesAgent-FlowMind-交互框架设计-2026-04-29.md`
+> - `FlowMindDeploy/docs/01-product/HermesAgent-FlowMind-产品功能基线与迭代路线图-2026-04-30.md`
 
 ---
 
@@ -45,9 +48,10 @@
 
 修好和 FlowMind 的连接：
 
-- `flowmind_capture.py`
+- `flowmind_capture.py + flowmind_handshake_smoke.py`
 - instance registration
-- payload/auth/baseURL 契约
+- payload/auth 契约
+- `control_plane_url / public_url` 双地址配置
 - handshake smoke
 
 ### 2. Ops Data Plane
@@ -69,6 +73,7 @@
 - Bitable
 - Tech Radar
 - operator task state
+- `feedback / truth / context` 分通道消费
 
 ### 4. Operator Console Convergence
 
@@ -101,11 +106,32 @@
 
 Crazy 侧直接动作：
 
-1. 修 `flowmind_capture.py`
-2. 做第一轮 handshake smoke
-3. 把 webhook 也纳入 manifest 与 compatibility matrix
+1. 固定 `flowmind_capture.py + flowmind_handshake_smoke.py` 为当前唯一受支持 ingress 验证对
+2. 补齐 `control_plane_url / public_url` 双地址配置
+3. 做第一轮 handshake smoke
+4. 把 webhook 也纳入 manifest 与 compatibility matrix
 
-### Phase 2 — 运营数据底座
+### Phase 2 — 轻量本体与数据语义
+
+Crazy 侧直接动作：
+
+1. 对齐联合产品的 ontology / data-semantic 基线
+2. 让 Bitable / webhook / 文档输入具备结构化语义草案
+3. 保持 ontology 与 truth 的职责分离
+
+### Phase 3 — 反向通道与分层上下文
+
+Crazy 侧直接动作：
+
+1. 对齐 4 条通道：
+   - `Push-Candidate`
+   - `Pull-Feedback`
+   - `Pull-Truth`
+   - `Pull-Context`
+2. 明确 `approved + committed` 都属于当前可读 truth
+3. 让 `feedback` 更新运营状态，`truth/context` 更新运行时决策与长期记忆
+
+### Phase 4 — 运营数据底座
 
 Crazy 侧直接动作：
 
@@ -113,32 +139,53 @@ Crazy 侧直接动作：
 2. 建立 Bitable/HUD 数据底座
 3. 让反思、情报、运营日报有真实数据输入
 
-### Phase 3 — 治理闭环回写
+### Phase 5 — 治理闭环回写
 
 Crazy 侧直接动作：
 
-1. `decision -> Bitable/Tech Radar` 状态回写
-2. feedback/context-pack 消费
+1. `candidate approved / committed / rejected` 后按规则回写 Bitable / Tech Radar
+2. 固定 `feedback pull -> Bitable / operator task state` 最小规则
 3. 双重人工确认入口固定
 
-### Phase 4 — Operator Console 收敛
+### Phase 6 — Operator Console 与外部执行平面升级
 
 Crazy 侧直接动作：
 
 1. 五大一级 IA 分区收敛为真实聚合页
 2. HUD 只读优先、动作受控
 3. 架构页与真实状态互跳
-
-### Phase 5 — 安全自动化升级
-
-Crazy 侧直接动作：
-
-1. 决定 capture 的人工闸门策略
-2. 将 `three_state_protocol.py` 与 `task_watcher.py` 推进为默认控制协议
-3. 让 webhook 成为正式触发通道，而不是隐式边界
+4. 将 `three_state_protocol.py` 与 `task_watcher.py` 推进为默认控制协议
+5. 给 Codex 外部执行平面补：
+   - `task registry`
+   - `handoff packet`
+   - `runtime heartbeat`
+6. 让 webhook 成为正式触发通道，而不是隐式边界
 
 ---
 
-## 六、一句话结论
+## 六、镜像同步规则
+
+这份文档不是第二套母本。
+
+只要 `FlowMindDeploy` 中以下 canonical docs 变化：
+
+- `docs/01-product/HermesAgent-FlowMind-交互框架设计-2026-04-29.md`
+- `docs/01-product/HermesAgent-FlowMind-产品功能基线与迭代路线图-2026-04-30.md`
+
+就必须同步更新：
+
+1. 本文档
+2. `docs/prd/README.md`
+3. `docs/roadmap/prd-execution-roadmap.md`
+
+检查命令：
+
+```bash
+scripts/check_cross_repo_prd_sync.sh
+```
+
+---
+
+## 七、一句话结论
 
 > 从现在开始，CrazyAgentsManage 的活跃产品主线不再是旧的 `v0.1.0 ~ v0.5.0` 顺序，而是“作为 Hermes 侧运营编排系统，与 FlowMind 治理真值层共同演进”的联合产品路线。
