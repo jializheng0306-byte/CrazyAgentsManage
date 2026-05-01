@@ -185,6 +185,10 @@
 
 ## 当前直接下一步
 
-1. 继续把 split PRD set 作为 planning baseline
-2. 新任务必须明确归入技术实现或运营实现
-3. 每次迭代 closeout 都必须触发文档更新
+1. 把 `ALI-HERMES` 的真实 scheduler authority 固定为受追踪事实：
+   - root `crontab` 负责 shell/python 运营任务
+   - Hermes `jobs.json` 负责内部提醒类任务
+2. 按 `Hermes 真实运行面 Authority 审计` 收口旧 `.sh` 入口与 live skill 引用
+3. 继续把 split PRD set 作为 planning baseline
+4. 新任务必须明确归入技术实现或运营实现
+5. 每次迭代 closeout 都必须触发文档更新
