@@ -6,6 +6,7 @@
 
 import json
 import os
+import shlex
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -14,7 +15,9 @@ from pathlib import Path
 PROMISE_DIR = os.path.expanduser("~/.hermes/promises")
 REPORT_DIR = os.path.expanduser("~/.hermes/promises/reviews")
 CLOUD_FOLDER_TOKEN = "KnUNfAvLGlgYgwdwGjPcgkPonTc"  # 承诺审查报告文件夹
+CLOUD_FOLDER_URL = "https://bcn7uazoofu0.feishu.cn/drive/folder/KnUNfAvLGlgYgwdwGjPcgkPonTc"
 CHAT_ID = "oc_bbde428675a7c267d55c3f0663ca701d"  # CrazyAgentsManage群
+DRY_RUN = os.environ.get("HERMES_CRON_DRY_RUN", "0") == "1"
 
 # 文件夹协作者列表（新成员加入时在此添加）
 FOLDER_COLLABORATORS = [
@@ -31,6 +34,9 @@ def run_cmd(cmd, timeout=30):
 
 def ensure_folder_permissions():
     """确保文件夹协作者权限正确（幂等操作）"""
+    if DRY_RUN:
+        print("  DRY RUN: 跳过文件夹权限校验")
+        return
     for collab in FOLDER_COLLABORATORS:
         data = json.dumps(collab, ensure_ascii=False)
         cmd = f'''lark-cli drive permission.members create \
@@ -182,8 +188,16 @@ def upload_to_feishu(report_file, date_str):
     """上传报告到飞书云盘并设置开放权限"""
     filename = f"承诺审查报告-{date_str}.md"
 
+    if DRY_RUN:
+        print(f"  DRY RUN: 跳过飞书上传 {filename}")
+        return None
+
     # 上传文件
-    cmd = f'cd {os.path.dirname(report_file)} && lark-cli drive +upload --file "{os.path.basename(report_file)}" --folder-token "{CLOUD_FOLDER_TOKEN}" --name "{filename}"'
+    cmd = (
+        f"cd {shlex.quote(os.path.dirname(report_file))} && "
+        f"lark-cli drive +upload --file {shlex.quote(os.path.basename(report_file))} "
+        f"--folder-token {shlex.quote(CLOUD_FOLDER_TOKEN)} --name {shlex.quote(filename)}"
+    )
     output, code = run_cmd(cmd)
     print(f"  上传: {'✅' if code == 0 else '❌'} {filename}")
 
@@ -234,9 +248,14 @@ def send_to_feishu(classified, cloud_url=None):
 - 7天内到期: {due_soon}
 {alert}
 ---
-完整报告: 飞书云盘"""
+完整报告: {cloud_url or CLOUD_FOLDER_URL}"""
 
-    cmd = f'lark-cli im +messages-send --chat-id {CHAT_ID} --text "{message}"'
+    if DRY_RUN:
+        print("  DRY RUN: 跳过飞书群发送")
+        print(message)
+        return True
+
+    cmd = f'lark-cli im +messages-send --chat-id {shlex.quote(CHAT_ID)} --text {shlex.quote(message)}'
     output, code = run_cmd(cmd)
     print(f"  群消息: {'✅' if code == 0 else '❌'}")
     return code == 0
@@ -272,11 +291,14 @@ def main():
     # 4. 上传到飞书云盘
     print("4. 上传到飞书云盘...")
     date_str = datetime.now().strftime("%Y-%m-%d")
-    upload_to_feishu(report_file, date_str)
+    file_token = upload_to_feishu(report_file, date_str)
+    cloud_url = CLOUD_FOLDER_URL
+    if file_token:
+        cloud_url = f"https://bcn7uazoofu0.feishu.cn/file/{file_token}"
 
     # 5. 发送到飞书群
     print("5. 发送审查摘要到飞书群...")
-    send_to_feishu(classified)
+    send_to_feishu(classified, cloud_url)
 
     print("\n✅ 承诺审查完成！")
     return report_file

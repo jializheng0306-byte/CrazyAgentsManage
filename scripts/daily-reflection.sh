@@ -7,6 +7,7 @@ set -e
 LOG_DIR="$HOME/.hermes/logs"
 LOG_FILE="$LOG_DIR/daily-reflection-$(date +%Y%m%d).log"
 REFLECTION_DIR="$HOME/.hermes/reflections"
+DRY_RUN="${HERMES_CRON_DRY_RUN:-0}"
 
 mkdir -p "$LOG_DIR" "$REFLECTION_DIR"
 
@@ -22,7 +23,11 @@ echo "  Git提交数: $COMMIT_COUNT" | tee -a "$LOG_FILE"
 
 # 统计任务完成情况
 PROMISE_DIR="$HOME/.hermes/promises"
-TODAY_COMPLETED=$(find "$PROMISE_DIR" -name "*.json" -newer "$PROMISE_DIR" -exec grep -l "completed" {} \; 2>/dev/null | wc -l)
+if [ -d "$PROMISE_DIR" ]; then
+  TODAY_COMPLETED=$(find "$PROMISE_DIR" -name "*.json" -newer "$PROMISE_DIR" -exec grep -l "completed" {} \; 2>/dev/null | wc -l)
+else
+  TODAY_COMPLETED=0
+fi
 echo "  完成承诺数: $TODAY_COMPLETED" | tee -a "$LOG_FILE"
 
 # 2. 效率分析
@@ -88,7 +93,7 @@ echo "  临时文件已清理" | tee -a "$LOG_FILE"
 echo "5. 发送反思报告到飞书群..." | tee -a "$LOG_FILE"
 CHAT_ID="oc_bbde428675a7c267d55c3f0663ca701d"
 
-lark-cli im +messages-send --chat-id "$CHAT_ID" --text "🌙 每日反思 ($(date +%Y-%m-%d))
+MESSAGE="🌙 每日反思 ($(date +%Y-%m-%d))
 
 今日完成:
 - Git提交: $COMMIT_COUNT 次
@@ -98,6 +103,13 @@ lark-cli im +messages-send --chat-id "$CHAT_ID" --text "🌙 每日反思 ($(dat
 - 完成率: $(echo "scale=2; $TODAY_COMPLETED * 100 / 10" | bc 2>/dev/null || echo "0")%
 
 ---
-📁 反思报告目录: https://bcn7uazoofu0.feishu.cn/drive/folder/YUfPftiTils0wedMGnvcBrr1nEg" 2>&1 | tee -a "$LOG_FILE"
+📁 反思报告目录: https://bcn7uazoofu0.feishu.cn/drive/folder/YUfPftiTils0wedMGnvcBrr1nEg"
+
+if [ "$DRY_RUN" = "1" ]; then
+  echo "  DRY RUN: 跳过飞书发送" | tee -a "$LOG_FILE"
+  printf '%s\n' "$MESSAGE" | tee -a "$LOG_FILE"
+else
+  lark-cli im +messages-send --chat-id "$CHAT_ID" --text "$MESSAGE" 2>&1 | tee -a "$LOG_FILE"
+fi
 
 echo "=== 每日反思完成 $(date) ===" | tee -a "$LOG_FILE"
