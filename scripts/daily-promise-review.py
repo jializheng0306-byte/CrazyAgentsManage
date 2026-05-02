@@ -20,7 +20,12 @@ REPORT_DIR = os.path.expanduser("~/.hermes/promises/reviews")
 # Bitable 配置
 BITABLE_APP_TOKEN = "EpeXbhpF9a0s0wsh6axce9PknFg"
 BITABLE_TABLE_ID = "tblJRMmjbyKEDZY1"
+BITABLE_TRACE_TABLE_ID = "tbltwMndeV5O2YkR"
 BITABLE_URL = f"https://bcn7uazoofu0.feishu.cn/base/{BITABLE_APP_TOKEN}"
+
+# FlowMind 配置
+FLOWMIND_TRACE_API = "http://111.229.194.203:3301/api/bridge/trace"
+FLOWMIND_AUTH = "Bearer flowmind-dev-token"
 
 # 飞书配置
 CHAT_ID = "oc_bbde428675a7c267d55c3f0663ca701d"  # CrazyAgentsManage群
@@ -178,7 +183,7 @@ def sync_to_bitable(promises):
 
     # 先获取现有记录（按 promise_id 去重）
     existing_records = {}
-    cmd = f'lark-cli base +record-list --base-token {BITABLE_APP_TOKEN} --table-id {BITABLE_TABLE_ID} --page-size 500'
+    cmd = f'lark-cli base +record-list --base-token {BITABLE_APP_TOKEN} --table-id {BITABLE_TABLE_ID} --limit 500'
     output, code = run_cmd(cmd, timeout=30)
     if code == 0:
         try:
@@ -229,7 +234,6 @@ def sync_to_bitable(promises):
 
         # 更新或创建
         if pid in existing_records:
-            # 更新现有记录
             record_id = existing_records[pid]
             update_cmd = f'''lark-cli api PUT "/open-apis/bitable/v1/apps/{BITABLE_APP_TOKEN}/tables/{BITABLE_TABLE_ID}/records/{record_id}" \
                 --data '{json.dumps({"fields": fields}, ensure_ascii=False)}' '''
@@ -238,7 +242,6 @@ def sync_to_bitable(promises):
                 sync_count += 1
                 print(f"  🔄 更新: {promise.get('title', '')[:50]}...")
         else:
-            # 创建新记录
             create_cmd = f'''lark-cli api POST "/open-apis/bitable/v1/apps/{BITABLE_APP_TOKEN}/tables/{BITABLE_TABLE_ID}/records" \
                 --data '{json.dumps({"fields": fields}, ensure_ascii=False)}' '''
             _, code = run_cmd(create_cmd, timeout=15)
@@ -247,6 +250,81 @@ def sync_to_bitable(promises):
                 print(f"  ✅ 新增: {promise.get('title', '')[:50]}...")
 
     return sync_count
+
+
+def fetch_trace(candidate_id):
+    """从 FlowMind 获取 trace 数据"""
+    import urllib.request
+    url = f"{FLOWMIND_TRACE_API}/{candidate_id}"
+    req = urllib.request.Request(url, headers={"Authorization": FLOWMIND_AUTH})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode())
+    except Exception as e:
+        print(f"  ⚠️ trace 查询失败 ({candidate_id[:8]}...): {e}")
+        return None
+
+
+def sync_trace_events(promise_id, candidate_id):
+    """同步 trace 事件到交互轨迹子表"""
+    trace_data = fetch_trace(candidate_id)
+    if not trace_data or not trace_data.get("success"):
+        return 0
+
+    events = trace_data.get("data", {}).get("events", [])
+    if not events:
+        return 0
+
+    synced = 0
+    for event in events:
+        ts = event.get("timestamp", "")
+        ts_ms = datetime_to_ms(ts)
+
+        fields = {
+            "trace_id": event.get("traceId", ""),
+            "candidate_id": candidate_id,
+            "promise_id": promise_id,
+            "action": event.get("action", ""),
+            "actor": event.get("actor", ""),
+            "module": event.get("module", "unknown"),
+            "from_status": event.get("fromStatus"),
+            "to_status": event.get("toStatus"),
+            "summary": event.get("summary", "")[:200],
+        }
+        if ts_ms:
+            fields["timestamp"] = ts_ms
+
+        cmd = f'''lark-cli api POST "/open-apis/bitable/v1/apps/{BITABLE_APP_TOKEN}/tables/{BITABLE_TRACE_TABLE_ID}/records" \
+            --data '{json.dumps({"fields": fields}, ensure_ascii=False)}' '''
+        _, code = run_cmd(cmd, timeout=15)
+        if code == 0:
+            synced += 1
+        else:
+            # 可能已存在，跳过
+            pass
+
+    return synced
+
+
+def update_trace_fields(record_id, candidate_id):
+    """更新承诺主表的 trace 派生字段"""
+    trace_data = fetch_trace(candidate_id)
+    if not trace_data or not trace_data.get("success"):
+        return
+
+    events = trace_data.get("data", {}).get("events", [])
+    event_count = len(events)
+    last_summary = events[-1].get("summary", "") if events else ""
+
+    update_fields = {
+        "trace_event_count": event_count,
+        "last_trace_summary": last_summary[:200],
+    }
+
+    update_cmd = f'''lark-cli api PUT "/open-apis/bitable/v1/apps/{BITABLE_APP_TOKEN}/tables/{BITABLE_TABLE_ID}/records/{record_id}" \
+        --data '{json.dumps({"fields": update_fields}, ensure_ascii=False)}' '''
+    run_cmd(update_cmd, timeout=15)
+    print(f"  📊 trace: {event_count} 事件 | {last_summary[:40]}...")
 
 
 def send_to_feishu(classified, sync_count):
@@ -313,6 +391,17 @@ def main():
     print("3. 同步到 Bitable...")
     sync_count = sync_to_bitable(promises)
     print(f"  同步 {sync_count} 条记录")
+
+    # 3.5. 同步 FlowMind trace 数据
+    print("3.5. 同步 FlowMind trace...")
+    trace_synced = 0
+    for promise in promises:
+        cid = promise.get("flowmind_candidate_id")
+        if cid:
+            pid = promise.get("id", "")
+            trace_synced += sync_trace_events(pid, cid)
+    if trace_synced:
+        print(f"  🔗 同步 {trace_synced} 条交互轨迹")
 
     # 4. 保存本地报告（可选备份）
     report_file = os.path.join(REPORT_DIR, f"review-{today}.md")
