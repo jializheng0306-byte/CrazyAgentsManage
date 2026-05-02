@@ -96,32 +96,29 @@ def ensure_bitable_fields(token: str, table_id: str) -> bool:
     for fname, fdef in required_fields.items():
         if fname not in existing_names:
             logger.info(f"Bitable 缺少字段 '{fname}'，尝试创建...")
-            cr = _lark([
-                "base", "+field-create",
-                "--as", "bot",
-                "--base-token", token,
-                f"--table-id={table_id}",
-                "--name", fdef["field_name"],
-                "--type", str(fdef["type"]),
-            ])
+            if fname == "status":
+                # status 是 Select 类型，通过 --json 创建并同时指定选项
+                cr = _lark([
+                    "base", "+field-create",
+                    "--as", "bot",
+                    "--base-token", token,
+                    f"--table-id={table_id}",
+                    "--json", '{"name":"status","type":"select","multiple":false,"options":[{"name":"待确认","hue":"Blue","lightness":"Lighter"},{"name":"已确认","hue":"Green","lightness":"Light"},{"name":"已忽略","hue":"Gray","lightness":"Light"}]}',
+                ])
+            else:
+                cr = _lark([
+                    "base", "+field-create",
+                    "--as", "bot",
+                    "--base-token", token,
+                    f"--table-id={table_id}",
+                    "--name", fdef["field_name"],
+                    "--type", str(fdef["type"]),
+                ])
             if cr.get("ok"):
                 logger.info(f"字段 '{fname}' 创建成功")
             else:
                 logger.warning(f"字段 '{fname}' 创建失败: {cr.get('error')}")
                 all_ready = False
-
-    # 确保 status 字段有 Select 选项
-    if "status" not in existing_names:
-        # 创建选项：待确认、已确认、已忽略
-        for opt_val in ["待确认", "已确认", "已忽略"]:
-            _lark([
-                "base", "+field-create",
-                "--as", "bot",
-                "--base-token", token,
-                f"--table-id={table_id}",
-                "--name", f"opt_{opt_val}",
-                "--type", "3",
-            ])
 
     return all_ready
 
