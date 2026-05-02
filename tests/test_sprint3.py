@@ -34,7 +34,7 @@ class TestComponentsCss:
         assert '.time-range-selector' in data
 
     def test_components_css_in_templates(self, client):
-        pages = ['/', '/agent', '/graph', '/tokens', '/alerts', '/tasks']
+        pages = ['/overview', '/agent', '/graph', '/tokens', '/alerts', '/tasks']
         for page in pages:
             resp = client.get(page)
             if resp.status_code == 200:
