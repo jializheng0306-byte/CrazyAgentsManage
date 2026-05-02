@@ -14,7 +14,6 @@ import os
 import subprocess
 import sys
 from datetime import datetime, timezone, timedelta
-from pathlib import Path
 
 # === 配置 ===
 LARK_CLI = os.environ.get("LARK_CLI", "lark-cli")
@@ -28,6 +27,35 @@ USER_OPEN_ID = os.environ.get("CAPTURE_USER_OPEN_ID", "ou_0")
 # Bitable 配置
 BITABLE_APP_TOKEN = os.environ.get("BITABLE_APP_TOKEN", "")
 BITABLE_TABLE_ID = os.environ.get("BITABLE_TABLE_ID", "")
+
+STATUS_OPTIONS = [
+    {"name": "待确认", "hue": "Blue", "lightness": "Lighter"},
+    {"name": "已确认", "hue": "Green", "lightness": "Light"},
+    {"name": "已忽略", "hue": "Gray", "lightness": "Light"},
+]
+
+REQUIRED_FIELD_SPECS = {
+    "title": {"name": "title", "type": "text"},
+    "summary": {"name": "summary", "type": "text"},
+    "raw_text": {"name": "raw_text", "type": "text"},
+    "source_task": {"name": "source_task", "type": "text"},
+    "captured_at": {
+        "name": "captured_at",
+        "type": "datetime",
+        "style": {"format": "yyyy-MM-dd HH:mm:ss"},
+    },
+    "status": {
+        "name": "status",
+        "type": "select",
+        "multiple": False,
+        "options": STATUS_OPTIONS,
+    },
+    "confidence": {
+        "name": "confidence",
+        "type": "number",
+        "style": {"type": "plain", "precision": 0, "percentage": False, "thousands_separator": False},
+    },
+}
 
 # === 日志设置 ===
 os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
@@ -62,6 +90,20 @@ def _lark(args: list[str]) -> dict:
         return {"ok": False, "error": str(e)}
 
 
+def _field_name(field: dict) -> str:
+    return field.get("field_name") or field.get("name") or ""
+
+
+def _field_id(field: dict) -> str:
+    return field.get("field_id") or field.get("id") or _field_name(field)
+
+
+def _field_options_payload(result: dict) -> list[dict]:
+    data = result.get("data") or {}
+    raw_options = data.get("options") or data.get("items") or []
+    return [item for item in raw_options if isinstance(item, dict)]
+
+
 def ensure_bitable_fields(token: str, table_id: str) -> bool:
     """
     确保 Bitable 表包含所需字段。
@@ -80,45 +122,62 @@ def ensure_bitable_fields(token: str, table_id: str) -> bool:
         return False
 
     fields = result.get("data", {}).get("items", []) if result.get("data") else []
-    existing_names = {f.get("field_name", "") for f in fields}
-
-    required_fields = {
-        "title": {"field_name": "title", "type": 1},    # text
-        "summary": {"field_name": "summary", "type": 1},  # text
-        "raw_text": {"field_name": "raw_text", "type": 1}, # text
-        "source_task": {"field_name": "source_task", "type": 1}, # text
-        "captured_at": {"field_name": "captured_at", "type": 5}, # datetime
-        "status": {"field_name": "status", "type": 3},    # select
-        "confidence": {"field_name": "confidence", "type": 2}, # number
-    }
+    existing_fields = {_field_name(field): field for field in fields if _field_name(field)}
 
     all_ready = True
-    for fname, fdef in required_fields.items():
-        if fname not in existing_names:
+    for fname, field_spec in REQUIRED_FIELD_SPECS.items():
+        if fname not in existing_fields:
             logger.info(f"Bitable 缺少字段 '{fname}'，尝试创建...")
-            if fname == "status":
-                # status 是 Select 类型，通过 --json 创建并同时指定选项
-                cr = _lark([
-                    "base", "+field-create",
-                    "--as", "bot",
-                    "--base-token", token,
-                    f"--table-id={table_id}",
-                    "--json", '{"name":"status","type":"select","multiple":false,"options":[{"name":"待确认","hue":"Blue","lightness":"Lighter"},{"name":"已确认","hue":"Green","lightness":"Light"},{"name":"已忽略","hue":"Gray","lightness":"Light"}]}',
-                ])
-            else:
-                cr = _lark([
-                    "base", "+field-create",
-                    "--as", "bot",
-                    "--base-token", token,
-                    f"--table-id={table_id}",
-                    "--name", fdef["field_name"],
-                    "--type", str(fdef["type"]),
-                ])
+            cr = _lark([
+                "base", "+field-create",
+                "--as", "bot",
+                "--base-token", token,
+                f"--table-id={table_id}",
+                "--json", json.dumps(field_spec, ensure_ascii=False),
+            ])
             if cr.get("ok"):
                 logger.info(f"字段 '{fname}' 创建成功")
             else:
                 logger.warning(f"字段 '{fname}' 创建失败: {cr.get('error')}")
                 all_ready = False
+            continue
+
+        if fname != "status":
+            continue
+
+        status_field_id = _field_id(existing_fields[fname])
+        options_result = _lark([
+            "base", "+field-search-options",
+            "--as", "bot",
+            "--base-token", token,
+            f"--table-id={table_id}",
+            "--field-id", status_field_id,
+            "--limit", "100",
+        ])
+        if not options_result.get("ok"):
+            logger.warning(f"查询字段 '{fname}' 选项失败: {options_result.get('error')}")
+            all_ready = False
+            continue
+
+        option_names = {option.get("name", "") for option in _field_options_payload(options_result)}
+        required_option_names = {option["name"] for option in STATUS_OPTIONS}
+        if required_option_names.issubset(option_names):
+            continue
+
+        logger.info(f"字段 '{fname}' 缺少必需选项，尝试补齐...")
+        update_result = _lark([
+            "base", "+field-update",
+            "--as", "bot",
+            "--base-token", token,
+            f"--table-id={table_id}",
+            "--field-id", status_field_id,
+            "--json", json.dumps(field_spec, ensure_ascii=False),
+        ])
+        if update_result.get("ok"):
+            logger.info(f"字段 '{fname}' 选项补齐成功")
+        else:
+            logger.warning(f"字段 '{fname}' 选项补齐失败: {update_result.get('error')}")
+            all_ready = False
 
     return all_ready
 
@@ -191,8 +250,10 @@ def send_private_notification(source_task: str, title: str, summary: str,
 
 def write_bitable_record(token: str, table_id: str, fields: dict) -> dict:
     """通道 3: Bitable value item 新增记录。"""
-    # 构建记录字段
-    record_fields = {"title": fields["title"]}
+    record_fields = {
+        "title": fields["title"],
+        "status": fields.get("status", "待确认"),
+    }
     if fields.get("summary"):
         record_fields["summary"] = fields["summary"]
     if fields.get("raw_text"):
@@ -203,18 +264,18 @@ def write_bitable_record(token: str, table_id: str, fields: dict) -> dict:
         record_fields["captured_at"] = fields["captured_at"]
     if fields.get("confidence") is not None:
         record_fields["confidence"] = int(fields["confidence"])
-    # status 默认 "待确认" — 通过 data 传入
-
-    payload = json.dumps({"fields": record_fields})
+    payload = json.dumps(record_fields, ensure_ascii=False)
     result = _lark([
-        "base", "+record-create",
+        "base", "+record-upsert",
         "--as", "bot",
         "--base-token", token,
         f"--table-id={table_id}",
-        "--data", payload,
+        "--json", payload,
     ])
     if result.get("ok"):
-        record_id = result.get("data", {}).get("record_id", "unknown")
+        data = result.get("data", {})
+        record = data.get("record", {}) if isinstance(data, dict) else {}
+        record_id = record.get("record_id") or data.get("record_id") or "unknown"
         logger.info(f"Bitable 记录创建成功, record_id={record_id}")
     else:
         logger.warning(f"Bitable 记录创建失败: {result.get('error')}")
@@ -263,6 +324,7 @@ def main():
             "raw_text": raw_text,
             "source_task": source_task,
             "captured_at": captured_at,
+            "status": "待确认",
             "confidence": round(confidence) if confidence else 0,
         }
         results["bitable"] = write_bitable_record(BITABLE_APP_TOKEN, BITABLE_TABLE_ID, fields)
