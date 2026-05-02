@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-05-02T01:10:02.075829",
+  "results": {
+    "checked": 0,
+    "completed": 0,
+    "failed": 0,
+    "timed_out": 0
+  },
+  "taskCounts": {
+    "total": 1,
+    "pending": 0,
+    "in_progress": 0,
+    "completed": 1,
+    "failed": 0,
+    "timed_out": 0
+  },
+  "tasks": [
+    {
+      "task_id": "task-20260429064310-晚间情报",
+      "name": "晚间情报",
+      "adapter": "cron",
+      "status": "completed",
+      "retry_count": 0,
+      "last_check": "2026-04-29T06:43:10.362535",
+      "last_result": "日志正常 (154 chars)",
+      "deadline": "2026-04-29T12:43:10.174418"
+    }
+  ]
+}

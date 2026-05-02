@@ -1,0 +1,11 @@
+{
+  "instanceId": "crazyagentsmanage-intel-sentinel",
+  "sourceAgent": "hermes",
+  "serverId": "ali-hermes",
+  "apiKey": "fm-crazyagentsmanage-intel-sentinel-mon64n4f",
+  "registeredAt": "2026-05-01T17:10:02.511Z",
+  "baseUrl": "http://111.229.194.203:3301",
+  "routeId": "crazyagentsmanage-handshake-smoke",
+  "controlPlaneUrl": "http://111.229.194.203:3301",
+  "publicUrl": "https://www.uncentury.cn"
+}

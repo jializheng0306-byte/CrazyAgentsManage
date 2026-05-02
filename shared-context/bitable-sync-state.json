@@ -3,7 +3,29 @@
     "Agent Constitution Pattern (SOUL.md/USER.md/AGENTS.md)",
     "MCP for Personal Data Read/Write",
     "Energy-Based Reasoning Model (EBM) / Logical Intelligence",
-    "AWS OpenAI Agent Service"
+    "AWS OpenAI Agent Service",
+    "Memanto: Typed Semantic Memory with Information-Theoretic Retrieval",
+    "RecursiveMAS: Recursive Multi-Agent Systems",
+    "OxyGent: Modular Observable Evolvable MAS via Oxy Abstraction",
+    "FSFM: Biologically-Inspired Selective Forgetting for Agent Memory",
+    "S2G-RAG: Structured Sufficiency and Gap Judging for Iterative Retrieval",
+    "Bian Que: Flexible Skill Arrangement for Agent Orchestration",
+    "TDD Governance for Multi-Agent Code Generation",
+    "AI Council: Preserving Disagreement in Multi-Agent Deliberation",
+    "Faithfulness-QA: Context-Faithful RAG Training",
+    "Anthropic $900B Valuation Signal",
+    "Pu.sh – Minimal Coding Agent Harness (400 LOC Shell)",
+    "Lookup ≠ Memory: Agentic Memory Category Error",
+    "Safe Bilevel Delegation (SBD): Runtime Delegation Safety",
+    "paragents: Parallel Agent Sessions with Conflict Checks",
+    "oh-my-kimichan: Multi-Agent Orchestration Harness (DAG/Ensemble + MCP)",
+    "Ubuntu Infrastructure Sustained Cross-Border Attack",
+    "MCPHunt: Cross-Boundary Data Propagation in Multi-Server MCP Agents",
+    "CARE: Collaborative Agent Reasoning Engineering (Three-Party Methodology)",
+    "Persona-Based Agents On Demand: Tailoring Multi-Agent Workflows",
+    "Trace-Level Information Contamination in Multi-Agent Systems",
+    "Crab: Semantics-Aware Checkpoint/Restore for Agent Sandboxes",
+    "CORAL: Adaptive Retrieval Loop for Multilingual RAG"
   ],
-  "last_sync": "2026-04-29T07:17:22.644769"
+  "last_sync": "2026-05-02T12:03:04.943966"
 }

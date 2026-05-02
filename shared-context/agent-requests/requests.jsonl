@@ -1,0 +1,1 @@
+{"request_id": "req-test-001", "ack_id": "test-001", "sender": "intel-sentinel", "target": "zoe", "action": "发现 ReMe 记忆框架，请评估", "status": "delivered", "created_at": "2026-04-29T06:43:09.514313", "updated_at": "2026-04-29T06:43:09.831850", "deadline": "2026-04-29T06:53:09.514175", "result": null, "error": null, "retry_count": 0}

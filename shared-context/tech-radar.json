@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2026-04-29",
+  "last_updated": "2026-05-02",
   "updated_by": "intel-sentinel",
   "categories": {
     "adopt": [],
@@ -64,6 +64,270 @@
       "action_suggested": "监控 AWS OpenAI agent 服务的能力边界和定价，作为未来部署选项评估",
       "status": "pending",
       "notes": "OpenAI 解除 Microsoft 独占后的第一个多云动作"
+    },
+    {
+      "name": "Memanto: Typed Semantic Memory with Information-Theoretic Retrieval",
+      "url": "https://arxiv.org/abs/2604.22085v1",
+      "source": "arxiv",
+      "discovered_date": "2026-04-29",
+      "impact_assessment": "针对多会话持久Agent的内存瓶颈，提出类型化语义记忆+信息论检索方法。直接命中HermesAgent的记忆管理痛点——当前记忆系统依赖简单语义检索，Memanto的类型化记忆（事件/知识/关系/技能分区存储）可提升检索精度和效率。计算开销低于传统混合语义图架构。",
+      "priority": "P0",
+      "action_suggested": "深入阅读论文全文，重点评估类型化记忆分类体系和信息论检索指标，输出HermesAgent记忆系统改造建议文档",
+      "status": "pending",
+      "notes": "论文核心：typed memory + information-theoretic retrieval 替代 hybrid semantic graph"
+    },
+    {
+      "name": "RecursiveMAS: Recursive Multi-Agent Systems",
+      "url": "https://arxiv.org/abs/2604.25917v1",
+      "source": "arxiv",
+      "discovered_date": "2026-04-29",
+      "impact_assessment": "将递归推理从单一模型扩展到多Agent系统，Agent协作本身可作为新的scaling维度。对CrazyAgentsManage的编排层有直接影响：当前扁平pipeline可升级为递归树结构，子任务Agent递归调用自身直到问题可解。",
+      "priority": "P1",
+      "action_suggested": "深度阅读论文，评估递归调度机制融入CrazyAgentsManage Agent编排层的可行性",
+      "status": "pending",
+      "notes": "核心问题：Can agent collaboration itself be scaled through recursion?"
+    },
+    {
+      "name": "OxyGent: Modular Observable Evolvable MAS via Oxy Abstraction",
+      "url": "https://arxiv.org/abs/2604.25602v1",
+      "source": "arxiv",
+      "discovered_date": "2026-04-29",
+      "impact_assessment": "提出Oxy统一抽象层，将Agent/Tool/LLM/推理流封装为可插拔原子组件。直接对标CrazyAgentsManage的Agent Adapter架构。其内置可观测性管道（非事后日志）和自主演化机制（Agent可替换低效组件）是我们当前缺失的能力。",
+      "priority": "P1",
+      "action_suggested": "阅读OxyGent源码，评估Oxy抽象模式作为CrazyAgentsManage Agent Adapter下一代设计参考的可行性；重点关可观测性实现",
+      "status": "pending",
+      "notes": "开源框架，可直接参考实现"
+    },
+    {
+      "name": "FSFM: Biologically-Inspired Selective Forgetting for Agent Memory",
+      "url": "https://arxiv.org/abs/2604.20300v2",
+      "source": "arxiv",
+      "discovered_date": "2026-04-29",
+      "impact_assessment": "受海马体巩固理论和艾宾浩斯遗忘曲线启发的选择性遗忘框架。直接解决HermesAgent记忆只增不减的问题。应与Memanto结合，构建完整的记忆生命周期管理（写入→巩固→检索→遗忘）。",
+      "priority": "P1",
+      "action_suggested": "结合Memanto一起阅读，为HermesAgent设计完整记忆生命周期管理方案",
+      "status": "pending",
+      "notes": "核心洞察：well-designed forgetting mechanism is as crucial as memory retention"
+    },
+    {
+      "name": "S2G-RAG: Structured Sufficiency and Gap Judging for Iterative Retrieval",
+      "url": "https://arxiv.org/abs/2604.23783v1",
+      "source": "arxiv",
+      "discovered_date": "2026-04-29",
+      "impact_assessment": "解决RAG多跳问答中的两个关键问题：何时证据足够+下一步该检索什么。对FlowMind的RAG管道有直接价值：增加充分性检查节点和差距分析驱动的检索规划，可大幅提升复杂问题回答质量。",
+      "priority": "P1",
+      "action_suggested": "评估将S2G-RAG的充分性判断模块集成到FlowMind RAG管道中的可行性",
+      "status": "pending",
+      "notes": "两个核心机制：sufficiency judging + gap-driven retrieval planning"
+    },
+    {
+      "name": "Bian Que: Flexible Skill Arrangement for Agent Orchestration",
+      "url": "https://arxiv.org/abs/2604.26805v1",
+      "source": "arxiv",
+      "discovered_date": "2026-04-30",
+      "impact_assessment": "Kuaishou e-commerce search team Agent O&M framework. Core innovations: (1) Unified O&M paradigm abstracting into 3 canonical patterns (2) Flexible Skill Arrangement - each Skill declares needed data/knowledge, LLM auto-generated or NL iterative refinement (3) Unified self-evolving mechanism - one correction signal drives dual-path repair (case-memory distillation + skill refinement). Production results: alerts -75%, RCA accuracy 80%, MTTR -50%+. Directly relevant to CrazyAgentsManage Agent orchestration layer skill modularization and self-evolution.",
+      "priority": "P1",
+      "action_suggested": "Read paper + source code (github.com/benchen4395/BianQue_Assistant), evaluate Flexible Skill Arrangement integration into Agent Adapter",
+      "status": "pending",
+      "notes": "Key insight: orchestration is the deployment bottleneck, not reasoning capability; self-evolution = case-memory distillation + skill refinement dual-channel"
+    },
+    {
+      "name": "TDD Governance for Multi-Agent Code Generation",
+      "url": "https://arxiv.org/abs/2604.26615v1",
+      "source": "arxiv",
+      "discovered_date": "2026-04-30",
+      "impact_assessment": "Upgrades TDD from auxiliary input to enforceable process constraint for multi-agent code generation, addressing instability, non-determinism, and weak discipline. Directly relevant to CrazyAgentsManage Codex-HermesAgent code collaboration: tests should be enforceable process constraints, not optional inputs.",
+      "priority": "P1",
+      "action_suggested": "Read paper, evaluate embedding TDD governance into CrazyAgentsManage development workflow",
+      "status": "pending",
+      "notes": "Core concept: tests as enforceable process constraints, not auxiliary inputs"
+    },
+    {
+      "name": "AI Council: Preserving Disagreement in Multi-Agent Deliberation",
+      "url": "https://arxiv.org/abs/2604.26561v1",
+      "source": "arxiv",
+      "discovered_date": "2026-04-30",
+      "impact_assessment": "Addresses artificial consensus in multi-agent deliberation - evaluator agents converge ignoring assigned value perspectives. AI Council three-phase framework + architectural heterogeneity intervention. Relevant to CrazyAgentsManage multi-agent collaboration: maintain perspective diversity, prevent false consensus.",
+      "priority": "P2",
+      "action_suggested": "Record design approach, reference for future multi-agent decision modules",
+      "status": "pending",
+      "notes": "Validated across 120 deliberations; architectural heterogeneity more effective than prompt heterogeneity"
+    },
+    {
+      "name": "Faithfulness-QA: Context-Faithful RAG Training",
+      "url": "https://arxiv.org/abs/2604.25313v2",
+      "source": "arxiv",
+      "discovered_date": "2026-04-30",
+      "impact_assessment": "RAG models often rely on parametric memory rather than retrieved context. Proposes counterfactual entity substitution dataset to train models to prefer context. Relevant to FlowMind RAG pipeline faithfulness optimization.",
+      "priority": "P2",
+      "action_suggested": "Record methodology, reference for FlowMind RAG faithfulness optimization",
+      "status": "pending",
+      "notes": "Large-scale counterfactual entity substitution dataset, usable as RAG faithfulness benchmark"
+    },
+    {
+      "name": "Anthropic $900B Valuation Signal",
+      "url": "https://techcrunch.com/2026/04/29/sources-anthropic-could-raise-a-new-50b-round-at-a-valuation-of-900b/",
+      "source": "techcrunch",
+      "discovered_date": "2026-04-30",
+      "impact_assessment": "Anthropic raising at $850-900B valuation confirms agent infrastructure demand explosion. Claude is core推理backend for HermesAgent. Accelerated funding likely means faster Claude API evolution and expanded auto-mode capabilities. Market window for agent orchestration platforms (CrazyAgentsManage positioning) is opening.",
+      "priority": "P2",
+      "action_suggested": "Track post-funding Claude API changes; evaluate auto-mode safety boundary design for FlowMind governance",
+      "status": "pending",
+      "notes": "Market signal, not technical discovery. Confirms strategic timing for agent infrastructure investment."
+    },
+    {
+      "name": "Pu.sh – Minimal Coding Agent Harness (400 LOC Shell)",
+      "url": "https://pu.dev/",
+      "source": "hn",
+      "discovered_date": "2026-05-01",
+      "impact_assessment": "A full coding-agent harness implemented in ~400 lines of shell script. Demonstrates that agent orchestration can be radically simplified — the harness pattern (task decomposition, tool invocation, result aggregation) does not require complex frameworks. Relevant to CrazyAgentsManage design philosophy: validates that lightweight, composable agent harnesses are viable alternatives to heavy frameworks. Also shows pi-autoresearch as underlying model, indicating open-source models can drive coding agents.",
+      "priority": "P2",
+      "action_suggested": "Review Pu.sh source code for harness design patterns; evaluate if CrazyAgentsManage Agent Adapter can adopt similar minimal-complexity approach for simple tasks",
+      "status": "pending",
+      "notes": "Show HN post. Core insight: agent harness complexity is often self-imposed; 400 LOC shell can cover core orchestration loop."
+    },
+    {
+      "name": "Lookup ≠ Memory: Agentic Memory Category Error",
+      "url": "https://arxiv.org/abs/2604.27707v1",
+      "source": "arxiv",
+      "discovered_date": "2026-05-01",
+      "impact_assessment": "Challenges fundamental assumption of all current agentic memory systems (vector stores, RAG, scratchpads). Argues lookup is categorically different from memory — retrieval generalizes by similarity, weight-based memory generalizes by abstraction. Directly questions whether Memanto-style typed lookup is sufficient; may need hybrid approach with learned representations.",
+      "priority": "P0",
+      "action_suggested": "Deep-read paper; reassess HermesAgent memory architecture in light of lookup-vs-memory distinction; evaluate hybrid memory approaches combining typed lookup with learned abstraction",
+      "status": "pending",
+      "notes": "Paradigm-challenging paper. May require rethinking the entire Memanto + FSFM memory strategy."
+    },
+    {
+      "name": "Risk-Sensitive Abstention-Aware Memory Retrieval",
+      "url": "https://arxiv.org/abs/2604.27283v1",
+      "source": "arxiv",
+      "discovered_date": "2026-05-01",
+      "impact_assessment": "Retrieved memory is useful only when current failure is genuinely compatible with previous one. Surface similarity in stack traces/errors can lead to unsafe memory reuse. Proposes contextual bandit framework for agent to choose 'not to recall'. Addresses a blind spot in HermesAgent memory — current system always attempts retrieval without quality gating.",
+      "priority": "P1",
+      "action_suggested": "Evaluate contextual bandit approach for HermesAgent memory retrieval gating; design abstention-aware retrieval prototype",
+      "status": "pending",
+      "notes": "Complements Memanto and FSFM. Adds the 'when NOT to retrieve' dimension to memory lifecycle."
+    },
+    {
+      "name": "Continual Learning Stability-Plasticity at Memory Level",
+      "url": "https://arxiv.org/abs/2604.27003v1",
+      "source": "arxiv",
+      "discovered_date": "2026-05-01",
+      "impact_assessment": "Memory-augmented agents don't escape stability-plasticity dilemma — it resurfaces at memory level. Under limited context window, old and new experiences compete during retrieval, causing catastrophic forgetting equivalent. Critical for HermesAgent long-running sessions with growing experience base.",
+      "priority": "P1",
+      "action_suggested": "Design memory consolidation mechanism for HermesAgent; combine with FSFM selective forgetting for complete memory lifecycle (write → consolidate → retrieve → forget)",
+      "status": "pending",
+      "notes": "Pairs with FSFM (forgetting) and Memanto (typed storage) for full memory lifecycle management."
+    },
+    {
+      "name": "Safe Bilevel Delegation (SBD): Runtime Delegation Safety",
+      "url": "https://arxiv.org/abs/2604.27358v1",
+      "source": "arxiv",
+      "discovered_date": "2026-05-01",
+      "impact_assessment": "Formal framework for dynamically adjusting safety-efficiency trade-off at runtime when delegating subtasks to sub-agents. Addresses gap between design-time architecture selection and runtime safety needs. Directly relevant to CrazyAgentsManage Agent orchestration layer delegation security.",
+      "priority": "P1",
+      "action_suggested": "Read SBD formal framework; evaluate integration into CrazyAgentsManage orchestration layer for runtime safety-adjusted delegation",
+      "status": "pending",
+      "notes": "Complements RecursiveMAS — adds safety layer to recursive delegation patterns."
+    },
+    {
+      "name": "paragents: Parallel Agent Sessions with Conflict Checks",
+      "url": "https://github.com/FrankHui/paragents",
+      "source": "github",
+      "discovered_date": "2026-05-02",
+      "impact_assessment": "Parallel ai-agent sessions in one panel with permission-aware tools and preflight conflict checks. Directly relevant to CrazyAgentsManage multi-agent orchestration — addresses concurrent agent execution conflicts that our current flat pipeline does not handle. The preflight conflict check pattern could be integrated into Agent Adapter for safe parallel task execution.",
+      "priority": "P1",
+      "action_suggested": "Review paragents source code; evaluate preflight conflict check mechanism for integration into CrazyAgentsManage parallel agent execution layer",
+      "status": "pending",
+      "notes": "Python-based, 30 stars. Key pattern: permission-aware tools + preflight conflict checks for parallel agents."
+    },
+    {
+      "name": "oh-my-kimichan: Multi-Agent Orchestration Harness (DAG/Ensemble + MCP)",
+      "url": "https://github.com/dmae97/oh-my-kimichan",
+      "source": "github",
+      "discovered_date": "2026-05-02",
+      "impact_assessment": "Production-ready multi-agent orchestration harness for Kimi Code CLI: worktree team runtime, DAG/ensemble planning, MCP skill-hooks, quality gates. Directly maps to CrazyAgentsManage architecture — DAG planning for agent orchestration, MCP skill-hooks as plugin system, quality gates for output verification. The worktree team runtime pattern is especially relevant for our Codex-HermesAgent dual-agent collaboration.",
+      "priority": "P0",
+      "action_suggested": "Deep-dive into oh-my-kimichan source code; evaluate DAG/ensemble planning and MCP skill-hooks as reference implementation for CrazyAgentsManage Agent Adapter next iteration",
+      "status": "pending",
+      "notes": "TypeScript-based, 20 stars. Three key patterns: (1) worktree-based team runtime (2) DAG/ensemble planning (3) MCP skill-hooks + quality gates. Production-ready label suggests battle-tested patterns."
+    },
+    {
+      "name": "Ubuntu Infrastructure Sustained Cross-Border Attack",
+      "url": "https://arstechnica.com/security/2026/05/ubuntu-infrastructure-has-been-down-for-more-than-a-day/",
+      "source": "hn",
+      "discovered_date": "2026-05-02",
+      "impact_assessment": "Ubuntu servers taken offline by sustained cross-border attack, affecting infrastructure for over a day. If our systems depend on Ubuntu-based infrastructure or Canonical services (PPAs, Snap store, Launchpad), this could impact availability. Also a signal that open-source infrastructure is increasingly targeted.",
+      "priority": "P2",
+      "action_suggested": "Verify our dependency on Ubuntu infrastructure; confirm backup package sources and mirrors are available",
+      "status": "pending",
+      "notes": "Security/infrastructure alert. Monitor for resolution timeline."
+    },
+    {
+      "name": "MCPHunt: Cross-Boundary Data Propagation in Multi-Server MCP Agents",
+      "url": "https://arxiv.org/abs/2604.27819v1",
+      "source": "arxiv",
+      "discovered_date": "2026-05-02",
+      "impact_assessment": "First controlled benchmark for MCP multi-server credential propagation. Reveals that faithful tool composition can turn benign permissions into cross-boundary credential leakage — a structural side effect of workflow topology. Directly relevant to CrazyAgentsManage MCP tool chain security boundary design.",
+      "priority": "P0",
+      "action_suggested": "Audit current MCP tool chain for cross-boundary information flow using MCPHunt framework; evaluate information flow control policies for CrazyAgentsManage MCP integration",
+      "status": "pending",
+      "notes": "Security-critical finding. MCP ecosystem blind spot — not malicious model behavior but structural side effect of tool composition topology."
+    },
+    {
+      "name": "CARE: Collaborative Agent Reasoning Engineering (Three-Party Methodology)",
+      "url": "https://arxiv.org/abs/2604.28043v1",
+      "source": "arxiv",
+      "discovered_date": "2026-05-02",
+      "impact_assessment": "Disciplined methodology for engineering LLM agents: three-party workflow (domain expert + AI engineer + verifier), stage-gated phases, reusable artifacts for behavior/grounding/tool-orchestration/verification. Three-party model directly maps to our Codex-HermesAgent collaboration. Stage-gated process can enhance handoff packet mechanism.",
+      "priority": "P1",
+      "action_suggested": "Deep-read CARE paper; evaluate stage-gated process and reusable artifact system for integration into CrazyAgentsManage orchestration layer",
+      "status": "pending",
+      "notes": "Three-party model: Subject Matter Expert + AI Engineer + Verifier. Maps to our domain expertise + Codex + HermesAgent acceptance."
+    },
+    {
+      "name": "Persona-Based Agents On Demand: Tailoring Multi-Agent Workflows",
+      "url": "https://arxiv.org/abs/2604.27882v1",
+      "source": "arxiv",
+      "discovered_date": "2026-05-02",
+      "impact_assessment": "Addresses hard-coded agent architectures with on-demand persona construction for multi-agent workflows. Complements Agent Constitution Pattern (SOUL.md) — enables scenario-specific persona switching for HermesAgent (ops/intel/customer-service modes).",
+      "priority": "P1",
+      "action_suggested": "Evaluate on-demand persona construction approach for integration with SOUL.md pattern in HermesAgent memory system",
+      "status": "pending",
+      "notes": "Complementary to Agent Constitution Pattern discovered 2026-04-29. Moves from static persona files to dynamic persona generation."
+    },
+    {
+      "name": "Trace-Level Information Contamination in Multi-Agent Systems",
+      "url": "https://arxiv.org/abs/2604.27586v1",
+      "source": "arxiv",
+      "discovered_date": "2026-05-02",
+      "impact_assessment": "Uncertainty in structured agent workflows can redirect decomposition/routing decisions, reshape intermediate state, and produce qualitatively different execution paths. Critical for CrazyAgentsManage: information quality between agents directly affects downstream decisions. Need trace-level contamination detection in orchestration layer.",
+      "priority": "P1",
+      "action_suggested": "Evaluate trace-level information quality monitoring for CrazyAgentsManage inter-agent communication layer",
+      "status": "pending",
+      "notes": "Not just input quality issue — uncertainty cascades through routing decisions and state transformations."
+    },
+    {
+      "name": "Crab: Semantics-Aware Checkpoint/Restore for Agent Sandboxes",
+      "url": "https://arxiv.org/abs/2604.28138v1",
+      "source": "arxiv",
+      "discovered_date": "2026-05-02",
+      "impact_assessment": "Bridges gap between app-level recovery (chat history only) and full VM snapshots (complete but slow) for agent sandbox C/R. Agent fault tolerance and rollback is a long-missing capability in CrazyAgentsManage. Semantic-aware C/R provides a middle ground.",
+      "priority": "P2",
+      "action_suggested": "Record design approach; reference for future CrazyAgentsManage fault tolerance layer construction",
+      "status": "pending",
+      "notes": "May be too infrastructure-heavy for current stage; keep as reference architecture."
+    },
+    {
+      "name": "CORAL: Adaptive Retrieval Loop for Multilingual RAG",
+      "url": "https://arxiv.org/abs/2604.25676v1",
+      "source": "arxiv",
+      "discovered_date": "2026-05-02",
+      "impact_assessment": "Proposes adaptive retrieval loop that moves beyond fixed retrieval space for culturally-grounded multilingual queries. Adaptive retrieval pattern is relevant to FlowMind RAG pipeline evolution, especially for multi-language extension.",
+      "priority": "P2",
+      "action_suggested": "Record adaptive retrieval loop pattern; reference for FlowMind RAG pipeline multi-language expansion",
+      "status": "pending",
+      "notes": "Core innovation: retrieval-condition alignment via adaptive loop rather than fixed translation/embedding space."
     }
   ]
 }
