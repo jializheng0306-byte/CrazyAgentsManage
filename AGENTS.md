@@ -49,3 +49,16 @@ Before claiming completion for workflow changes:
 - validate script syntax
 - verify referenced paths exist
 - confirm harness and docs layers stay separated from `.omx/`
+
+## Auto-Capture Trace Post-Hook
+
+When a HermesAgent task completes and its type is one of:
+- `external-intel-collect`
+- `morning-intel`
+- `evening-trend`
+
+The agent MUST run the auto-capture trace script as a post-processing step:
+- Script: `scripts/auto-trace-to-bitable.py`
+- Input: JSON with `source_task` and `raw_content` (the full task output text)
+- Failure behavior: log warning, do NOT block the main task
+- Log: `~/.hermes/logs/auto-capture-trace.log`

@@ -1,0 +1,50 @@
+{
+  "version": "1",
+  "rules": [
+    {
+      "id": "keyword-competitor",
+      "type": "keyword",
+      "description": "竞争对手动态",
+      "keywords": ["competitor", "竞品", "对标", "替代", "竞对", "竞争对手"],
+      "confidence_if_match": 65
+    },
+    {
+      "id": "keyword-domain",
+      "type": "keyword",
+      "description": "领域相关: AI Agent / knowledge graph / ontology",
+      "keywords": [
+        "agent", "knowledge graph", "knowledge_graph", "ontology",
+        "multi-agent", "multiagent", "AI Agent", "智能体",
+        "知识图谱", "本体", "语义", "大模型", "LLM"
+      ],
+      "confidence_if_match": 70
+    },
+    {
+      "id": "model-eval",
+      "type": "mixed",
+      "description": "模型评估（关键词 + 语义判断）",
+      "keywords": ["benchmark", "evaluation", "评估", "评测", "测试集", "指标"],
+      "min_confidence": 50
+    },
+    {
+      "id": "keyword-flowmind",
+      "type": "keyword",
+      "description": "FlowMind 相关: 承诺治理 / 审计 / 真值",
+      "keywords": [
+        "commitment", "governance", "truth", "audit",
+        "承诺", "治理", "真值", "审计", "capture"
+      ],
+      "confidence_if_match": 80
+    },
+    {
+      "id": "keyword-tech-trend",
+      "type": "mixed",
+      "description": "技术趋势（关键词 + 语义判断）",
+      "keywords": [
+        "trend", "前沿", "突破", "发布", "release",
+        "new model", "新模型", "开源", "open source"
+      ],
+      "min_confidence": 40
+    }
+  ]
+}
