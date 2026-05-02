@@ -84,6 +84,11 @@ def cron():
     return render_template('cron.html')
 
 
+@app.route('/timeline')
+def timeline():
+    return render_template('timeline.html', active_nav='operations')
+
+
 @app.route('/skills')
 def skills():
     return render_template('skills.html')
@@ -137,6 +142,11 @@ def operations_cron():
 @app.route('/operations/team-memory')
 def operations_team_memory():
     return render_template('team-memory.html')
+
+
+@app.route('/operations/timeline')
+def operations_timeline():
+    return render_template('timeline.html', active_nav='operations')
 
 
 @app.route('/operations/alerts')

@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
-承诺审查脚本 v2 — Bitable 版本
+承诺审查脚本 v3
 每日 09:00 执行
-功能：扫描活跃承诺、写入飞书多维表格、发送群通知摘要
+功能：
+1. 扫描活跃承诺
+2. 主表同步到飞书多维表格
+3. 按 FlowMind candidateId 拉取 trace 并同步子表
+4. 保留本地 MD 备份，但 Bitable 是主输出
 """
 
 import json
@@ -11,27 +15,18 @@ import shlex
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
+from urllib import error as urlerror
+from urllib import parse as urlparse
+from urllib import request as urlrequest
 
-# 配置
-PROMISE_ACTIVE_DIR = os.path.expanduser("~/.hermes/promises/active")
-PROMISE_ROOT_DIR = os.path.expanduser("~/.hermes/promises")
-REPORT_DIR = os.path.expanduser("~/.hermes/promises/reviews")
+PROMISE_ACTIVE_DIR = Path(os.path.expanduser("~/.hermes/promises/active"))
+PROMISE_ROOT_DIR = Path(os.path.expanduser("~/.hermes/promises"))
+REPORT_DIR = Path(os.path.expanduser("~/.hermes/promises/reviews"))
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_CONFIG_PATH = REPO_ROOT / "shared-context" / "promise-bitable-config.json"
 
-# Bitable 配置
-BITABLE_APP_TOKEN = "EpeXbhpF9a0s0wsh6axce9PknFg"
-BITABLE_TABLE_ID = "tblJRMmjbyKEDZY1"
-BITABLE_TRACE_TABLE_ID = "tbltwMndeV5O2YkR"
-BITABLE_URL = f"https://bcn7uazoofu0.feishu.cn/base/{BITABLE_APP_TOKEN}"
-
-# FlowMind 配置
-FLOWMIND_TRACE_API = "http://111.229.194.203:3301/api/bridge/trace"
-FLOWMIND_AUTH = "Bearer flowmind-dev-token"
-
-# 飞书配置
-CHAT_ID = "oc_bbde428675a7c267d55c3f0663ca701d"  # CrazyAgentsManage群
 DRY_RUN = os.environ.get("HERMES_CRON_DRY_RUN", "0") == "1"
 
-# 状态映射：JSON status → Bitable option name
 STATUS_MAP = {
     "pending": "待处理",
     "in_progress": "进行中",
@@ -42,7 +37,6 @@ STATUS_MAP = {
     "blocked": "进行中",
 }
 
-# 优先级映射
 PRIORITY_MAP = {
     "P0": "P0",
     "P1": "P1",
@@ -52,45 +46,84 @@ PRIORITY_MAP = {
 
 
 def run_cmd(cmd, timeout=30):
-    """执行命令并返回结果"""
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
     return result.stdout.strip(), result.returncode
 
 
+def load_json(path):
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def load_config():
+    config_path = Path(os.environ.get("PROMISE_BITABLE_CONFIG_PATH", str(DEFAULT_CONFIG_PATH)))
+    file_config = load_json(config_path)
+
+    bitable = file_config.get("bitable", {})
+    flowmind = file_config.get("flowmind", {})
+    feishu = file_config.get("feishu", {})
+
+    app_token = os.environ.get("PROMISE_BITABLE_APP_TOKEN") or bitable.get("app_token", "")
+    main_table_id = os.environ.get("PROMISE_BITABLE_MAIN_TABLE_ID") or bitable.get("main_table_id", "")
+    trace_table_id = os.environ.get("PROMISE_BITABLE_TRACE_TABLE_ID") or bitable.get("trace_table_id", "")
+    bitable_url = bitable.get("url") or (
+        f"https://bcn7uazoofu0.feishu.cn/base/{app_token}" if app_token else ""
+    )
+
+    return {
+        "config_path": config_path,
+        "bitable_app_token": app_token,
+        "bitable_main_table_id": main_table_id,
+        "bitable_trace_table_id": trace_table_id,
+        "bitable_url": os.environ.get("PROMISE_BITABLE_URL") or bitable_url,
+        "chat_id": os.environ.get("PROMISE_REVIEW_CHAT_ID") or feishu.get(
+            "chat_id", "oc_bbde428675a7c267d55c3f0663ca701d"
+        ),
+        "flowmind_trace_api_base_url": (
+            os.environ.get("FLOWMIND_TRACE_API_BASE_URL")
+            or os.environ.get("FLOWMIND_API_BASE_URL")
+            or flowmind.get("base_url")
+            or "http://127.0.0.1:3001"
+        ).rstrip("/"),
+        "flowmind_trace_api_bearer_token": (
+            os.environ.get("FLOWMIND_TRACE_API_BEARER_TOKEN")
+            or os.environ.get("FLOWMIND_API_KEY")
+            or flowmind.get("api_key")
+            or "flowmind-dev-token"
+        ),
+    }
+
+
 def scan_promises():
-    """扫描所有承诺文件（active 目录 + 根目录兼容）"""
     promises = []
 
-    # 扫描 active 目录（新格式）
-    active_dir = Path(PROMISE_ACTIVE_DIR)
-    if active_dir.exists():
-        for json_file in active_dir.glob("*.json"):
+    if PROMISE_ACTIVE_DIR.exists():
+        for json_file in PROMISE_ACTIVE_DIR.glob("*.json"):
             try:
-                with open(json_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    if isinstance(data, dict):
-                        data["_source_file"] = json_file.name
-                        data["_source_dir"] = "active"
-                        promises.append(data)
+                data = load_json(json_file)
+                if isinstance(data, dict):
+                    data["_source_file"] = json_file.name
+                    data["_source_dir"] = "active"
+                    promises.append(data)
             except Exception:
                 continue
 
-    # 扫描根目录（旧格式兼容）
-    root_dir = Path(PROMISE_ROOT_DIR)
-    if root_dir.exists():
-        for json_file in root_dir.glob("*.json"):
+    if PROMISE_ROOT_DIR.exists():
+        for json_file in PROMISE_ROOT_DIR.glob("*.json"):
             try:
-                with open(json_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    if isinstance(data, dict):
-                        data["_source_file"] = json_file.name
-                        data["_source_dir"] = "root"
-                        promises.append(data)
-                    elif isinstance(data, list):
-                        for p in data:
-                            p["_source_file"] = json_file.name
-                            p["_source_dir"] = "root"
-                        promises.extend(data)
+                data = load_json(json_file)
+                if isinstance(data, dict):
+                    data["_source_file"] = json_file.name
+                    data["_source_dir"] = "root"
+                    promises.append(data)
+                elif isinstance(data, list):
+                    for promise in data:
+                        promise["_source_file"] = json_file.name
+                        promise["_source_dir"] = "root"
+                    promises.extend(data)
             except Exception:
                 continue
 
@@ -98,7 +131,6 @@ def scan_promises():
 
 
 def classify_promises(promises):
-    """分类承诺状态"""
     today = datetime.now().strftime("%Y-%m-%d")
     next_week = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
 
@@ -113,26 +145,26 @@ def classify_promises(promises):
         "pending_count": 0,
     }
 
-    for p in promises:
-        status = p.get("status", "pending").lower()
-        due = p.get("due_date", p.get("deadline", ""))
+    for promise in promises:
+        status = str(promise.get("status", "pending")).lower()
+        due = promise.get("due_date", promise.get("deadline", ""))
 
         if status in ("done", "completed", "已完成"):
-            result["completed"].append(p)
+            result["completed"].append(promise)
         elif status in ("blocked", "阻塞"):
-            result["blocked"].append(p)
+            result["blocked"].append(promise)
         elif due:
             if due < today:
-                result["overdue"].append(p)
+                result["overdue"].append(promise)
             elif due == today:
-                result["due_today"].append(p)
+                result["due_today"].append(promise)
             elif due <= next_week:
-                result["due_soon"].append(p)
+                result["due_soon"].append(promise)
             else:
-                result["in_progress"].append(p)
+                result["in_progress"].append(promise)
         else:
             if status in ("in_progress", "进行中"):
-                result["in_progress"].append(p)
+                result["in_progress"].append(promise)
             else:
                 result["pending_count"] += 1
 
@@ -140,82 +172,269 @@ def classify_promises(promises):
 
 
 def datetime_to_ms(dt_str):
-    """将 ISO datetime 字符串转为 Unix 毫秒时间戳"""
     if not dt_str:
         return None
     try:
-        # 处理多种格式
-        for fmt in [
-            "%Y-%m-%dT%H:%M:%S.%f",
-            "%Y-%m-%dT%H:%M:%S",
-            "%Y-%m-%d %H:%M:%S",
-            "%Y-%m-%d",
-        ]:
+        dt = datetime.fromisoformat(str(dt_str).replace("Z", "+00:00"))
+        return int(dt.timestamp() * 1000)
+    except ValueError:
+        pass
+
+    try:
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
             try:
-                dt = datetime.strptime(dt_str[:26], fmt)
+                dt = datetime.strptime(str(dt_str)[:19], fmt)
                 return int(dt.timestamp() * 1000)
             except ValueError:
                 continue
-        # 尝试解析带时区的
-        dt_str_clean = dt_str.split("+")[0].split("Z")[0]
-        dt = datetime.fromisoformat(dt_str_clean)
-        return int(dt.timestamp() * 1000)
     except Exception:
         return None
+    return None
 
 
 def date_to_ms(date_str):
-    """将日期字符串转为 Unix 毫秒时间戳"""
     if not date_str:
         return None
     try:
-        dt = datetime.strptime(date_str[:10], "%Y-%m-%d")
+        dt = datetime.strptime(str(date_str)[:10], "%Y-%m-%d")
         return int(dt.timestamp() * 1000)
-    except Exception:
+    except ValueError:
         return None
 
 
-def sync_to_bitable(promises):
-    """将承诺同步到 Bitable"""
+def _bitable_api(path, method="GET", payload=None, params=None, timeout=20):
     if DRY_RUN:
-        print("  DRY RUN: 跳过 Bitable 同步")
-        return 0
+        return {}
 
-    # 先获取现有记录（按 promise_id 去重）
-    existing_records = {}
-    cmd = f'lark-cli api GET "/open-apis/bitable/v1/apps/{BITABLE_APP_TOKEN}/tables/{BITABLE_TABLE_ID}/records" --params \'{{"page_size":500}}\' '
-    output, code = run_cmd(cmd, timeout=30)
-    if code == 0:
-        try:
-            data = json.loads(output)
-            for item in data.get("data", {}).get("items", []):
-                pid_field = item.get("fields", {}).get("promise_id")
-                if pid_field:
-                    existing_records[pid_field[0]["text"] if isinstance(pid_field, list) else pid_field] = item.get("record_id")
-        except Exception:
-            pass
+    parts = [f'lark-cli api {method} "{path}"']
+    if params is not None:
+        parts.append(f"--params {shlex.quote(json.dumps(params, ensure_ascii=False))}")
+    if payload is not None:
+        parts.append(f"--data {shlex.quote(json.dumps(payload, ensure_ascii=False))}")
+    cmd = " ".join(parts)
+    output, code = run_cmd(cmd, timeout=timeout)
+    if code != 0 or not output:
+        return {}
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError:
+        return {}
 
-    sync_count = 0
-    for promise in promises:
-        pid = promise.get("id", "")
-        status_raw = promise.get("status", "pending").lower()
-        priority_raw = promise.get("priority", "P3")
 
-        # 映射状态和优先级
-        status = STATUS_MAP.get(status_raw, "待处理")
-        priority = PRIORITY_MAP.get(priority_raw, "P3")
+def extract_bitable_text(value):
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list) and value:
+        first = value[0]
+        if isinstance(first, dict):
+            return first.get("text", "")
+        return str(first)
+    if isinstance(value, dict):
+        return value.get("text", "")
+    return ""
 
-        # 构建字段
-        fields = {
-            "promise_id": pid,
-            "title": promise.get("title", "")[:200],
-            "description": promise.get("description", "")[:500],
-            "source": promise.get("source", ""),
-            "status": status,
-            "priority": priority,
+
+def list_existing_records(app_token, table_id, key_field):
+    if not app_token or not table_id or DRY_RUN:
+        return {}
+
+    data = _bitable_api(
+        f"/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records",
+        method="GET",
+        params={"page_size": 500},
+        timeout=30,
+    )
+
+    result = {}
+    for item in data.get("data", {}).get("items", []):
+        fields = item.get("fields", {})
+        record_key = extract_bitable_text(fields.get(key_field))
+        if record_key:
+            result[str(record_key)] = item.get("record_id")
+    return result
+
+
+def upsert_record(app_token, table_id, existing_records, key, fields):
+    if DRY_RUN or not app_token or not table_id or not key:
+        return False
+
+    if key in existing_records:
+        path = f"/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records/{existing_records[key]}"
+        response = _bitable_api(path, method="PUT", payload={"fields": fields})
+        return bool(response)
+
+    path = f"/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records"
+    response = _bitable_api(path, method="POST", payload={"fields": fields})
+    if response.get("data", {}).get("record", {}).get("record_id"):
+        existing_records[key] = response["data"]["record"]["record_id"]
+    return bool(response)
+
+
+def flowmind_trace_request(config, candidate_id):
+    encoded = urlparse.quote(candidate_id)
+    url = f"{config['flowmind_trace_api_base_url']}/api/bridge/trace/{encoded}"
+    req = urlrequest.Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "Authorization": f"Bearer {config['flowmind_trace_api_bearer_token']}",
+        },
+        method="GET",
+    )
+    try:
+        with urlrequest.urlopen(req, timeout=10) as response:
+            charset = response.headers.get_content_charset() or "utf-8"
+            body = response.read().decode(charset, errors="replace")
+            return json.loads(body) if body else {}
+    except (urlerror.URLError, urlerror.HTTPError, TimeoutError, OSError, json.JSONDecodeError):
+        return {}
+
+
+def normalize_trace_events(candidate_id, trace_response):
+    raw_events = []
+    if isinstance(trace_response, dict):
+        if isinstance(trace_response.get("events"), list):
+            raw_events = trace_response.get("events", [])
+        elif isinstance(trace_response.get("trace"), list):
+            raw_events = trace_response.get("trace", [])
+        elif isinstance(trace_response.get("data"), list):
+            raw_events = trace_response.get("data", [])
+
+    events = []
+    for index, event in enumerate(raw_events):
+        if not isinstance(event, dict):
+            continue
+        timestamp = event.get("timestamp") or event.get("createdAt") or event.get("occurredAt")
+        summary = event.get("summary") or event.get("detail") or event.get("label") or event.get("action") or ""
+        trace_id = event.get("traceId") or event.get("id") or f"{candidate_id}:{index}"
+        events.append(
+            {
+                "trace_id": str(trace_id),
+                "candidate_id": candidate_id,
+                "direction": event.get("direction") or "FlowMind→Hermes",
+                "flowmind_module": event.get("module") or event.get("moduleId") or "bridge",
+                "action": event.get("action") or event.get("eventType") or "query",
+                "request_payload": event.get("payload") or event.get("requestPayload") or {},
+                "response_summary": summary,
+                "status": event.get("status") or event.get("toStatus") or event.get("result") or "success",
+                "timestamp": timestamp,
+                "latency_ms": event.get("latencyMs") or event.get("durationMs"),
+                "from_status": event.get("fromStatus"),
+                "to_status": event.get("toStatus") or event.get("status"),
+                "summary": summary,
+            }
+        )
+
+    events.sort(key=lambda item: item.get("timestamp") or "")
+    return events
+
+
+def build_trace_summary(trace_events):
+    if not trace_events:
+        return {
+            "flowmind_status": "",
+            "last_trace_at": None,
+            "trace_summary": "",
+            "trace_event_count": 0,
+            "last_trace_summary": "",
         }
 
-        # 时间字段（毫秒时间戳）
+    latest = trace_events[-1]
+    latest_status = latest.get("to_status") or latest.get("status") or ""
+    latest_summary = latest.get("summary") or latest.get("response_summary") or ""
+    modules = []
+    for event in trace_events:
+        module = event.get("flowmind_module")
+        if module and module not in modules:
+            modules.append(module)
+
+    return {
+        "flowmind_status": latest_status,
+        "last_trace_at": datetime_to_ms(latest.get("timestamp")),
+        "trace_summary": " → ".join(modules[:4]),
+        "trace_event_count": len(trace_events),
+        "last_trace_summary": latest_summary[:500],
+    }
+
+
+def sync_to_bitable(promises, config):
+    app_token = config["bitable_app_token"]
+    main_table_id = config["bitable_main_table_id"]
+    trace_table_id = config["bitable_trace_table_id"]
+    if not app_token or not main_table_id:
+        print("  ⚠️ 未配置 Bitable 主表，跳过同步")
+        return {"main_sync_count": 0, "trace_sync_count": 0, "trace_summary_by_promise": {}}
+
+    if DRY_RUN:
+        print("  DRY RUN: 跳过 Bitable 同步")
+        return {"main_sync_count": 0, "trace_sync_count": 0, "trace_summary_by_promise": {}}
+
+    existing_main = list_existing_records(app_token, main_table_id, "promise_id")
+    existing_trace = (
+        list_existing_records(app_token, trace_table_id, "trace_id") if trace_table_id else {}
+    )
+
+    main_sync_count = 0
+    trace_sync_count = 0
+    trace_summary_by_promise = {}
+
+    for promise in promises:
+        promise_id = str(promise.get("id", "")).strip()
+        if not promise_id:
+            continue
+
+        trace_summary = build_trace_summary([])
+        flowmind_id = str(promise.get("flowmind_candidate_id", "")).strip()
+        if flowmind_id:
+            trace_response = flowmind_trace_request(config, flowmind_id)
+            trace_events = normalize_trace_events(flowmind_id, trace_response)
+            trace_summary = build_trace_summary(trace_events)
+            trace_summary_by_promise[promise_id] = trace_summary
+
+            if trace_table_id:
+                for event in trace_events:
+                    fields = {
+                        "trace_id": event["trace_id"],
+                        "promise_id": promise_id,
+                        "candidate_id": event["candidate_id"],
+                        "direction": event["direction"],
+                        "flowmind_module": event["flowmind_module"],
+                        "action": event["action"],
+                        "request_payload": json.dumps(event["request_payload"], ensure_ascii=False)
+                        if event["request_payload"]
+                        else "",
+                        "response_summary": event["response_summary"][:500],
+                        "status": str(event["status"])[:100],
+                    }
+                    timestamp_ms = datetime_to_ms(event.get("timestamp"))
+                    if timestamp_ms:
+                        fields["timestamp"] = timestamp_ms
+                    if event.get("latency_ms") is not None:
+                        fields["latency_ms"] = event["latency_ms"]
+                    if upsert_record(
+                        app_token,
+                        trace_table_id,
+                        existing_trace,
+                        event["trace_id"],
+                        fields,
+                    ):
+                        trace_sync_count += 1
+
+        status_raw = str(promise.get("status", "pending")).lower()
+        priority_raw = str(promise.get("priority", "P3")).upper()
+        fields = {
+            "promise_id": promise_id,
+            "title": str(promise.get("title", ""))[:200],
+            "description": str(promise.get("description", ""))[:500],
+            "source": str(promise.get("source", ""))[:100],
+            "status": STATUS_MAP.get(status_raw, "待处理"),
+            "priority": PRIORITY_MAP.get(priority_raw, "P3"),
+            "flowmind_status": trace_summary["flowmind_status"],
+            "trace_summary": trace_summary["trace_summary"],
+            "trace_event_count": trace_summary["trace_event_count"],
+            "last_trace_summary": trace_summary["last_trace_summary"],
+        }
+
         created_at = datetime_to_ms(promise.get("created_at", ""))
         if created_at:
             fields["created_at"] = created_at
@@ -228,109 +447,37 @@ def sync_to_bitable(promises):
         if completed_at:
             fields["completed_at"] = completed_at
 
-        flowmind_id = promise.get("flowmind_candidate_id")
         if flowmind_id:
             fields["flowmind_candidate_id"] = flowmind_id
+        if trace_summary["last_trace_at"]:
+            fields["last_trace_at"] = trace_summary["last_trace_at"]
 
-        # 更新或创建
-        if pid in existing_records:
-            record_id = existing_records[pid]
-            update_cmd = f'''lark-cli api PUT "/open-apis/bitable/v1/apps/{BITABLE_APP_TOKEN}/tables/{BITABLE_TABLE_ID}/records/{record_id}" \
-                --data '{json.dumps({"fields": fields}, ensure_ascii=False)}' '''
-            _, code = run_cmd(update_cmd, timeout=15)
-            if code == 0:
-                sync_count += 1
-                print(f"  🔄 更新: {promise.get('title', '')[:50]}...")
-        else:
-            create_cmd = f'''lark-cli api POST "/open-apis/bitable/v1/apps/{BITABLE_APP_TOKEN}/tables/{BITABLE_TABLE_ID}/records" \
-                --data '{json.dumps({"fields": fields}, ensure_ascii=False)}' '''
-            _, code = run_cmd(create_cmd, timeout=15)
-            if code == 0:
-                sync_count += 1
-                print(f"  ✅ 新增: {promise.get('title', '')[:50]}...")
+        if upsert_record(app_token, main_table_id, existing_main, promise_id, fields):
+            main_sync_count += 1
 
-    return sync_count
-
-
-def fetch_trace(candidate_id):
-    """从 FlowMind 获取 trace 数据"""
-    import urllib.request
-    url = f"{FLOWMIND_TRACE_API}/{candidate_id}"
-    req = urllib.request.Request(url, headers={"Authorization": FLOWMIND_AUTH})
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read().decode())
-    except Exception as e:
-        print(f"  ⚠️ trace 查询失败 ({candidate_id[:8]}...): {e}")
-        return None
-
-
-def sync_trace_events(promise_id, candidate_id):
-    """同步 trace 事件到交互轨迹子表"""
-    trace_data = fetch_trace(candidate_id)
-    if not trace_data or not trace_data.get("success"):
-        return 0
-
-    events = trace_data.get("data", {}).get("events", [])
-    if not events:
-        return 0
-
-    synced = 0
-    for event in events:
-        ts = event.get("timestamp", "")
-        ts_ms = datetime_to_ms(ts)
-
-        fields = {
-            "trace_id": event.get("traceId", ""),
-            "candidate_id": candidate_id,
-            "promise_id": promise_id,
-            "action": event.get("action", ""),
-            "actor": event.get("actor", ""),
-            "module": event.get("module", "unknown"),
-            "from_status": event.get("fromStatus"),
-            "to_status": event.get("toStatus"),
-            "summary": event.get("summary", "")[:200],
-        }
-        if ts_ms:
-            fields["timestamp"] = ts_ms
-
-        cmd = f'''lark-cli api POST "/open-apis/bitable/v1/apps/{BITABLE_APP_TOKEN}/tables/{BITABLE_TRACE_TABLE_ID}/records" \
-            --data '{json.dumps({"fields": fields}, ensure_ascii=False)}' '''
-        _, code = run_cmd(cmd, timeout=15)
-        if code == 0:
-            synced += 1
-        else:
-            # 可能已存在，跳过
-            pass
-
-    return synced
-
-
-def update_trace_fields(record_id, candidate_id):
-    """更新承诺主表的 trace 派生字段"""
-    trace_data = fetch_trace(candidate_id)
-    if not trace_data or not trace_data.get("success"):
-        return
-
-    events = trace_data.get("data", {}).get("events", [])
-    event_count = len(events)
-    last_summary = events[-1].get("summary", "") if events else ""
-
-    update_fields = {
-        "trace_event_count": event_count,
-        "last_trace_summary": last_summary[:200],
+    return {
+        "main_sync_count": main_sync_count,
+        "trace_sync_count": trace_sync_count,
+        "trace_summary_by_promise": trace_summary_by_promise,
     }
 
-    update_cmd = f'''lark-cli api PUT "/open-apis/bitable/v1/apps/{BITABLE_APP_TOKEN}/tables/{BITABLE_TABLE_ID}/records/{record_id}" \
-        --data '{json.dumps({"fields": update_fields}, ensure_ascii=False)}' '''
-    run_cmd(update_cmd, timeout=15)
-    print(f"  📊 trace: {event_count} 事件 | {last_summary[:40]}...")
+
+def write_backup_report(report_path, classified, sync_result, config):
+    report = f"""# 承诺审查报告 {datetime.now().strftime("%Y-%m-%d")}
+- 总承诺: {classified['total']}
+- 已完成: {len(classified['completed'])}
+- 进行中: {len(classified['in_progress'])}
+- 已过期: {len(classified['overdue'])}
+- 主表同步: {sync_result['main_sync_count']} 条
+- Trace 子表同步: {sync_result['trace_sync_count']} 条
+- Bitable 主输出: {config['bitable_url'] or '未配置'}
+"""
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(report, encoding="utf-8")
 
 
-def send_to_feishu(classified, sync_count):
-    """发送审查摘要到飞书群"""
+def send_to_feishu(classified, sync_result, config):
     today = datetime.now().strftime("%Y-%m-%d")
-
     total = classified["total"]
     in_progress = len(classified["in_progress"])
     done = len(classified["completed"])
@@ -340,14 +487,20 @@ def send_to_feishu(classified, sync_count):
     blocked = len(classified["blocked"])
     pending = classified.get("pending_count", 0)
 
-    # 构建告警部分
-    alert = ""
+    alerts = []
     if overdue > 0:
-        alert += f"🚨 已过期: {overdue} 项\n"
+        alerts.append(f"🚨 已过期: {overdue} 项")
     if due_today > 0:
-        alert += f"⚠️ 今日到期: {due_today} 项\n"
+        alerts.append(f"⚠️ 今日到期: {due_today} 项")
     if blocked > 0:
-        alert += f"🚧 阻塞: {blocked} 项\n"
+        alerts.append(f"🚧 阻塞: {blocked} 项")
+    alert_block = "\n".join(alerts)
+    if alert_block:
+        alert_block += "\n"
+
+    bitable_url = config["bitable_url"] or "未配置"
+    main_table_id = config["bitable_main_table_id"] or ""
+    gantt_url = f"{bitable_url}?table={main_table_id}&view=gantt" if main_table_id and bitable_url else "未配置"
 
     message = f"""📋 承诺审查报告 ({today})
 ━━━━━━━━━━━━━━━━━━━
@@ -355,74 +508,58 @@ def send_to_feishu(classified, sync_count):
 📊 统计:
 - 总承诺: {total} | 进行中: {in_progress} | 已完成: {done}
 - 待处理: {pending} | 7天内到期: {due_soon}
-{alert}🔄 本次同步: {sync_count} 条到 Bitable
+{alert_block}🔄 主表同步: {sync_result['main_sync_count']} 条
+🔄 Trace 同步: {sync_result['trace_sync_count']} 条
 
 ━━━━━━━━━━━━━━━━━━━
-📊 查看承诺主表: {BITABLE_URL}
-📊 甘特图: {BITABLE_URL}?table={BITABLE_TABLE_ID}&view=gantt"""
+📊 承诺主表: {bitable_url}
+📊 甘特图: {gantt_url}
+📝 本地备份: ~/.hermes/promises/reviews/
+"""
 
     if DRY_RUN:
         print("  DRY RUN: 跳过飞书群发送")
         print(message)
         return True
 
-    cmd = f'lark-cli im +messages-send --chat-id {shlex.quote(CHAT_ID)} --text {shlex.quote(message)}'
-    output, code = run_cmd(cmd)
+    cmd = (
+        f"lark-cli im +messages-send --chat-id {shlex.quote(config['chat_id'])} "
+        f"--text {shlex.quote(message)}"
+    )
+    _, code = run_cmd(cmd)
     print(f"  群消息: {'✅' if code == 0 else '❌'}")
     return code == 0
 
 
 def main():
-    print("📋 开始承诺审查 v2 (Bitable)...")
+    print("📋 开始承诺审查 v3 (Bitable 主输出 + Trace 子表)...")
+    config = load_config()
+    print(f"  配置文件: {config['config_path']}")
 
-    os.makedirs(REPORT_DIR, exist_ok=True)
-    today = datetime.now().strftime("%Y%m%d")
-
-    # 1. 扫描承诺
     print("\n1. 扫描承诺文件...")
     promises = scan_promises()
     print(f"  找到 {len(promises)} 条承诺")
 
-    # 2. 分类统计
     print("2. 分类统计...")
     classified = classify_promises(promises)
 
-    # 3. 同步到 Bitable
     print("3. 同步到 Bitable...")
-    sync_count = sync_to_bitable(promises)
-    print(f"  同步 {sync_count} 条记录")
+    sync_result = sync_to_bitable(promises, config)
+    print(
+        f"  主表同步 {sync_result['main_sync_count']} 条，"
+        f"Trace 子表同步 {sync_result['trace_sync_count']} 条"
+    )
 
-    # 3.5. 同步 FlowMind trace 数据
-    print("3.5. 同步 FlowMind trace...")
-    trace_synced = 0
-    for promise in promises:
-        cid = promise.get("flowmind_candidate_id")
-        if cid:
-            pid = promise.get("id", "")
-            trace_synced += sync_trace_events(pid, cid)
-    if trace_synced:
-        print(f"  🔗 同步 {trace_synced} 条交互轨迹")
+    report_path = REPORT_DIR / f"review-{datetime.now().strftime('%Y%m%d')}.md"
+    print("4. 写本地 MD 备份...")
+    write_backup_report(report_path, classified, sync_result, config)
+    print(f"  备份报告: {report_path}")
 
-    # 4. 保存本地报告（可选备份）
-    report_file = os.path.join(REPORT_DIR, f"review-{today}.md")
-    report = f"""# 承诺审查报告 {today}
-- 总承诺: {classified['total']}
-- 已完成: {len(classified['completed'])}
-- 进行中: {len(classified['in_progress'])}
-- 已过期: {len(classified['overdue'])}
-- 同步到 Bitable: {sync_count} 条
-- Bitable: {BITABLE_URL}
-"""
-    with open(report_file, "w", encoding="utf-8") as f:
-        f.write(report)
-    print(f"  备份报告: {report_file}")
-
-    # 5. 发送到飞书群
-    print("4. 发送审查摘要到飞书群...")
-    send_to_feishu(classified, sync_count)
+    print("5. 发送审查摘要到飞书群...")
+    send_to_feishu(classified, sync_result, config)
 
     print("\n✅ 承诺审查完成！")
-    return report_file
+    return str(report_path)
 
 
 if __name__ == "__main__":

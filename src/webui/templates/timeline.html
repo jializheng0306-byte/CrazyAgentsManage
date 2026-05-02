@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>承诺时序图 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/timeline.css">
+</head>
+<body>
+  {% set active_nav = 'operations' %}
+  {% include 'ia-nav.html' %}
+
+  <main id="timeline-app" class="container">
+    <section class="tl-hero">
+      <div>
+        <p class="tl-kicker">Promise Review Timeline</p>
+        <h1>承诺跨系统交互时序</h1>
+        <p class="tl-subtitle">按 FlowMind `candidateId` 查看 HermesAgent 与 FlowMind 的交互事件、状态推进和原始摘要。</p>
+      </div>
+      <form id="timeline-form" class="tl-form">
+        <label for="candidateIdInput">Candidate ID</label>
+        <div class="tl-form-row">
+          <input id="candidateIdInput" name="candidateId" type="text" placeholder="输入 FlowMind candidateId">
+          <button type="submit">查询 Trace</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="tl-summary" id="timeline-summary">
+      <div class="tl-summary-card">
+        <span class="tl-summary-label">Candidate</span>
+        <strong id="timeline-candidate">--</strong>
+      </div>
+      <div class="tl-summary-card">
+        <span class="tl-summary-label">事件数</span>
+        <strong id="timeline-count">0</strong>
+      </div>
+      <div class="tl-summary-card">
+        <span class="tl-summary-label">最新状态</span>
+        <strong id="timeline-status">--</strong>
+      </div>
+      <div class="tl-summary-card">
+        <span class="tl-summary-label">Upstream</span>
+        <strong id="timeline-upstream">--</strong>
+      </div>
+    </section>
+
+    <section class="tl-layout">
+      <div class="tl-panel">
+        <div class="tl-panel-head">
+          <h2>事件流</h2>
+          <span id="timeline-state" class="tl-state">等待查询</span>
+        </div>
+        <div id="timeline-events" class="tl-events">
+          <div class="tl-empty">
+            <strong>暂无 trace 数据</strong>
+            <p>输入 `candidateId` 后会从 FlowMind `GET /api/bridge/trace/:candidateId` 拉取事件。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tl-panel">
+        <div class="tl-panel-head">
+          <h2>调试视图</h2>
+        </div>
+        <pre id="timeline-raw" class="tl-raw">{
+  "hint": "query a candidateId to inspect raw trace payload"
+}</pre>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/timeline.js"></script>
+</body>
+</html>
