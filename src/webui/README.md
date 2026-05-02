@@ -40,15 +40,24 @@ This is the WebUI for CrazyAgentsManage, a multi-agent collaboration platform. T
 
 ### Installation
 
+推荐使用仓库根目录下的隔离测试环境，而不是直接往系统 Python 安装依赖：
+
 ```bash
-cd src/webui
-pip install flask
+cd ../..
+bash scripts/setup-local-test-env.sh
+source .venv/bin/activate
 ```
 
 ### Running
 
 ```bash
-python app.py
+python src/webui/app.py
+```
+
+### Tests
+
+```bash
+bash scripts/run-local-tests.sh
 ```
 
 Then open your browser and navigate to: http://localhost:5000

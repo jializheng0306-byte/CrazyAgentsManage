@@ -35,8 +35,11 @@ CrazyAgentsManage 当前的规范性定位是：
 git clone https://github.com/jializheng0306-byte/CrazyAgentsManage.git
 cd CrazyAgentsManage
 
-# 安装依赖（与 Hermes-Agent 共享）
-pip install -r requirements.txt
+# 创建隔离测试环境
+bash scripts/setup-local-test-env.sh
+
+# 激活环境
+source .venv/bin/activate
 ```
 
 ### 配置
@@ -145,6 +148,24 @@ task-002 (research) ──┘
 ```
 
 ## 开发指南
+
+### 本地测试环境
+
+仓库当前将 WebUI 回归测试固定到一个最小隔离环境中，不再依赖系统 Python 是否碰巧装过 `flask` 或 `pytest`。
+
+```bash
+# 初始化本地测试环境
+bash scripts/setup-local-test-env.sh
+
+# 运行当前 WebUI 回归集
+bash scripts/run-local-tests.sh
+```
+
+测试入口当前覆盖：
+
+- `tests/test_sprint2.py`
+- `tests/test_sprint3.py`
+- `tests/test_sprint4.py`
 
 ### 添加新角色
 
