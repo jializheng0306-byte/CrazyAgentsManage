@@ -64,6 +64,7 @@ def load_config():
 
     bitable = file_config.get("bitable", {})
     flowmind = file_config.get("flowmind", {})
+    webui = file_config.get("webui", {})
     feishu = file_config.get("feishu", {})
 
     app_token = os.environ.get("PROMISE_BITABLE_APP_TOKEN") or bitable.get("app_token", "")
@@ -94,7 +95,21 @@ def load_config():
             or flowmind.get("api_key")
             or "flowmind-dev-token"
         ),
+        "timeline_base_url": (
+            os.environ.get("PROMISE_TIMELINE_BASE_URL")
+            or webui.get("timeline_base_url")
+            or "http://47.99.217.1/timeline"
+        ).rstrip("/"),
     }
+
+
+def build_timeline_url(config, candidate_id):
+    if not candidate_id:
+        return ""
+    base = config.get("timeline_base_url", "").rstrip("/")
+    if not base:
+        return ""
+    return f"{base}?candidateId={urlparse.quote(candidate_id)}"
 
 
 def scan_promises():
@@ -449,6 +464,7 @@ def sync_to_bitable(promises, config):
 
         if flowmind_id:
             fields["flowmind_candidate_id"] = flowmind_id
+            fields["timeline_url"] = build_timeline_url(config, flowmind_id)
         if trace_summary["last_trace_at"]:
             fields["last_trace_at"] = trace_summary["last_trace_at"]
 

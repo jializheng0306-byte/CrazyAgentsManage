@@ -113,6 +113,7 @@ create_datetime_field "$APP_TOKEN" "$MAIN_TABLE_ID" "last_trace_at"
 create_text_field "$APP_TOKEN" "$MAIN_TABLE_ID" "trace_summary"
 create_number_field "$APP_TOKEN" "$MAIN_TABLE_ID" "trace_event_count"
 create_text_field "$APP_TOKEN" "$MAIN_TABLE_ID" "last_trace_summary"
+create_text_field "$APP_TOKEN" "$MAIN_TABLE_ID" "timeline_url"
 
 echo "5. 创建 Trace 子表字段..."
 create_text_field "$APP_TOKEN" "$TRACE_TABLE_ID" "trace_id"
@@ -142,6 +143,9 @@ cat > "$CONFIG_PATH" <<EOF
   "flowmind": {
     "base_url": "http://111.229.194.203:3301",
     "api_key": "flowmind-dev-token"
+  },
+  "webui": {
+    "timeline_base_url": "http://47.99.217.1/timeline"
   },
   "feishu": {
     "chat_id": "oc_bbde428675a7c267d55c3f0663ca701d"
