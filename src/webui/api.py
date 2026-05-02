@@ -339,6 +339,10 @@ def _normalize_bridge_trace(candidate_id, upstream):
             'upstream': _get_flowmind_base_url(),
         }
 
+    payload = upstream.get('data')
+    if isinstance(payload, dict):
+        upstream = payload
+
     raw_events = []
     if isinstance(upstream.get('events'), list):
         raw_events = upstream.get('events', [])

@@ -325,6 +325,37 @@ class TestPromiseTimeline:
         assert data['latestStatus'] == 'approved'
         assert data['events'][0]['module'] == 'review'
 
+    def test_promise_review_trace_api_unwraps_success_data_payload(self, client, monkeypatch):
+        monkeypatch.setattr(
+            webui_api,
+            '_safe_flowmind_request',
+            lambda *args, **kwargs: {
+                'success': True,
+                'data': {
+                    'candidateId': 'cand-2',
+                    'traceCount': 1,
+                    'events': [
+                        {
+                            'traceId': 'trace-2',
+                            'candidateId': 'cand-2',
+                            'action': 'create',
+                            'actor': 'system',
+                            'module': 'candidate-ingress',
+                            'timestamp': '2026-05-02T10:00:00Z',
+                            'summary': 'candidate created',
+                        }
+                    ],
+                },
+            },
+        )
+        resp = client.get('/api/promise-review/trace/cand-2')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['candidateId'] == 'cand-2'
+        assert data['traceCount'] == 1
+        assert data['events'][0]['traceId'] == 'trace-2'
+        assert data['events'][0]['module'] == 'candidate-ingress'
+
     def test_promise_review_trace_api_handles_upstream_failure(self, client, monkeypatch):
         monkeypatch.setattr(webui_api, '_safe_flowmind_request', lambda *args, **kwargs: None)
         resp = client.get('/api/promise-review/trace/missing-candidate')
