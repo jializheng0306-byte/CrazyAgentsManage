@@ -16,6 +16,7 @@ Read these files in order before substantial work:
 2. `docs/02-engineering/harness/CODEX-HERMES-WORKFLOW.md`
 3. `docs/02-engineering/harness/CODEX-HERMES-COLLABORATION-MECHANISM.md`
 4. `docs/codex-hermes-role-design.md`
+5. `docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md` for `candidate / promise / truth / trace / review / feedback` work
 
 If the task explicitly involves `HermesAgent`, Feishu group collaboration, handoff packets, or runtime state sync, also read:
 
@@ -32,6 +33,17 @@ If the task explicitly involves `HermesAgent`, Feishu group collaboration, hando
   - repository-tracked docs or harness artifacts
   - generated Hermes handoff packets
   - explicit runtime state snapshots
+
+## Semantic-First Trigger
+
+When the task involves `candidate`, `promise`, `truth`, `trace`, `review`, or `feedback`, do not start from page code, scripts, runtime snapshots, or chat history.
+
+Read in this order:
+
+1. semantic/contract layer
+2. cross-repo product and collaboration layer
+3. Hermes host-platform operations layer
+4. raw implementation only after the first three layers
 
 ## Collaboration Boundary
 

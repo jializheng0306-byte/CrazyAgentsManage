@@ -13,6 +13,12 @@ When Codex asks HermesAgent to collaborate, the expected inputs are:
 2. one or more repository artifacts to review
 3. an explicit question list
 
+If the task involves `candidate / promise / truth / trace / review / feedback`,
+HermesAgent should also be given the semantic-first reading context:
+
+4. `docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md`
+5. any referenced DSL / compatibility-matrix / host-platform operations artifacts from that rule
+
 HermesAgent should respond in operations language:
 
 - what is visible or invisible to operators
@@ -47,4 +53,4 @@ HermesAgent should:
 - challenge missing runtime observability
 - challenge weak operator workflows
 - push Codex to expose real operations controls
-
+- avoid answering these cross-system questions from chat memory alone when repository artifacts already define the semantics

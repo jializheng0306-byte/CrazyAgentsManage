@@ -62,6 +62,7 @@ Never invert that rule.
 8. `docs/codex-hermes-role-design.md`
 9. `docs/02-engineering/harness/PRD-DOCUMENT-GOVERNANCE.md`
 10. `docs/02-engineering/harness/HARNESS-CAPABILITY-MAPPING.md`
+11. `docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md`
 
 ## Required Artifacts For A Collaboration Round
 
@@ -72,6 +73,26 @@ Every non-trivial Codex ↔ HermesAgent round should leave behind:
 3. one durable repository artifact when the round changes shared project truth
 4. one harness success/failure record at closeout
 5. one PRD/roadmap update when the iteration changes implementation or operations truth
+
+## Semantic-First Reading Rule
+
+当任务涉及：
+
+- `candidate`
+- `promise`
+- `truth`
+- `trace`
+- `review`
+- `feedback`
+
+Harness 要求先执行 [SEMANTIC-FIRST-READING-RULE.md](./SEMANTIC-FIRST-READING-RULE.md)：
+
+1. 语义与契约层
+2. 双仓产品与协同层
+3. Hermes 宿主平台运行与运营层
+4. 最后才进入原始实现层
+
+这条规则的目的，是把双仓协同与 Hermes 宿主平台联动收敛为同一套前置读取顺序，而不是让不同 agent 各自从脚本、页面或群聊里推断事实。
 
 ## Harness Runtime Commands
 

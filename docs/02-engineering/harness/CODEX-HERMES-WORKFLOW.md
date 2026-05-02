@@ -15,6 +15,11 @@ For the finalized post-discussion collaboration contract, also read:
 
 - `docs/02-engineering/harness/CODEX-HERMES-COLLABORATION-MECHANISM.md`
 
+For tasks involving `candidate / promise / truth / trace / review / feedback`,
+apply the semantic-first reading order before asking HermesAgent to interpret runtime facts:
+
+- `docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md`
+
 ## Role Contract
 
 ### Codex
@@ -60,6 +65,14 @@ python3 scripts/runtime/generate_hermes_handoff.py \
 ```
 
 The generated packet is what Codex sends or paraphrases in group chat to `@HermesAgent`.
+
+If the task is in the semantic-first trigger set, the handoff packet should point HermesAgent to:
+
+1. semantic/contract artifacts
+2. cross-repo baseline artifacts
+3. host-platform operations artifacts
+
+before asking for runtime or operations judgment.
 
 ### 3. HermesAgent review
 
