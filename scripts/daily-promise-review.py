@@ -183,15 +183,15 @@ def sync_to_bitable(promises):
 
     # 先获取现有记录（按 promise_id 去重）
     existing_records = {}
-    cmd = f'lark-cli base +record-list --base-token {BITABLE_APP_TOKEN} --table-id {BITABLE_TABLE_ID} --limit 500'
+    cmd = f'lark-cli api GET "/open-apis/bitable/v1/apps/{BITABLE_APP_TOKEN}/tables/{BITABLE_TABLE_ID}/records" --params \'{{"page_size":500}}\' '
     output, code = run_cmd(cmd, timeout=30)
     if code == 0:
         try:
             data = json.loads(output)
             for item in data.get("data", {}).get("items", []):
-                pid = item.get("fields", {}).get("promise_id", "")
-                if pid:
-                    existing_records[pid] = item.get("record_id")
+                pid_field = item.get("fields", {}).get("promise_id")
+                if pid_field:
+                    existing_records[pid_field[0]["text"] if isinstance(pid_field, list) else pid_field] = item.get("record_id")
         except Exception:
             pass
 
