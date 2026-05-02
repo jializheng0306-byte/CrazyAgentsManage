@@ -145,7 +145,7 @@ cat > "$CONFIG_PATH" <<EOF
     "api_key": "flowmind-dev-token"
   },
   "webui": {
-    "timeline_base_url": "http://47.99.217.1/timeline"
+    "timeline_base_url": "http://47.99.217.1/manage/timeline"
   },
   "feishu": {
     "chat_id": "oc_bbde428675a7c267d55c3f0663ca701d"

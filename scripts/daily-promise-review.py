@@ -98,7 +98,7 @@ def load_config():
         "timeline_base_url": (
             os.environ.get("PROMISE_TIMELINE_BASE_URL")
             or webui.get("timeline_base_url")
-            or "http://47.99.217.1/timeline"
+            or "http://47.99.217.1/manage/timeline"
         ).rstrip("/"),
     }
 
