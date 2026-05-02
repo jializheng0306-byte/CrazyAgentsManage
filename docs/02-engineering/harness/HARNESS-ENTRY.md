@@ -54,10 +54,14 @@ Never invert that rule.
 
 1. `docs/02-engineering/harness/CODEX-HERMES-WORKFLOW.md`
 2. `docs/02-engineering/harness/CODEX-HERMES-COLLABORATION-MECHANISM.md`
-3. `docs/02-engineering/harness/HERMESAGENT-ENTRY.md`
-4. `docs/02-engineering/harness/dual-im-omx-runtime-architecture-2026-04-25.md`
-5. `docs/codex-hermes-role-design.md`
-6. `docs/02-engineering/harness/PRD-DOCUMENT-GOVERNANCE.md`
+3. `docs/02-engineering/harness/HAGENT-WORKFLOW.md`
+4. `docs/02-engineering/harness/CROSS-REVIEW-PROCESS.md`
+5. `docs/02-engineering/harness/WORKTREE-BOOTSTRAP.md`
+6. `docs/02-engineering/harness/HERMESAGENT-ENTRY.md`
+7. `docs/02-engineering/harness/dual-im-omx-runtime-architecture-2026-04-25.md`
+8. `docs/codex-hermes-role-design.md`
+9. `docs/02-engineering/harness/PRD-DOCUMENT-GOVERNANCE.md`
+10. `docs/02-engineering/harness/HARNESS-CAPABILITY-MAPPING.md`
 
 ## Required Artifacts For A Collaboration Round
 
@@ -68,3 +72,16 @@ Every non-trivial Codex ↔ HermesAgent round should leave behind:
 3. one durable repository artifact when the round changes shared project truth
 4. one harness success/failure record at closeout
 5. one PRD/roadmap update when the iteration changes implementation or operations truth
+
+## Harness Runtime Commands
+
+Canonical repository-owned closeout and learning commands:
+
+```bash
+node scripts/record-success.cjs
+node scripts/record-failure.cjs
+node scripts/harness-critic.cjs --json
+node scripts/harness-closeout-writeback.cjs --status success --message "Round completed" --critic-write-back --json
+```
+
+These commands complement the Python runtime scripts under `scripts/runtime/`; they do not replace the Hermes-specific handoff and runtime-state workflow.

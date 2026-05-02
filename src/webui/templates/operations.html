@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>运营面 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+</head>
+<body>
+  {% set active_nav = 'operations' %}
+  {% include 'ia-nav.html' %}
+
+  <main class="container mt-lg">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+      <h1 class="page-title">运营面</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
+        聚合技能、定时任务、团队记忆与异常处理，形成 HermesAgent 的运营工作台。
+      </p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+      <div class="card" style="padding: var(--spacing-lg);">
+        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">运营对象</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm);">
+          <a class="btn btn-primary btn-sm" href="{{ BASE }}/operations/skills">技能中心</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/operations/cron">定时任务</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/operations/team-memory">团队记忆</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/operations/alerts">告警中心</a>
+        </div>
+      </div>
+
+      <div class="card" style="padding: var(--spacing-lg);">
+        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">运营原则</h3>
+        <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.8; margin: 0; padding-left: 18px;">
+          <li>先识别异常，再进入处理动作，而不是把动作入口散落在各页。</li>
+          <li>运营面优先接 Hermes 既有能力，不在 WebUI 重造运行时。</li>
+          <li>运营结论需要可回流到协作与治理表面。</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

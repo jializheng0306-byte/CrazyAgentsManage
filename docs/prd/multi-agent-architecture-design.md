@@ -185,6 +185,36 @@ scheduler.py 核心逻辑:
 - 技能卡片：技能名称、描述、所属分类、标签（内置/自创）
 - 搜索与筛选功能
 
+#### 2.6.6 可观测性数据现状（深度代码扫描发现）
+
+基于对生产环境 state.db（32 个会话、1884 条消息、2190 万 Token）的深度扫描和源码分析，当前数据捕捉能力如下：
+
+**数据生产链路**：
+```
+用户输入 → Gateway (gateway/run.py)
+         → AIAgent (run_agent.py:run_conversation)
+            → LLM API 调用 (_interruptible_streaming_api_call)
+               → stream_delta_callback 流式回调
+                  → 提取 token_count / tool_calls / finish_reason
+            → 工具执行 (handle_function_call)
+               → 记录 tool_calls 和 tool_result
+            → 消息存储 (session_store.append_to_transcript)
+               → INSERT INTO messages (..., token_count, tool_calls, ...)
+            → 会话结束
+               → session_store.update_session (input_tokens, output_tokens)
+               → session_db.set_token_counts (会话级聚合)
+```
+
+**关键发现**：
+1. **Token 数据仅在会话级聚合**，messages.token_count 在生产环境中全部为 NULL
+2. **工具调用有记录但无耗时**，messages 表无 duration 字段
+3. **所有消息批量写入**，100 条消息时间戳差异 < 0.1 秒（无法构建真实时间轴）
+4. **错误信息不完整**，仅有 end_reason，无 error_message 或 traceback
+5. **无性能指标采集**，无 TTFT、TPS、API 延迟等指标
+6. **上下文压缩无量化记录**，知道发生了但无 compression_ratio 数据
+
+详见 `product-requirements.md` 第 2.1.11 节《运行时可观测性数据体系》
+
 ### 2.7 WebUI 与核心架构的关系
 
 ```
@@ -267,6 +297,29 @@ scheduler.py 核心逻辑:
 │  │  │  - 任务分解 / DAG 构建 / 依赖管理                      │  │ │
 │  │  │  - 3 状态协议 (pending/running/done)                   │  │ │
 │  │  │  - 共享上下文目录 (shared-context/)                    │  │ │
+│  │  └───────────────────────────────────────────────────────┘  │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│         ▼                                                         │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │            可观测性数据层 (Observability)                     │ │
+│  │                                                             │ │
+│  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐   │ │
+│  │  │ Metrics       │  │ Traces        │  │ Logs          │   │ │
+│  │  │ 采集器        │  │ 采集器        │  │ 采集器        │   │ │
+│  │  │               │  │               │  │               │   │ │
+│  │  │ • API延迟     │  │ • 工具调用链  │  │ • 错误堆栈    │   │ │
+│  │  │ • TTFT/TPS    │  │ • 父子会话    │  │ • 压缩记录    │   │ │
+│  │  │ • Token用量   │  │ • 模型切换    │  │ • 异常事件    │   │ │
+│  │  │ • 工具耗时    │  │ • 上下文压缩  │  │ • 状态变更    │   │ │
+│  │  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘   │ │
+│  │          └──────────────────┼──────────────────┘            │ │
+│  │                             ▼                                │ │
+│  │  ┌───────────────────────────────────────────────────────┐  │ │
+│  │  │           数据聚合与存储                               │  │ │
+│  │  │  • messages 表增强 (10 个新字段)                       │  │ │
+│  │  │  • sessions 表增强 (8 个新字段)                        │  │ │
+│  │  │  • 运行时 JSON 文件 (gateway_state.json 等)            │  │ │
 │  │  └───────────────────────────────────────────────────────┘  │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 └───────────────────────────────────────────────────────────────────┘
@@ -753,6 +806,28 @@ class TaskWatcher:
       result TEXT,
       error TEXT
   );
+
+增强: messages 表新增可观测性字段:
+  ALTER TABLE messages ADD COLUMN duration_ms REAL;          -- 消息处理耗时
+  ALTER TABLE messages ADD COLUMN ttft_ms REAL;              -- 首Token时间
+  ALTER TABLE messages ADD COLUMN tps REAL;                  -- 每秒Token数
+  ALTER TABLE messages ADD COLUMN tool_duration_ms REAL;     -- 工具执行耗时
+  ALTER TABLE messages ADD COLUMN tool_result_status TEXT;   -- 工具执行状态
+  ALTER TABLE messages ADD COLUMN error_message TEXT;        -- 错误信息
+  ALTER TABLE messages ADD COLUMN error_traceback TEXT;      -- 错误堆栈
+  ALTER TABLE messages ADD COLUMN reasoning_tokens INTEGER;  -- 推理Token数
+  ALTER TABLE messages ADD COLUMN compression_ratio REAL;    -- 压缩比例
+  ALTER TABLE messages ADD COLUMN model_used TEXT;           -- 实际使用模型
+
+增强: sessions 表新增可观测性字段:
+  ALTER TABLE sessions ADD COLUMN total_tool_duration_ms REAL;
+  ALTER TABLE sessions ADD COLUMN total_api_duration_ms REAL;
+  ALTER TABLE sessions ADD COLUMN avg_tps REAL;
+  ALTER TABLE sessions ADD COLUMN min_ttft_ms REAL;
+  ALTER TABLE sessions ADD COLUMN max_ttft_ms REAL;
+  ALTER TABLE sessions ADD COLUMN model_switch_count INTEGER;
+  ALTER TABLE sessions ADD COLUMN compression_count INTEGER;
+  ALTER TABLE sessions ADD COLUMN error_details TEXT;
 ```
 
 ### 4.4 与 Gateway 集成
@@ -801,6 +876,13 @@ class TaskWatcher:
   - 团队记忆管理: 团队/角色层次结构管理
   - 共享上下文浏览器: shared-context/ 目录浏览
   - 子代理实时监控: delegate_task 派生的子智能体状态
+  - 可观测性仪表板: Trace 树 + 性能指标 + 错误链路追踪
+
+增强: API 新增端点:
+  - GET /api/sessions/<id>/metrics — 会话性能指标（TTFT/TPS/延迟）
+  - GET /api/sessions/<id>/tools  — 工具调用详情（耗时/状态/Token）
+  - GET /api/sessions/<id>/errors — 错误详情列表
+  - GET /api/metrics/overview     — 全局性能概览
 ```
 
 ---
@@ -852,6 +934,18 @@ class TaskWatcher:
 | CLI 命令 | `hermes_cli/commands.py` | /tasks /teams /status 等 |
 | WebUI 改造 | `/opt/hermes-webui/` | 新增多智能体视图 |
 | API 扩展 | `webui/api/` | 团队/任务 API |
+
+### Phase 6: 可观测性增强 (1-2 周)
+
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| DB Migration | `hermes_state.py` | messages/sessions 表新增 18 个字段 |
+| Metrics 采集 | `gateway/run.py` | API延迟/TTFT/TPS 埋点 |
+| Traces 采集 | `run_agent.py` | 工具耗时/执行状态埋点 |
+| Logs 采集 | `run_agent.py` | 错误堆栈/异常事件记录 |
+| Token 修复 | `gateway/session.py` | messages.token_count 赋值修复 |
+| WebUI 增强 | `dashboard.js` | Trace 树耗时条/错误高亮 |
+| 新 API 端点 | `webui/api.py` | /metrics /tools /errors 端点 |
 
 ---
 

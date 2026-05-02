@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>运行态 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+</head>
+<body>
+  {% set active_nav = 'runtime' %}
+  {% include 'ia-nav.html' %}
+
+  <main class="container mt-lg">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+      <h1 class="page-title">运行态</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
+        汇总 HermesAgent 宿主下的会话、追踪、Token 与智能体运行健康。
+      </p>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--spacing-xl);">
+      <div class="stat-card"><div class="stat-value">会话</div><div class="stat-label">根会话、子会话、来源分布</div></div>
+      <div class="stat-card"><div class="stat-value">追踪</div><div class="stat-label">执行链路、时延、状态切换</div></div>
+      <div class="stat-card"><div class="stat-value">成本</div><div class="stat-label">Token、费用、预算视角</div></div>
+      <div class="stat-card"><div class="stat-value">Agent</div><div class="stat-label">运行状态、负载与异常</div></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-lg);">
+      <div class="card" style="padding: var(--spacing-lg);">
+        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">运行态主入口</h3>
+        <p style="color: #94a3b8; font-size: 13px; margin-bottom: var(--spacing-md);">沿用现有功能页作为新 IA 子表面。</p>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm);">
+          <a class="btn btn-primary btn-sm" href="{{ BASE }}/runtime/sessions">会话流水线</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/runtime/dashboard">监控追踪</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/runtime/tokens">Token 监控</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/runtime/agents">Agent 状态</a>
+        </div>
+      </div>
+
+      <div class="card" style="padding: var(--spacing-lg);">
+        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">实施动态</h3>
+        <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.8; margin: 0; padding-left: 18px;">
+          <li>FlowMind 与外部交互链路应先从运行态信号进入总览与监控面。</li>
+          <li>技术架构展示页承担“运行信号如何进入产品”的解释职责。</li>
+          <li>旧路由继续保留，避免破坏已有调试与分享路径。</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

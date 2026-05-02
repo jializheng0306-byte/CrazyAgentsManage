@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>协作面 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+</head>
+<body>
+  {% set active_nav = 'collaboration' %}
+  {% include 'ia-nav.html' %}
+
+  <main class="container mt-lg">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+      <h1 class="page-title">协作面</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
+        用于呈现 Codex 与 HermesAgent、FlowMind 与外部系统之间的协作链路与执行动态。
+      </p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-lg);">
+      <div class="card" style="padding: var(--spacing-lg);">
+        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">当前协作入口</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+          <a class="btn btn-primary btn-sm" href="{{ BASE }}/collaboration/tasks">任务编排</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/runtime/sessions">会话链路</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/governance/graph">关系图谱</a>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px;">现阶段协作面以任务、会话和关系视角组合呈现，后续再引入 handoff、acceptance、follow-up 等专门表面。</p>
+      </div>
+
+      <div class="card" style="padding: var(--spacing-lg);">
+        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">外部交互可视化</h3>
+        <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.8; margin: 0; padding-left: 18px;">
+          <li>展示 FlowMind 与外部系统的数据进入、处理、回流路径。</li>
+          <li>承接 Codex 开发实现与 HermesAgent 运营验收之间的交接证据。</li>
+          <li>与技术架构展示页共同说明系统实施动态。</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

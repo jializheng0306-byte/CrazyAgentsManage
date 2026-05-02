@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>总览 - CrazyAgentsManage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+</head>
+<body data-base="{{ BASE }}">
+  {% set active_nav = 'overview' %}
+  {% include 'ia-nav.html' %}
+
+  <!-- Main Content -->
+  <main id="overview-app">
+
+    <!-- Hero Section: Agent System Overview -->
+    <section class="ov-hero">
+      <div class="ov-hero-header">
+        <h1 class="ov-hero-title">
+          <span class="ov-hero-icon">&#129302;</span>
+          HermesAgent × FlowMind 总览
+        </h1>
+        <p class="ov-hero-subtitle">总入口聚合运行态、运营面、治理面与协作面，先判断异常，再决定下一步动作。</p>
+      </div>
+
+      <!-- Global Metrics Strip -->
+      <div class="ov-metrics-strip">
+        <div class="ov-metric-card" id="metric-sessions">
+          <div class="ov-metric-value" id="metric-total-sessions">--</div>
+          <div class="ov-metric-label">总会话数</div>
+          <div class="ov-metric-trend" id="trend-sessions">--</div>
+        </div>
+        <div class="ov-metric-card" id="metric-active">
+          <div class="ov-metric-value" id="metric-active-count">--</div>
+          <div class="ov-metric-label">活跃会话</div>
+          <div class="ov-metric-indicator" id="indicator-active"></div>
+        </div>
+        <div class="ov-metric-card" id="metric-tokens">
+          <div class="ov-metric-value" id="metric-total-tokens">--</div>
+          <div class="ov-metric-label">总Token消耗</div>
+          <div class="ov-metric-trend" id="trend-tokens">--</div>
+        </div>
+        <div class="ov-metric-card" id="metric-tools">
+          <div class="ov-metric-value" id="metric-tool-calls">--</div>
+          <div class="ov-metric-label">工具调用总数</div>
+          <div class="ov-metric-trend" id="trend-tools">--</div>
+        </div>
+        <div class="ov-metric-card" id="metric-errors">
+          <div class="ov-metric-value" id="metric-error-count">--</div>
+          <div class="ov-metric-label">错误会话数</div>
+          <div class="ov-metric-trend" id="trend-errors">--</div>
+        </div>
+        <div class="ov-metric-card" id="metric-tps">
+          <div class="ov-metric-value" id="metric-avg-tps">--</div>
+          <div class="ov-metric-label">平均 TPS</div>
+          <div class="ov-metric-trend" id="trend-tps">--</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ov-lane-section">
+      <h2 class="ov-section-title">
+        <span class="ov-section-icon">&#129517;</span>
+        工作分区
+      </h2>
+      <div class="ov-lane-grid">
+        <a class="ov-lane-card" href="{{ BASE }}/runtime">
+          <div class="ov-lane-head">
+            <span class="ov-lane-pill runtime">Runtime</span>
+            <span class="ov-lane-link">进入运行态 →</span>
+          </div>
+          <h3 class="ov-lane-title">运行态健康与证据</h3>
+          <p class="ov-lane-copy">会话、追踪、Token、错误与当前活跃流量。适合先判断系统是不是在正常跑。</p>
+        </a>
+        <a class="ov-lane-card" href="{{ BASE }}/operations">
+          <div class="ov-lane-head">
+            <span class="ov-lane-pill operations">Operations</span>
+            <span class="ov-lane-link">进入运营面 →</span>
+          </div>
+          <h3 class="ov-lane-title">技能、定时任务与团队记忆</h3>
+          <p class="ov-lane-copy">查看可运营对象、例行任务和告警入口，确认 Hermes 宿主侧的动作面是否完整。</p>
+        </a>
+        <a class="ov-lane-card" href="{{ BASE }}/governance">
+          <div class="ov-lane-head">
+            <span class="ov-lane-pill governance">Governance</span>
+            <span class="ov-lane-link">进入治理面 →</span>
+          </div>
+          <h3 class="ov-lane-title">Candidate、Truth 与 Review</h3>
+          <p class="ov-lane-copy">面向 FlowMind 的治理链路摘要。当前仍以过渡页承载，但已经是正式一级入口。</p>
+        </a>
+        <a class="ov-lane-card" href="{{ BASE }}/collaboration">
+          <div class="ov-lane-head">
+            <span class="ov-lane-pill collaboration">Collaboration</span>
+            <span class="ov-lane-link">进入协作面 →</span>
+          </div>
+          <h3 class="ov-lane-title">Handoff、Closeout 与回写</h3>
+          <p class="ov-lane-copy">查看 Codex/Hermes 的协作闭环状态，确认哪些结果已经成为可追踪的仓库事实。</p>
+        </a>
+      </div>
+    </section>
+
+    <!-- Architecture Overview: ReAct Loop Visualization -->
+    <section class="ov-architecture">
+      <h2 class="ov-section-title">
+        <span class="ov-section-icon">&#9881;</span>
+        ReAct Loop 架构
+      </h2>
+      <div class="ov-arch-container">
+        <!-- ReAct Loop Circle -->
+        <div class="ov-react-loop">
+          <div class="ov-react-center">
+            <div class="ov-react-core">ReAct<br>Loop</div>
+          </div>
+          <div class="ov-react-phases">
+            <div class="ov-react-phase" data-phase="pre-checks">
+              <div class="ov-phase-number">1</div>
+              <div class="ov-phase-label">Pre-Checks</div>
+              <div class="ov-phase-detail">消息过滤 &middot; 令牌检查</div>
+            </div>
+            <div class="ov-react-phase" data-phase="auto-compaction">
+              <div class="ov-phase-number">2</div>
+              <div class="ov-phase-label">Auto-Compaction</div>
+              <div class="ov-phase-detail">上下文压缩 &middot; 优化</div>
+            </div>
+            <div class="ov-react-phase" data-phase="thinking">
+              <div class="ov-phase-number">3</div>
+              <div class="ov-phase-label">Thinking</div>
+              <div class="ov-phase-detail">推理调用 &middot; 链式思考</div>
+            </div>
+            <div class="ov-react-phase" data-phase="self-critique">
+              <div class="ov-phase-number">4</div>
+              <div class="ov-phase-label">Self-Critique</div>
+              <div class="ov-phase-detail">自我审查 &middot; LLM 评估</div>
+            </div>
+            <div class="ov-react-phase" data-phase="action">
+              <div class="ov-phase-number">5</div>
+              <div class="ov-phase-label">Action</div>
+              <div class="ov-phase-detail">主 LLM &middot; 工具调度</div>
+            </div>
+            <div class="ov-react-phase" data-phase="tool-execution">
+              <div class="ov-phase-number">6</div>
+              <div class="ov-phase-label">Tool Execution</div>
+              <div class="ov-phase-detail">顺序 / 并行 / 静默</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Surrounding Architecture Blocks -->
+        <div class="ov-arch-blocks">
+          <div class="ov-arch-block" id="block-input">
+            <h3 class="ov-block-title">&#128172; Input Layer</h3>
+            <div class="ov-block-body">
+              <div class="ov-block-item">用户消息</div>
+              <div class="ov-block-item">消息注入队列 (max=10)</div>
+            </div>
+          </div>
+          <div class="ov-arch-block" id="block-subagent">
+            <h3 class="ov-block-title">&#129302; Subagent Orchestration</h3>
+            <div class="ov-block-body">
+              <div class="ov-block-item" id="block-subagent-main">Main Agent</div>
+              <div class="ov-block-sub-items" id="subagent-list">
+                <!-- Dynamically populated -->
+              </div>
+              <div class="ov-block-detail">ThreadPoolExecutor(5)</div>
+            </div>
+          </div>
+          <div class="ov-arch-block" id="block-prompt">
+            <h3 class="ov-block-title">&#128221; Prompt Composition</h3>
+            <div class="ov-block-body">
+              <div class="ov-block-item">21 Modular Sections</div>
+              <div class="ov-block-item">Stable + Dynamic</div>
+              <div class="ov-block-item">System / Thinking / Planning</div>
+            </div>
+          </div>
+          <div class="ov-arch-block" id="block-tool">
+            <h3 class="ov-block-title">&#128736; Tool Registry &amp; Dispatch</h3>
+            <div class="ov-block-body" id="tool-registry">
+              <!-- Dynamically populated -->
+            </div>
+            <div class="ov-block-detail">PreToolUse &#8594; Context &#8594; Dispatch &#8594; PostToolUse</div>
+          </div>
+          <div class="ov-arch-block" id="block-safety">
+            <h3 class="ov-block-title">&#128737; Safety System</h3>
+            <div class="ov-block-body">
+              <div class="ov-block-item ov-safety-ok">&#9989; 批准系统</div>
+              <div class="ov-block-item ov-safety-ok">&#9989; 危险命令检测</div>
+              <div class="ov-block-item ov-safety-ok">&#9989; Hook 系统</div>
+              <div class="ov-block-item ov-safety-ok">&#9989; 稳定读取检测</div>
+              <div class="ov-block-item ov-safety-ok">&#9989; 计划模式 (只读)</div>
+              <div class="ov-block-item ov-safety-ok">&#9989; 无限循环检测</div>
+              <div class="ov-block-item ov-safety-ok">&#9989; 迭代上限 (200)</div>
+              <div class="ov-block-item ov-safety-ok">&#9989; 协作取消</div>
+            </div>
+          </div>
+          <div class="ov-arch-block" id="block-memory">
+            <h3 class="ov-block-title">&#129505; Memory &amp; Session</h3>
+            <div class="ov-block-body">
+              <div class="ov-block-item">ACE Playbook</div>
+              <div class="ov-block-item">Session Storage (metadata+json)</div>
+              <div class="ov-block-item">Snapshot Manager</div>
+            </div>
+          </div>
+          <div class="ov-arch-block" id="block-context">
+            <h3 class="ov-block-title">&#128202; Context Engineering</h3>
+            <div class="ov-block-body">
+              <div class="ov-context-stages">
+                <div class="ov-ctx-stage ov-ctx-warn">Stage 1<br>Warning<br><span>70%</span></div>
+                <div class="ov-ctx-stage ov-ctx-mask">Stage 2<br>Masking<br><span>80%</span></div>
+                <div class="ov-ctx-stage ov-ctx-framing">Stage 3<br>Framing<br><span>85%</span></div>
+                <div class="ov-ctx-stage ov-ctx-compact">Stage 4<br>Compaction<br><span>90%</span></div>
+                <div class="ov-ctx-stage ov-ctx-aggressive">Stage 5<br>Aggressive<br><span>95%</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="ov-arch-block" id="block-output">
+            <h3 class="ov-block-title">&#128230; Post-Processing &amp; Output</h3>
+            <div class="ov-block-body">
+              <div class="ov-block-item">保存会话</div>
+              <div class="ov-block-item">触发 Stop Hook</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ov-summary-section">
+      <h2 class="ov-section-title">
+        <span class="ov-section-icon">&#128269;</span>
+        下一步分流
+      </h2>
+      <div class="ov-summary-grid">
+        <div class="ov-summary-card">
+          <div class="ov-summary-label">治理摘要</div>
+          <h3 class="ov-summary-title">FlowMind 治理入口已独立，但聚合指标仍在补齐</h3>
+          <p class="ov-summary-copy">当前版本先通过治理面过渡页承接 candidate / truth / review / feedback 的产品分区，不再把治理状态混在运行态总览里。</p>
+          <a class="ov-summary-action" href="{{ BASE }}/governance">查看治理面</a>
+        </div>
+        <div class="ov-summary-card">
+          <div class="ov-summary-label">协作摘要</div>
+          <h3 class="ov-summary-title">协作闭环与 closeout 已独立成面</h3>
+          <p class="ov-summary-copy">如果当前问题不是运行故障，而是交付、回写或 handoff 漏项，应该直接进入协作面排查，而不是停留在会话视图。</p>
+          <a class="ov-summary-action" href="{{ BASE }}/collaboration">查看协作面</a>
+        </div>
+        <div class="ov-summary-card">
+          <div class="ov-summary-label">架构入口</div>
+          <h3 class="ov-summary-title">产品与技术架构页保留为解释面</h3>
+          <p class="ov-summary-copy">当需要理解五分区如何映射到真实数据对象和工作流时，从这里跳到产品哲学、产品架构和技术架构页面。</p>
+          <a class="ov-summary-action" href="{{ BASE }}/architecture/product">查看架构页</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Sessions Overview -->
+    <section class="ov-active-sessions">
+      <h2 class="ov-section-title">
+        <span class="ov-section-icon">&#128994;</span>
+        运行态摘要
+        <span class="ov-section-badge" id="active-count-badge">0</span>
+      </h2>
+      <div class="ov-sessions-grid" id="active-sessions-grid">
+        <!-- Dynamically populated -->
+      </div>
+    </section>
+
+    <!-- Tool Usage Distribution -->
+    <section class="ov-tool-usage">
+      <h2 class="ov-section-title">
+        <span class="ov-section-icon">&#128736;</span>
+        工具使用分布
+      </h2>
+      <div class="ov-tools-container">
+        <div class="ov-tools-chart" id="tools-bar-chart">
+          <!-- Dynamically populated bar chart -->
+        </div>
+        <div class="ov-tools-legend" id="tools-legend">
+          <!-- Dynamically populated legend -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Performance Trends -->
+    <section class="ov-performance">
+      <h2 class="ov-section-title">
+        <span class="ov-section-icon">&#128200;</span>
+        性能趋势
+      </h2>
+      <div class="ov-perf-grid">
+        <div class="ov-perf-card">
+          <h3 class="ov-perf-card-title">API 响应延迟 (TTFT)</h3>
+          <div class="ov-perf-value" id="perf-ttft">--</div>
+          <div class="ov-perf-bar">
+            <div class="ov-perf-bar-fill" id="perf-ttft-bar" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="ov-perf-card">
+          <h3 class="ov-perf-card-title">吞吐量 (TPS)</h3>
+          <div class="ov-perf-value" id="perf-tps">--</div>
+          <div class="ov-perf-bar">
+            <div class="ov-perf-bar-fill" id="perf-tps-bar" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="ov-perf-card">
+          <h3 class="ov-perf-card-title">平均会话耗时</h3>
+          <div class="ov-perf-value" id="perf-duration">--</div>
+          <div class="ov-perf-bar">
+            <div class="ov-perf-bar-fill" id="perf-duration-bar" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="ov-perf-card">
+          <h3 class="ov-perf-card-title">错误率</h3>
+          <div class="ov-perf-value" id="perf-error-rate">--</div>
+          <div class="ov-perf-bar">
+            <div class="ov-perf-bar-fill" id="perf-error-rate-bar" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recent Errors & Alerts -->
+    <section class="ov-errors">
+      <h2 class="ov-section-title">
+        <span class="ov-section-icon">&#9888;</span>
+        最近错误
+      </h2>
+      <div class="ov-errors-list" id="recent-errors-list">
+        <!-- Dynamically populated -->
+      </div>
+    </section>
+
+    <!-- Source Distribution -->
+    <section class="ov-sources">
+      <h2 class="ov-section-title">
+        <span class="ov-section-icon">&#128232;</span>
+        来源分布
+      </h2>
+      <div class="ov-sources-container" id="sources-container">
+        <!-- Dynamically populated -->
+      </div>
+    </section>
+
+  </main>
+
+  <script src="{{ BASE }}/static/js/overview.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>治理面 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+</head>
+<body>
+  {% set active_nav = 'governance' %}
+  {% include 'ia-nav.html' %}
+
+  <main class="container mt-lg">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+      <h1 class="page-title">治理面</h1>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
+        面向规则、结构与判断口径，承接 FlowMind 的产品哲学、产品架构与治理图谱。
+      </p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-lg);">
+      <div class="card" style="padding: var(--spacing-lg);">
+        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">治理入口</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+          <a class="btn btn-primary btn-sm" href="{{ BASE }}/governance/graph">治理图谱</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/overview">总览</a>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px;">当前先由图谱和总览承接治理视图，后续再引入更细的 truth / review / feedback 表面。</p>
+      </div>
+
+      <div class="card" style="padding: var(--spacing-lg);">
+        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">架构展示入口</h3>
+        <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/architecture/philosophy">产品哲学展示页</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/architecture/product">产品架构展示页</a>
+          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/architecture/tech">技术架构展示页</a>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
