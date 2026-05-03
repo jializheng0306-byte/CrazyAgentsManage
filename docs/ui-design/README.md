@@ -82,19 +82,29 @@
 
 ## Current Live Fact
 
+> 2026-05-03 复验通过。详见 [live-reverify-external-ui-handoff-2026-05-03.md](../02-engineering/harness/live-reverify-external-ui-handoff-2026-05-03.md)。
+
 当前外部团队在开始前需要知道：
 
-- 仓库基线与 Crazy live WebUI 部署副本并非完全一致
-- 最新已知 live 漂移集中在：
-  - `src/webui/templates/timeline.html`
-  - `src/webui/static/js/timeline.js`
-  - `src/webui/static/css/timeline.css`
-  - `tests/test_sprint4.py`
+- ✅ **一级 IA 已复验通过** — 6 页（overview/runtime/operations/governance/collaboration + timeline）全部可访问（HTTP 200）
+- ✅ **timeline 消费链路已复验通过** — 稳定消费 FlowMind `/bridge/trace/:candidateId`，使用新契约 `traceEvents[]`，module 已归一化，`semanticContext` 已注入
+- ✅ **handoff 消费链路已复验通过** — 稳定消费 `moduleDetails.handoff`（14 字段全填充），不再需要手工拼装 handoff 文本
 
-因此，UI 团队的真相源应优先是：
+### 历史漂移记录（已关闭，不再视为当前阻塞项）
 
-1. 当前仓库受追踪文档
-2. 当前仓库代码
-3. 最新 live drift / closeout 说明
+以下漂移在 `feat/auto-capture-trace` 分支中已被修复并复验通过：
 
-而不是直接把线上页面截图当成唯一基线
+- `src/webui/templates/timeline.html` — 已同步到 `/opt/crazyagentsmanage` live 副本
+- `src/webui/static/js/timeline.js` — 同上
+- `src/webui/static/css/timeline.css` — 同上
+- `tests/test_sprint4.py` — 同上
+
+### 外部团队真相源规则
+
+UI 团队的真相源按优先级为：
+
+1. **仓库受追踪文档**（`docs/prd/`、`docs/ui-design/`）
+2. **最新事实层复验记录**（`docs/02-engineering/harness/live-reverify-external-ui-handoff-2026-05-03.md`）
+3. **当前仓库代码**（`src/webui/`）
+
+不要只依据旧截图或旧 drift 说明判断 live 状态——以事实层复验记录为当前真相基准。
