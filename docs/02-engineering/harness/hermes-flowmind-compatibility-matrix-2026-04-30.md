@@ -15,7 +15,7 @@
 | Candidate ingress | `scripts/flowmind_capture.py` | `POST /api/integrations/candidate-ingress` | `partially_compatible` | 接口可达（2026-05-03 冒烟 201 created），但 capture 脚本的 baseURL/body 对齐未在真实 Bitable→FlowMind 链路上闭合验证 |
 | Truth / Review read | `scripts/runtime/generate_hermes_handoff.py` + HUD/webui | `review-queue` + `bridge/truth` | `compatible` ✅ | **已真实跑通**：2026-05-03 通过 `bridge/truth` 成功读取 `semanticContext` + `latestEvidence`，直接注入 Hermes handoff packet |
 | Hermes handoff packet | `scripts/runtime/generate_hermes_handoff.py` | `bridge/truth` | `compatible` ✅ | **真实 round 已验证**：packet 包含 semantic refs、field mappings、consumer hints、latestEvidence，HermesAgent 无需人工补充即可完成运营 review |
-| Handshake smoke | (待固化到仓库) | (全覆盖) | `pending_evidence` | 各端点接口可达已验证，但缺少仓库内固化记录（见 §2 条件项 #5） |
+| Handshake smoke | `docs/02-engineering/harness/handshake-smoke-status-2026-05-03.md` | (全覆盖) | `partial_pass_with_evidence` | 仓库证据已补；当前 5/8 通过、3/8 仅接口可达，尚未形成全链路 `handshake-passed` |
 | Feedback | **未消费** | `bridge/feedback/:instanceId` | `endpoint_only` | FlowMind 端点存在（HTTP 401 → endpoint 可达，需 x-instance-token），Crazy 侧无消费入口 |
 | Context Pack | **未消费** | `bridge/context-pack` | `endpoint_only` | FlowMind 端点存在（HTTP 401 → endpoint 可达，需 x-instance-token），Crazy 侧无消费入口 |
 | Health / Ops | Hermes 巡检任务 | `healthz` | `compatible` ✅ | 当前最成熟的一条联动链 |
@@ -39,13 +39,9 @@
 4. **HUD 当前仍是"设计 + webui + 外部 collector 参考实现"的组合，不是单一产品模块**  
    - 兼容矩阵条件项原 #4，状态无变化
 
-5. **handshake smoke 记录未固化到仓库**  
-   - 各端点接口可达已在本轮验证，但未输出仓库内 `handshake-smoke-status-*.md`
-   - 本轮补收口会输出该记录
-
-6. **feedback/context-pack 消费证据仍不足**  
+5. **feedback/context-pack 消费证据仍不足**  
    - 两个端点均存在且可达（HTTP 401 证明端点存活），但 Crazy 侧无消费脚本/流程
-   - 本轮补收口会输出 `feedback-context-consumption-status-*.md`
+   - 仓库证据已补到 `feedback-context-consumption-status-2026-05-03.md`，但结论仍是“仅接口存在，未消费”
 
 ---
 

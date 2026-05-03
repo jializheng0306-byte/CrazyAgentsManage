@@ -18,6 +18,7 @@ Thumbs.db
 *.swo
 *~
 check_*.py
+!scripts/check_harness_governance_consistency.py
 collect_*.py
 write_templates.py
 verify_all.py

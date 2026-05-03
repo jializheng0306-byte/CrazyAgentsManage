@@ -24,7 +24,7 @@
 | 问题 | 回答 |
 |---|---|
 | Crazy 是否真的在某条主链里读取了 `bridge/feedback/:instanceId`？ | **否** |
-| 入口脚本是什么？ | **无**。CrazyAgentsManage 仓库中无任何文件引用 `bridge/feedback` |
+| 入口脚本是什么？ | **无主线消费入口**。仓库存在 `scripts/flowmind_handshake_smoke.py` 的探测性调用，但没有持续消费 `bridge/feedback/:instanceId` 的运营/开发流程 |
 | 消费到哪个状态面？ | **无消费** |
 | 当前缺什么？ | 缺少：① 正确的 x-instance-token；② 消费入口脚本/流程；③ 反馈数据到运营决策面的映射 |
 | 属于设计缺口、实现缺口还是运行缺口？ | **实现缺口**。FlowMind manifest 已定义该契约（§1.1 contracts.feedback），Crazy 侧尚未实现消费端 |
@@ -52,7 +52,7 @@
 | 问题 | 回答 |
 |---|---|
 | Crazy 是否真的在某条主链里读取了 `bridge/context-pack`？ | **否** |
-| 入口脚本 / 页面 / 流程是什么？ | **无**。CrazyAgentsManage 仓库中无任何文件引用 `bridge/context-pack` |
+| 入口脚本 / 页面 / 流程是什么？ | **无主线消费入口**。仓库存在 `scripts/flowmind_handshake_smoke.py` 的探测性调用，但没有持续消费 `bridge/context-pack` 的页面、脚本或运营流程 |
 | 消费到哪个面？ | **无消费** |
 | 当前缺什么？ | 缺少：① 正确的 x-instance-token；② 消费入口；③ context-pack 语义定义与 Crazy 运营面的映射 |
 | 属于设计缺口、实现缺口还是运行缺口？ | **设计+实现缺口**。契约已定义（manifest contracts.contextPack），但 Crazy 侧未定义"需要什么样的 context"，也未实现消费端 |

@@ -71,8 +71,8 @@
 |---|---|
 | 端点 | `POST /api/integrations/candidates/:id/confirm` |
 | HTTP 状态 | **500 Internal Server Error** ❌ |
-| 原因 | 需要正确的 x-instance-token 或 session context，裸调不通过 |
-| 结论 | **接口可达但未在真实 review 轮次中触发** |
+| 原因 | 裸调失败并返回 500；疑似缺少正确的 x-instance-token 或 session context，待进一步定位 |
+| 结论 | **接口可达但本轮冒烟复现失败** |
 
 > C-1 candidate `219a5914` 的 `decisionMetadata.confirmedBy: "codex-cli"` 证明决策链路曾工作，但冒烟复现失败。
 
