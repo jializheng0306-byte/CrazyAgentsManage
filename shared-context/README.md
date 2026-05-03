@@ -2,6 +2,38 @@
 
 > 基于《OpenClaw 实战》文章的 shared-context/ 标准化设计
 
+## One-Page Summary
+
+### 这个目录解决什么问题
+
+- 作为跨 Agent 的文件化共享状态层
+- 为情报、决策、状态、task watcher、job-status 提供可追溯交换面
+- 给 Hermes 宿主运行态和 Crazy 运营面提供中间状态缓冲
+
+### 谁应该读
+
+- 需要读写 shared-context 的开发者
+- 需要理解 task watcher、tech radar、intel、三态协议的人
+- 需要区分 shared-context 与仓库事实层的人
+
+### 先读哪三份
+
+1. [hermes-agent-operations-design.md](/home/flowmind/CrazyAgentsManage/docs/06-agent-ops/hermes-agent-operations-design.md)
+2. [three-state-protocol.md](/home/flowmind/CrazyAgentsManage/docs/06-agent-ops/three-state-protocol.md)
+3. [daily-workflow.md](/home/flowmind/CrazyAgentsManage/docs/06-agent-ops/daily-workflow.md)
+
+### 典型工作流
+
+1. Hermes / cron / watcher 写入 shared-context
+2. Crazy 读取并转成运营动作、Bitable、handoff 或治理输入
+3. 真正的 durable truth 仍需回写到 `docs/` 或 `harness/`
+
+### 常见误区
+
+- 把 shared-context 当长期规范事实层
+- 只写状态，不补对应的治理或 closeout 文档
+- 混淆 runtime signal、operator state、canonical truth
+
 ## 目录结构
 
 ```

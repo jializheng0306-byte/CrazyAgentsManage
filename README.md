@@ -2,6 +2,38 @@
 
 > 以 HermesAgent 为宿主的 FlowMind 运营编排系统
 
+## One-Page Summary
+
+### 这个仓库解决什么问题
+
+- 作为 HermesAgent 的运营编排、观测、协作与 operator product 层
+- 承接上游宿主运行态，并与下游 FlowMind canonical truth 层联动
+- 把 Bitable、shared-context、handoff、closeout、治理回写收敛到一个可运营产品面
+
+### 谁应该先读
+
+- 需要理解 Crazy 当前产品定位的人
+- 需要做 PRD、roadmap、运营验收、双仓联动的人
+- 需要判断 Hermes / Crazy / FlowMind 三层职责边界的人
+
+### 先读哪三份
+
+1. [PRD 体系说明](docs/prd/README.md)
+2. [联合产品镜像基线](docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md)
+3. [执行路线图](docs/roadmap/prd-execution-roadmap.md)
+
+### 典型工作流
+
+1. 先用 PRD / roadmap 明确当前活跃主线
+2. 再用 harness / semantic-first 规则判断应读哪个事实层
+3. 开发或运营收口后，用治理检查和 closeout 写回仓库事实
+
+### 常见误区
+
+- 把 Crazy 当成独立多 Agent playground，而不是 Hermes-hosted FlowMind operator product
+- 只看聊天和运行时目录，不回到仓库受追踪文档
+- 让双仓 canonical 文档变化后，只改一边不改另一边
+
 ## 项目概述
 
 CrazyAgentsManage 当前的规范性定位是：

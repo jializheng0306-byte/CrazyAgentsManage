@@ -1,5 +1,42 @@
 # PRD 体系说明
 
+## One-Page Summary
+
+### 这个目录解决什么问题
+
+- 固定 Crazy 的拆分式 PRD 体系
+- 把技术实现、运营实现、联合产品镜像和执行路线图区分清楚
+- 给双仓联动提供 Crazy 侧的受追踪镜像入口
+
+### 谁应该读
+
+- 需要更新 PRD、roadmap、镜像基线的人
+- 需要做产品边界判断和运营验收的人
+- 需要确认 Crazy 当前规范性文档顺序的人
+
+### 先读哪三份
+
+1. [hermesagent-hosted-flowmind-product-foundation.md](/home/flowmind/CrazyAgentsManage/docs/prd/hermesagent-hosted-flowmind-product-foundation.md)
+2. [technical-implementation-prd.md](/home/flowmind/CrazyAgentsManage/docs/prd/technical-implementation-prd.md)
+3. [operations-implementation-prd.md](/home/flowmind/CrazyAgentsManage/docs/prd/operations-implementation-prd.md)
+
+当前联合镜像与执行入口同时应参考：
+
+- [HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md](/home/flowmind/CrazyAgentsManage/docs/roadmap/HermesAgent-FlowMind-%E8%81%94%E5%90%88%E4%BA%A7%E5%93%81%E5%8A%9F%E8%83%BD%E5%9F%BA%E7%BA%BF-2026-04-30.md)
+- [prd-execution-roadmap.md](/home/flowmind/CrazyAgentsManage/docs/roadmap/prd-execution-roadmap.md)
+
+### 典型工作流
+
+1. 先确认是技术范围变化、运营范围变化，还是联合产品镜像变化
+2. 按 PRD 分层更新对应文档
+3. 如果触发 FlowMind canonical 变化，再同步更新 roadmap 和镜像入口并跑双仓检查
+
+### 常见误区
+
+- 只改某个子 PRD，不改上位产品基础文档或路线图
+- 把旧背景文档继续当唯一规范表面
+- FlowMind canonical 变化后，只在 Crazy 一侧口头说明，不做 mirror update
+
 ## 文档目的
 
 CrazyAgentsManage 现在使用一套拆分式 PRD 体系，而不再依赖单一的大一统产品文档。

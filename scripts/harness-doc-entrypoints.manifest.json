@@ -1,0 +1,127 @@
+{
+  "manifestVersion": "crazy-harness-doc-entrypoints-v1",
+  "entrypoints": [
+    {
+      "path": "README.md",
+      "mustContain": [
+        "## 项目概述",
+        "## 文档",
+        "## 开发指南"
+      ],
+      "requiredLinks": [
+        "docs/prd/README.md",
+        "docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md",
+        "docs/roadmap/prd-execution-roadmap.md"
+      ]
+    },
+    {
+      "path": "harness/README.md",
+      "mustContain": [
+        "## Governance Gate",
+        "## Critic 命令",
+        "## Default Rule"
+      ],
+      "requiredLinks": [
+        "docs/02-engineering/harness/HARNESS-ENTRY.md",
+        "docs/02-engineering/harness/CROSS-REVIEW-PROCESS.md",
+        "docs/02-engineering/harness/WORKTREE-BOOTSTRAP.md"
+      ]
+    },
+    {
+      "path": "shared-context/README.md",
+      "mustContain": [
+        "## 目录结构",
+        "## 设计原则",
+        "## 使用方式"
+      ],
+      "requiredLinks": [
+        "docs/06-agent-ops/hermes-agent-operations-design.md",
+        "docs/06-agent-ops/three-state-protocol.md"
+      ]
+    },
+    {
+      "path": "docs/prd/README.md",
+      "mustContain": [
+        "## 当前活跃规划入口",
+        "## 规范性文档",
+        "联合规划同步检查命令"
+      ],
+      "requiredLinks": [
+        "docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md",
+        "docs/roadmap/prd-execution-roadmap.md",
+        "docs/prd/hermesagent-hosted-flowmind-product-foundation.md"
+      ]
+    },
+    {
+      "path": "docs/02-engineering/harness/HARNESS-ENTRY.md",
+      "mustContain": [
+        "## Canonical Rule",
+        "## Files To Read Next",
+        "## Harness Runtime Commands"
+      ],
+      "requiredLinks": [
+        "docs/02-engineering/harness/CODEX-HERMES-WORKFLOW.md",
+        "docs/02-engineering/harness/CROSS-REVIEW-PROCESS.md",
+        "docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md"
+      ]
+    },
+    {
+      "path": "docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md",
+      "mustContain": [
+        "## 三层读取顺序",
+        "## 触发规则",
+        "## 一句话规则"
+      ],
+      "requiredLinks": [
+        "docs/02-engineering/harness/hermes-flowmind-compatibility-matrix-2026-04-30.md",
+        "docs/02-engineering/harness/hermes-flowmind-link-manifest-v1.json",
+        "docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md"
+      ]
+    },
+    {
+      "path": "docs/02-engineering/harness/PRD-DOCUMENT-GOVERNANCE.md",
+      "mustContain": [
+        "## Canonical Files",
+        "## Required Closeout Updates",
+        "## No-Merge Rule"
+      ],
+      "requiredLinks": []
+    },
+    {
+      "path": "docs/02-engineering/harness/hermes-flowmind-compatibility-matrix-2026-04-30.md",
+      "mustContain": [
+        "Candidate ingress",
+        "Truth / Review read",
+        "Handshake smoke"
+      ],
+      "requiredLinks": []
+    },
+    {
+      "path": "docs/02-engineering/harness/handshake-smoke-status-2026-05-03.md",
+      "mustContain": [
+        "Candidate ingress",
+        "Decision confirm",
+        "bridge/truth"
+      ],
+      "requiredLinks": []
+    },
+    {
+      "path": "docs/02-engineering/harness/feedback-context-consumption-status-2026-05-03.md",
+      "mustContain": [
+        "bridge/feedback/:instanceId",
+        "bridge/context-pack",
+        "无主线消费入口"
+      ],
+      "requiredLinks": []
+    },
+    {
+      "path": "docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md",
+      "mustContain": [
+        "## 二、当前统一产品基线",
+        "## 五、当前活跃阶段",
+        "## 六、镜像同步规则"
+      ],
+      "requiredLinks": []
+    }
+  ]
+}

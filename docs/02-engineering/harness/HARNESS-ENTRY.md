@@ -50,6 +50,32 @@ This repository adopts the same high-level separation proven in `FlowMindDeploy`
 
 Never invert that rule.
 
+## One-Page Summary
+
+### 这个入口解决什么问题
+
+- 作为 Crazy harness 的总入口
+- 固定应先读哪些协作文档、哪些命令是 canonical runtime commands
+- 防止不同 agent 各自从脚本或群聊里发明入口顺序
+
+### 谁应该先读
+
+- 第一次进入 Crazy harness 的开发者或 agent
+- 需要做 cross-review、closeout、handoff 的人
+- 需要判断 `.omx/` 和仓库事实层边界的人
+
+### 先读哪三份
+
+1. [CODEX-HERMES-WORKFLOW.md](/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/CODEX-HERMES-WORKFLOW.md)
+2. [CROSS-REVIEW-PROCESS.md](/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/CROSS-REVIEW-PROCESS.md)
+3. [SEMANTIC-FIRST-READING-RULE.md](/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md)
+
+### 典型工作流
+
+1. 先读这里确认入口顺序和事实层边界
+2. 再跑 `./scripts/check_harness_governance_all.sh`
+3. 再进入具体的协作、review、closeout 或实现任务
+
 ## Files To Read Next
 
 1. `docs/02-engineering/harness/CODEX-HERMES-WORKFLOW.md`
@@ -111,3 +137,8 @@ node scripts/harness-closeout-writeback.cjs --status success --message "Round co
 These commands complement the Python runtime scripts under `scripts/runtime/`; they do not replace the Hermes-specific handoff and runtime-state workflow.
 
 `status=success` 的 `harness-closeout-writeback` 默认会先执行全量治理检查 `./scripts/check_harness_governance_all.sh`。
+
+当前全量治理检查会回写：
+
+- `scripts/harness-doc-entrypoints.manifest.json`
+- `docs/02-engineering/harness/harness-governance-report.md`
