@@ -1,0 +1,18 @@
+{
+  "bitable": {
+    "app_token": "EpeXbhpF9a0s0wsh6axce9PknFg",
+    "main_table_id": "tblJRMmjbyKEDZY1",
+    "trace_table_id": "tbltwMndeV5O2YkR",
+    "url": "https://bcn7uazoofu0.feishu.cn/base/EpeXbhpF9a0s0wsh6axce9PknFg"
+  },
+  "flowmind": {
+    "base_url": "http://111.229.194.203:3301",
+    "api_key": "flowmind-dev-token"
+  },
+  "webui": {
+    "timeline_base_url": "http://47.99.217.1/manage/timeline"
+  },
+  "feishu": {
+    "chat_id": "oc_bbde428675a7c267d55c3f0663ca701d"
+  }
+}
