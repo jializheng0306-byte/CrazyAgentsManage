@@ -93,6 +93,7 @@ node scripts/harness-closeout-writeback.cjs --status failed --message "Round fai
 - `status=success` 的 closeout 会默认执行全量治理检查；失败则直接阻断 closeout
 - `status=failed` 的 closeout 默认不阻断，便于记录失败现场；如需强制执行可加 `--governance-check`
 - 当前治理检查会回写报告到 `docs/02-engineering/harness/harness-governance-report.md`
+- closeout writeback 会把当前 harness 治理报告与 FlowMind 的 architecture drift 报告摘要一起写入 `governanceReports`
 
 ## Default Rule
 

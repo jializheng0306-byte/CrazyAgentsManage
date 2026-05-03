@@ -44,6 +44,17 @@ function parseSteps(raw) {
 
 function main() {
   var id = nextId();
+  var governanceReports = [];
+  if (process.env.HARNESS_GOVERNANCE_REPORTS) {
+    try {
+      governanceReports = JSON.parse(process.env.HARNESS_GOVERNANCE_REPORTS);
+      if (!Array.isArray(governanceReports)) {
+        governanceReports = [];
+      }
+    } catch (_) {
+      governanceReports = [];
+    }
+  }
   var record = {
     id: id,
     timestamp: new Date().toISOString(),
@@ -54,6 +65,7 @@ function main() {
       branch: process.env.HARNESS_BRANCH || safeBranch(),
       worktree: process.env.HARNESS_WORKTREE || process.cwd(),
       steps: parseSteps(process.env.HARNESS_SUCCESS_STEPS),
+      governanceReports: governanceReports,
     },
   };
 

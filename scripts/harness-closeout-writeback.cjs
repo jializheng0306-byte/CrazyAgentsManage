@@ -16,6 +16,7 @@
  */
 
 const cp = require("child_process");
+const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -37,6 +38,7 @@ function parseArgs(argv) {
     criticWriteBack: false,
     governanceCheck: false,
     skipGovernanceCheck: false,
+    governanceReports: [],
     days: "7",
     json: false,
   };
@@ -92,6 +94,9 @@ function parseArgs(argv) {
         break;
       case "--skip-governance-check":
         out.skipGovernanceCheck = true;
+        break;
+      case "--governance-report":
+        out.governanceReports.push(String(argv[++i] || "").trim());
         break;
       case "--json":
         out.json = true;
@@ -162,6 +167,64 @@ function maybeRunGovernanceCheck(enabled) {
   };
 }
 
+function defaultGovernanceReportPaths() {
+  return [
+    path.join(ROOT, "docs", "02-engineering", "harness", "harness-governance-report.md"),
+    path.resolve(ROOT, "..", "FlowMindDeploy", "docs", "05-version-control", "architecture-drift-report.md"),
+  ];
+}
+
+function summarizeGovernanceReport(reportPath) {
+  const resolved = path.resolve(ROOT, reportPath);
+  if (!fs.existsSync(resolved)) {
+    return null;
+  }
+  const raw = fs.readFileSync(resolved, "utf8");
+  const statusMatch = raw.match(/^- Status:\s*(.+)$/m);
+  const repoMatch = raw.match(/^- Repo:\s*(.+)$/m);
+  const titleMatch = raw.match(/^#\s+(.+)$/m);
+  const passCount = (raw.match(/^\-\s+\[PASS\]/gm) || []).length;
+  const failCount = (raw.match(/^\-\s+\[(FAIL|ERROR)\]/gm) || []).length;
+  const scopedSection =
+    raw.match(/^## Drift Findings\s+([\s\S]*?)(?:\n## |\s*$)/m)?.[1] ||
+    raw.match(/^## Findings\s+([\s\S]*?)(?:\n## |\s*$)/m)?.[1] ||
+    "";
+  const findingLines = scopedSection
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^- /.test(line) && !/^- (Date|Status|Repo):/.test(line));
+  return {
+    path: path.relative(ROOT, resolved),
+    absolutePath: resolved,
+    title: titleMatch ? titleMatch[1].trim() : path.basename(resolved),
+    repo: repoMatch ? repoMatch[1].trim() : "",
+    status: statusMatch ? statusMatch[1].trim() : "UNKNOWN",
+    passCount,
+    failCount,
+    summary: findingLines[0] ? findingLines[0].replace(/^- /, "").trim() : "",
+  };
+}
+
+function collectGovernanceReports(options) {
+  const requested = options.governanceReports.length > 0
+    ? options.governanceReports
+    : defaultGovernanceReportPaths();
+  const seen = new Set();
+  return requested
+    .map((reportPath) => String(reportPath || "").trim())
+    .filter(Boolean)
+    .map((reportPath) => path.resolve(ROOT, reportPath))
+    .filter((resolved) => {
+      if (seen.has(resolved)) {
+        return false;
+      }
+      seen.add(resolved);
+      return true;
+    })
+    .map((resolved) => summarizeGovernanceReport(resolved))
+    .filter(Boolean);
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.status !== "success" && options.status !== "failed") {
@@ -175,6 +238,7 @@ function main() {
     !options.skipGovernanceCheck && (options.governanceCheck || options.status === "success");
 
   const governance = maybeRunGovernanceCheck(shouldRunGovernanceCheck);
+  const governanceReports = collectGovernanceReports(options);
 
   let trace = null;
   if (options.status === "success") {
@@ -185,6 +249,7 @@ function main() {
       HARNESS_BRANCH: options.branch,
       HARNESS_WORKTREE: options.worktree,
       HARNESS_SUCCESS_STEPS: options.steps,
+      HARNESS_GOVERNANCE_REPORTS: JSON.stringify(governanceReports),
     });
     trace = { kind: "success", id: result.stdout };
   } else {
@@ -198,6 +263,7 @@ function main() {
       HARNESS_FAILURE_STAGE: options.stage,
       HARNESS_FAILURE_COMMAND: options.command,
       HARNESS_FAILURE_FATAL: options.fatal ? "true" : "false",
+      HARNESS_GOVERNANCE_REPORTS: JSON.stringify(governanceReports),
     });
     trace = { kind: "failure", id: result.stdout };
   }
@@ -212,6 +278,7 @@ function main() {
     trace,
     critic,
     governance,
+    governanceReports,
   };
 
   if (options.json) {
@@ -225,6 +292,9 @@ function main() {
   }
   if (governance) {
     process.stdout.write("governance: ok\n");
+  }
+  if (governanceReports.length > 0) {
+    process.stdout.write(`governance-reports: ${governanceReports.length}\n`);
   }
 }
 

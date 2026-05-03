@@ -142,3 +142,4 @@ These commands complement the Python runtime scripts under `scripts/runtime/`; t
 
 - `scripts/harness-doc-entrypoints.manifest.json`
 - `docs/02-engineering/harness/harness-governance-report.md`
+- `node scripts/harness-closeout-writeback.cjs` 生成的 closeout payload / harness trace 中的 `governanceReports`

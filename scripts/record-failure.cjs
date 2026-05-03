@@ -41,6 +41,17 @@ function nextId() {
 
 function main() {
   var id = nextId();
+  var governanceReports = [];
+  if (process.env.HARNESS_GOVERNANCE_REPORTS) {
+    try {
+      governanceReports = JSON.parse(process.env.HARNESS_GOVERNANCE_REPORTS);
+      if (!Array.isArray(governanceReports)) {
+        governanceReports = [];
+      }
+    } catch (_) {
+      governanceReports = [];
+    }
+  }
   var record = {
     id: id,
     timestamp: new Date().toISOString(),
@@ -54,6 +65,7 @@ function main() {
       verification_step: process.env.HARNESS_FAILURE_STAGE || '',
       command: process.env.HARNESS_FAILURE_COMMAND || '',
       fatal: process.env.HARNESS_FAILURE_FATAL === 'true',
+      governanceReports: governanceReports,
     },
   };
 
