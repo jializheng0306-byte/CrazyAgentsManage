@@ -249,6 +249,53 @@ class TestV04ContextManagementAPIs:
         data = resp.get_json()
         assert isinstance(data, list)
 
+    def test_runtime_handoffs_prefers_replay_handoff(self, client, monkeypatch):
+        monkeypatch.setattr(
+            webui_api,
+            '_safe_flowmind_request',
+            lambda *args, **kwargs: {
+                'record': {'id': 'rec-1'},
+                'mode': 'trace',
+                'gaps': [],
+                'steps': [
+                    {'moduleId': 'agent', 'label': 'Agent ingress', 'detail': 'first step'},
+                    {'moduleId': 'review', 'label': 'Review handoff', 'detail': 'latest summary'},
+                ],
+                'moduleDetails': {
+                    'handoff': {
+                        'title': 'Unified Handoff Packet',
+                        'summary': 'Upstream semantic packet.',
+                        'sections': [
+                            {
+                                'title': 'Handoff',
+                                'items': [
+                                    {'label': 'Truth Status', 'value': 'approved'},
+                                    {'label': 'Latest Evidence Summary', 'value': 'operator validated'},
+                                    {'label': 'Latest Evidence Class', 'value': 'OPERATOR_ACCEPTANCE'},
+                                    {'label': 'Latest Evidence Source Type', 'value': 'review'},
+                                    {'label': 'Latest Evidence Refs', 'value': 'bitable:rec-1'},
+                                    {'label': 'Semantic Refs', 'value': 'truth.read_surface'},
+                                    {'label': 'Trace Events', 'value': '4'},
+                                    {'label': 'Latest Trace Action', 'value': 'approve'},
+                                    {'label': 'Latest Trace Summary', 'value': 'Candidate approved'},
+                                    {'label': 'Consumer Hints', 'value': 'show review summary first'},
+                                ],
+                            }
+                        ],
+                    }
+                },
+            },
+        )
+        resp = client.get('/api/runtime/handoffs?recordId=rec-1')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['recordId'] == 'rec-1'
+        assert data['source'] == 'moduleDetails.handoff'
+        assert data['fieldMap']['Truth Status'] == 'approved'
+        assert data['latestTraceAction'] == 'approve'
+        assert data['traceEventCount'] == 2
+        assert data['missingFields'] == []
+
     def test_runtime_harness_summary_api_reachable(self, client):
         resp = client.get('/api/runtime/harness-summary')
         assert resp.status_code == 200
@@ -301,19 +348,25 @@ class TestPromiseTimeline:
             webui_api,
             '_safe_flowmind_request',
             lambda *args, **kwargs: {
-                'candidateId': 'cand-1',
-                'traceCount': 1,
-                'events': [
-                    {
-                        'traceId': 'trace-1',
-                        'action': 'confirm',
-                        'actor': 'operator',
-                        'module': 'review',
-                        'timestamp': '2026-05-02T09:30:00Z',
-                        'toStatus': 'approved',
-                        'summary': 'candidate approved',
-                    }
-                ],
+                'success': True,
+                'data': {
+                    'candidateId': 'cand-1',
+                    'candidateStatus': 'approved',
+                    'semanticContext': {'surface': 'bridge.trace'},
+                    'traceEvents': [
+                        {
+                            'traceId': 'trace-1',
+                            'action': 'confirm',
+                            'actor': 'operator',
+                            'module': 'review',
+                            'timestamp': '2026-05-02T09:30:00Z',
+                            'fromStatus': 'draft',
+                            'toStatus': 'approved',
+                            'summary': 'candidate approved',
+                            'semanticRefs': ['truth.read_surface'],
+                        }
+                    ],
+                },
             },
         )
         resp = client.get('/api/promise-review/trace/cand-1')
@@ -321,8 +374,10 @@ class TestPromiseTimeline:
         data = resp.get_json()
         assert data['candidateId'] == 'cand-1'
         assert data['traceCount'] == 1
+        assert data['candidateStatus'] == 'approved'
+        assert data['semanticContext']['surface'] == 'bridge.trace'
         assert data['latestStatus'] == 'approved'
-        assert data['events'][0]['module'] == 'review'
+        assert data['traceEvents'][0]['module'] == 'review'
 
     def test_promise_review_trace_api_unwraps_success_data_payload(self, client, monkeypatch):
         monkeypatch.setattr(
@@ -332,8 +387,8 @@ class TestPromiseTimeline:
                 'success': True,
                 'data': {
                     'candidateId': 'cand-2',
-                    'traceCount': 1,
-                    'events': [
+                    'candidateStatus': 'draft',
+                    'traceEvents': [
                         {
                             'traceId': 'trace-2',
                             'candidateId': 'cand-2',
@@ -352,8 +407,37 @@ class TestPromiseTimeline:
         data = resp.get_json()
         assert data['candidateId'] == 'cand-2'
         assert data['traceCount'] == 1
-        assert data['events'][0]['traceId'] == 'trace-2'
-        assert data['events'][0]['module'] == 'candidate-ingress'
+        assert data['traceEvents'][0]['traceId'] == 'trace-2'
+        assert data['traceEvents'][0]['module'] == 'candidate-ingress'
+
+    def test_promise_review_trace_api_keeps_legacy_event_fallback(self, client, monkeypatch):
+        monkeypatch.setattr(
+            webui_api,
+            '_safe_flowmind_request',
+            lambda *args, **kwargs: {
+                'candidateId': 'cand-legacy',
+                'traceCount': 1,
+                'events': [
+                    {
+                        'traceId': 'legacy-1',
+                        'action': 'confirm',
+                        'actor': 'operator',
+                        'module': 'review',
+                        'timestamp': '2026-05-02T09:30:00Z',
+                        'toStatus': 'approved',
+                        'summary': 'candidate approved',
+                    }
+                ],
+            },
+        )
+        resp = client.get('/api/promise-review/trace/cand-legacy')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['candidateId'] == 'cand-legacy'
+        assert data['traceCount'] == 1
+        assert data['traceEvents'][0]['traceId'] == 'legacy-1'
+        assert data['latestStatus'] == 'approved'
+        assert data['traceEvents'][0]['module'] == 'review'
 
     def test_promise_review_trace_api_handles_upstream_failure(self, client, monkeypatch):
         monkeypatch.setattr(webui_api, '_safe_flowmind_request', lambda *args, **kwargs: None)
@@ -362,4 +446,4 @@ class TestPromiseTimeline:
         data = resp.get_json()
         assert data['candidateId'] == 'missing-candidate'
         assert data['traceCount'] == 0
-        assert data['events'] == []
+        assert data['traceEvents'] == []

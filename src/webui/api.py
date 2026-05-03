@@ -333,8 +333,10 @@ def _normalize_bridge_trace(candidate_id, upstream):
     if not isinstance(upstream, dict):
         return {
             'candidateId': candidate_id,
+            'candidateStatus': '',
+            'semanticContext': {},
             'traceCount': 0,
-            'events': [],
+            'traceEvents': [],
             'latestStatus': '',
             'upstream': _get_flowmind_base_url(),
         }
@@ -342,6 +344,19 @@ def _normalize_bridge_trace(candidate_id, upstream):
     payload = upstream.get('data')
     if isinstance(payload, dict):
         upstream = payload
+
+    if isinstance(upstream.get('traceEvents'), list):
+        trace_events = [event for event in upstream.get('traceEvents', []) if isinstance(event, dict)]
+        latest_status = upstream.get('candidateStatus') or (trace_events[-1].get('toStatus') if trace_events else '')
+        return {
+            'candidateId': upstream.get('candidateId') or candidate_id,
+            'candidateStatus': upstream.get('candidateStatus') or '',
+            'semanticContext': upstream.get('semanticContext') or {},
+            'traceCount': upstream.get('traceCount') if isinstance(upstream.get('traceCount'), int) else len(trace_events),
+            'traceEvents': trace_events,
+            'latestStatus': latest_status or '',
+            'upstream': _get_flowmind_base_url(),
+        }
 
     raw_events = []
     if isinstance(upstream.get('events'), list):
@@ -351,12 +366,12 @@ def _normalize_bridge_trace(candidate_id, upstream):
     elif isinstance(upstream.get('data'), list):
         raw_events = upstream.get('data', [])
 
-    events = []
+    trace_events = []
     for index, event in enumerate(raw_events):
         if not isinstance(event, dict):
             continue
         summary = event.get('summary') or event.get('detail') or event.get('label') or event.get('action') or ''
-        events.append({
+        trace_events.append({
             'traceId': event.get('traceId') or event.get('id') or f'{candidate_id}:{index}',
             'candidateId': event.get('candidateId') or candidate_id,
             'action': event.get('action') or event.get('eventType') or 'query',
@@ -367,18 +382,86 @@ def _normalize_bridge_trace(candidate_id, upstream):
             'timestamp': event.get('timestamp') or event.get('createdAt') or event.get('occurredAt'),
             'summary': summary,
             'payload': event.get('payload') or event.get('requestPayload') or {},
-            'status': event.get('status') or event.get('result') or event.get('toStatus') or 'success',
-            'latencyMs': event.get('latencyMs') or event.get('durationMs'),
+            'semanticRefs': event.get('semanticRefs') or [],
         })
 
-    events.sort(key=lambda item: item.get('timestamp') or '')
-    latest_status = events[-1].get('toStatus') if events else ''
+    trace_events.sort(key=lambda item: item.get('timestamp') or '')
+    latest_status = trace_events[-1].get('toStatus') if trace_events else ''
     return {
         'candidateId': upstream.get('candidateId') or candidate_id,
-        'traceCount': upstream.get('traceCount') if isinstance(upstream.get('traceCount'), int) else len(events),
-        'events': events,
+        'candidateStatus': upstream.get('candidateStatus') or latest_status or '',
+        'semanticContext': upstream.get('semanticContext') or {},
+        'traceCount': upstream.get('traceCount') if isinstance(upstream.get('traceCount'), int) else len(trace_events),
+        'traceEvents': trace_events,
         'latestStatus': latest_status or '',
         'upstream': _get_flowmind_base_url(),
+    }
+
+
+def _handoff_field_map(sections):
+    field_map = {}
+    for section in sections or []:
+        for item in section.get('items') or []:
+            label = item.get('label')
+            if not label:
+                continue
+            field_map[label] = item.get('value')
+    return field_map
+
+
+def _normalize_runtime_handoff_summary(record_id, replay):
+    module_details = replay.get('moduleDetails') or {}
+    handoff = module_details.get('handoff')
+    steps = [step for step in (replay.get('steps') or []) if isinstance(step, dict)]
+    latest_step = steps[-1] if steps else {}
+
+    required_fields = [
+        'Truth Status',
+        'Latest Evidence Summary',
+        'Latest Evidence Class',
+        'Latest Evidence Source Type',
+        'Latest Evidence Refs',
+        'Semantic Refs',
+        'Trace Events',
+        'Latest Trace Action',
+        'Latest Trace Summary',
+        'Consumer Hints',
+    ]
+
+    if isinstance(handoff, dict):
+        sections = handoff.get('sections') or []
+        field_map = _handoff_field_map(sections)
+        missing_fields = [field for field in required_fields if field not in field_map or field_map.get(field) in (None, '')]
+        return {
+            'recordId': record_id,
+            'source': 'moduleDetails.handoff',
+            'mode': replay.get('mode'),
+            'title': handoff.get('title') or 'Handoff Summary',
+            'summary': handoff.get('summary') or '',
+            'sections': sections,
+            'fieldMap': field_map,
+            'traceEventCount': len(steps),
+            'latestTraceAction': field_map.get('Latest Trace Action'),
+            'latestTraceSummary': field_map.get('Latest Trace Summary'),
+            'consumerHints': field_map.get('Consumer Hints'),
+            'missingFields': missing_fields,
+            'gaps': replay.get('gaps') or [],
+        }
+
+    return {
+        'recordId': record_id,
+        'source': 'replay_without_moduleDetails.handoff',
+        'mode': replay.get('mode'),
+        'title': 'Handoff Summary',
+        'summary': '',
+        'sections': [],
+        'fieldMap': {},
+        'traceEventCount': len(steps),
+        'latestTraceAction': latest_step.get('action'),
+        'latestTraceSummary': latest_step.get('summary') or latest_step.get('detail') or latest_step.get('label'),
+        'consumerHints': None,
+        'missingFields': required_fields,
+        'gaps': (replay.get('gaps') or []) + ['moduleDetails.handoff is missing from the current replay payload.'],
     }
 def _flowmind_records(limit=80, source_agent=None):
     agent_filter = source_agent if source_agent is not None else _get_flowmind_source_agent()
@@ -1035,6 +1118,41 @@ def runtime_state():
 
 @api.route('/runtime/handoffs')
 def runtime_handoffs():
+    record_id = (request.args.get('recordId') or '').strip()
+    if record_id:
+        replay = _safe_flowmind_request(
+            f'/api/operator/records/{record_id}/replay',
+            default=None,
+        )
+        if isinstance(replay, dict):
+            return jsonify(_normalize_runtime_handoff_summary(record_id, replay))
+        return jsonify({
+            'recordId': record_id,
+            'source': 'flowmind_unavailable',
+            'mode': '',
+            'title': 'Handoff Summary',
+            'summary': '',
+            'sections': [],
+            'fieldMap': {},
+            'traceEventCount': 0,
+            'latestTraceAction': None,
+            'latestTraceSummary': None,
+            'consumerHints': None,
+            'missingFields': [
+                'Truth Status',
+                'Latest Evidence Summary',
+                'Latest Evidence Class',
+                'Latest Evidence Source Type',
+                'Latest Evidence Refs',
+                'Semantic Refs',
+                'Trace Events',
+                'Latest Trace Action',
+                'Latest Trace Summary',
+                'Consumer Hints',
+            ],
+            'gaps': ['FlowMind replay upstream unavailable for the provided recordId.'],
+        }), 502
+
     repo_root = _get_repo_root()
     outbox = repo_root / '.omx' / 'crazyagents' / 'outbox'
     if not outbox.exists():
