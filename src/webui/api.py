@@ -1317,13 +1317,9 @@ def promise_review_trace(candidate_id):
         default=None,
     )
     if upstream is None:
-        return jsonify({
-            'error': 'FlowMind trace upstream unavailable',
-            'candidateId': candidate_id,
-            'events': [],
-            'traceCount': 0,
-            'upstream': _get_flowmind_base_url(),
-        }), 502
+        payload = _normalize_bridge_trace(candidate_id, None)
+        payload['error'] = 'FlowMind trace upstream unavailable'
+        return jsonify(payload), 502
 
     return jsonify(_normalize_bridge_trace(candidate_id, upstream))
 # ═══════════════════════════════════════════

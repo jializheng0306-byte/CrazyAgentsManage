@@ -444,6 +444,11 @@ class TestPromiseTimeline:
         resp = client.get('/api/promise-review/trace/missing-candidate')
         assert resp.status_code == 502
         data = resp.get_json()
+        assert data['error'] == 'FlowMind trace upstream unavailable'
         assert data['candidateId'] == 'missing-candidate'
+        assert data['candidateStatus'] == ''
+        assert data['semanticContext'] == {}
         assert data['traceCount'] == 0
         assert data['traceEvents'] == []
+        assert data['latestStatus'] == ''
+        assert 'upstream' in data
