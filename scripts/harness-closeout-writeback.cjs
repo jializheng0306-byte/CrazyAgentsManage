@@ -35,6 +35,8 @@ function parseArgs(argv) {
     fatal: false,
     critic: false,
     criticWriteBack: false,
+    governanceCheck: false,
+    skipGovernanceCheck: false,
     days: "7",
     json: false,
   };
@@ -85,6 +87,12 @@ function parseArgs(argv) {
         out.critic = true;
         out.criticWriteBack = true;
         break;
+      case "--governance-check":
+        out.governanceCheck = true;
+        break;
+      case "--skip-governance-check":
+        out.skipGovernanceCheck = true;
+        break;
       case "--json":
         out.json = true;
         break;
@@ -134,6 +142,26 @@ function maybeRunCritic(days, writeBack) {
   return raw ? JSON.parse(raw) : null;
 }
 
+function maybeRunGovernanceCheck(enabled) {
+  if (!enabled) {
+    return null;
+  }
+  const result = cp.spawnSync(path.join(ROOT, "scripts", "check_harness_governance.sh"), [], {
+    cwd: ROOT,
+    env: process.env,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    const stderr = String(result.stderr || "").trim();
+    const stdout = String(result.stdout || "").trim();
+    const detail = stderr || stdout || `exit ${result.status}`;
+    throw new Error(`harness governance check failed: ${detail}`);
+  }
+  return {
+    stdout: String(result.stdout || "").trim(),
+  };
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.status !== "success" && options.status !== "failed") {
@@ -142,6 +170,11 @@ function main() {
   if (!options.message) {
     throw new Error("--message is required");
   }
+
+  const shouldRunGovernanceCheck =
+    !options.skipGovernanceCheck && (options.governanceCheck || options.status === "success");
+
+  const governance = maybeRunGovernanceCheck(shouldRunGovernanceCheck);
 
   let trace = null;
   if (options.status === "success") {
@@ -178,6 +211,7 @@ function main() {
     status: options.status,
     trace,
     critic,
+    governance,
   };
 
   if (options.json) {
@@ -188,6 +222,9 @@ function main() {
   process.stdout.write(`trace: ${trace.kind}:${trace.id}\n`);
   if (critic) {
     process.stdout.write(`critic: ok${options.criticWriteBack ? " (write-back)" : ""}\n`);
+  }
+  if (governance) {
+    process.stdout.write("governance: ok\n");
   }
 }
 

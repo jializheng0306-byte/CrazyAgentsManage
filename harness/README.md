@@ -44,9 +44,19 @@ node scripts/harness-critic.cjs
 node scripts/harness-critic.cjs --days 3
 node scripts/harness-critic.cjs --write-back
 node scripts/harness-critic.cjs --json
+./scripts/check_harness_governance.sh
+./scripts/check_harness_governance.sh --with-cross-repo
+./scripts/check_harness_governance.sh --local-only
 node scripts/harness-closeout-writeback.cjs --status success --message "Round completed" --critic-write-back --json
 node scripts/harness-closeout-writeback.cjs --status failed --message "Round failed" --stage verification --json
 ```
+
+## Governance Gate
+
+- PR / cross-review 前，先运行 `./scripts/check_harness_governance.sh`
+- 如果 FlowMind 双仓同步检查器已就位，再运行 `./scripts/check_harness_governance.sh --with-cross-repo`
+- `status=success` 的 closeout 会默认执行治理检查；失败则直接阻断 closeout
+- `status=failed` 的 closeout 默认不阻断，便于记录失败现场；如需强制执行可加 `--governance-check`
 
 ## Default Rule
 

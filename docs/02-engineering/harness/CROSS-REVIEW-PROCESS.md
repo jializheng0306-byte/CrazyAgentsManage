@@ -33,6 +33,8 @@
 - 关联 exec plan
 - 验证结果
 - 如适用，Hermes handoff 与 closeout evidence
+- 治理检查结果：`./scripts/check_harness_governance.sh`
+- 如已具备 FlowMind 双仓同步检查器，再补 `./scripts/check_harness_governance.sh --with-cross-repo`
 
 ## 4. 审查维度
 
@@ -67,3 +69,11 @@
 - `harness/memory/failure-patterns.md`
 - `harness/memory/procedural.md`
 - 或转成 lint / doc / template 更新
+
+## 7. 自动失败条件
+
+以下情况不应只靠人工 review 兜底，而应先被治理检查挡住：
+
+- 兼容矩阵与证据文档互相矛盾
+- 双仓 PRD 同步检查不通过
+- 成功 closeout 之前治理检查未通过
