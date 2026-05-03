@@ -146,7 +146,7 @@ function maybeRunGovernanceCheck(enabled) {
   if (!enabled) {
     return null;
   }
-  const result = cp.spawnSync(path.join(ROOT, "scripts", "check_harness_governance.sh"), [], {
+  const result = cp.spawnSync(path.join(ROOT, "scripts", "check_harness_governance_all.sh"), [], {
     cwd: ROOT,
     env: process.env,
     encoding: "utf8",

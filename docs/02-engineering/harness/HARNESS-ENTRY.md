@@ -104,9 +104,10 @@ node scripts/record-failure.cjs
 node scripts/harness-critic.cjs --json
 ./scripts/check_harness_governance.sh
 ./scripts/check_harness_governance.sh --with-cross-repo
+./scripts/check_harness_governance_all.sh
 node scripts/harness-closeout-writeback.cjs --status success --message "Round completed" --critic-write-back --json
 ```
 
 These commands complement the Python runtime scripts under `scripts/runtime/`; they do not replace the Hermes-specific handoff and runtime-state workflow.
 
-`status=success` 的 `harness-closeout-writeback` 默认会先执行本地治理检查 `./scripts/check_harness_governance.sh`。
+`status=success` 的 `harness-closeout-writeback` 默认会先执行全量治理检查 `./scripts/check_harness_governance_all.sh`。
