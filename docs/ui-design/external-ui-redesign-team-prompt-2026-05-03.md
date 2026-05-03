@@ -1,94 +1,99 @@
-# External UI Redesign — Team Assessment Prompt
+# 外部 UI 重构团队提示词
 
-> 日期: 2026-05-03  
-> 收件方: 外部 UI 设计团队  
-> 发起方: CrazyAgentsManage 运营侧（HermesAgent）
+请先同步 CrazyAgentsManage 当前活跃分支，再按仓库文档顺序阅读并开始评估。
 
----
+## 拉取最新版本
 
-## 评估目标
+```bash
+git clone https://github.com/jializheng0306-byte/CrazyAgentsManage.git
+cd CrazyAgentsManage
+git fetch --all --prune
+git checkout feat/auto-capture-trace
+git pull --ff-only origin feat/auto-capture-trace
+```
 
-对 CrazyAgentsManage WebUI 的当前实现状态做独立评估，并给出重设计方案建议。
+## 必读顺序
 
----
+1. `docs/ui-design/external-ui-redesign-handoff-2026-05-03.md`
+2. `docs/prd/hermesagent-hosted-flowmind-product-foundation.md`
+3. `docs/prd/technical-implementation-prd.md`
+4. `docs/prd/operations-implementation-prd.md`
+5. `docs/prd/pages/overview-page-prd.md`
+6. `docs/prd/pages/runtime-page-prd.md`
+7. `docs/prd/pages/operations-page-prd.md`
+8. `docs/prd/pages/governance-page-prd.md`
+9. `docs/prd/pages/collaboration-page-prd.md`
+10. `docs/prd/pages/architecture-visualization-pages-prd.md`
+11. `docs/prd/pages/webui-route-template-alignment.md`
+12. `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md`
+13. `docs/roadmap/prd-execution-roadmap.md`
+14. `docs/roadmap/master-task-plan.md`
+15. `docs/ui-design/06-high-fidelity-designs.md`
 
-## 需要评估的事项
+## 你们需要先理解的事实
 
-### 1. 一级 IA 是否合理
+1. `CrazyAgentsManage` 当前不是一个通用多 Agent playground，而是：
+   - `一个以 HermesAgent 为宿主的 FlowMind 运营产品`
+2. UI 的一级 IA 已经固定：
+   - `Overview`
+   - `Runtime`
+   - `Operations`
+   - `Governance`
+   - `Collaboration`
+3. 当前仓库已经存在这些正式产品页和对应过渡模板：
+   - `overview.html`
+   - `runtime.html`
+   - `operations.html`
+   - `governance.html`
+   - `collaboration.html`
+   - `timeline.html`
+4. 当前 live 部署副本与仓库基线并非完全一致，因此不要直接把线上页面当唯一真相
 
-当前 IA 为 6 个一级页面 + 1 个动态页面：
-- `/overview` — 总览
-- `/runtime` — 运行态
-- `/operations` — 运营面
-- `/governance` — 治理面
-- `/collaboration` — 协作面
-- `/timeline` — 承诺时序图（动态，数据来自 FlowMind trace）
+## 你们的任务
 
-请评价：
-- 分类是否清晰、互不重叠
-- 命名的外部可理解性
-- 是否有明显的缺失或冗余
+请基于当前仓库文档和代码，对 Crazy WebUI 做一次正式 UI 重构方案评估，并输出：
 
-### 2. 页面分工是否清楚
+1. 现有信息架构是否合理
+2. 五个一级 IA 是否还需要调整
+3. 当前页面层级、导航、状态表达、布局、交互的主要问题
+4. 哪些页面适合先做、哪些页面适合后做
+5. 一个分阶段的 UI 重构实施方案
+6. 哪些 FlowMind / Hermes 联动契约必须保持不变
 
-每个页面有对应的 PRD 规格文档（见 handoff 包的补充参考）。请评价：
-- 每页的职责边界是否明确
-- 是否存在"一页做多件事"或"多页做一件事"
+## 明确约束
 
-### 3. 当前 UI 实现质量
+1. 不要把产品重新定义成“另一个智能体控制台”
+2. 不要破坏 `/api/bridge/trace/:candidateId` 的 timeline 数据消费主路径
+3. 不要破坏 `moduleDetails.handoff` 的 handoff 数据消费主路径
+4. 不要破坏 `BASE` 感知的静态资源与链接生成
+5. 不要把重构方案建立在“改后端语义”之上，优先做信息架构、视觉和前端交互层重构
 
-当前实现以 Flask Jinja2 模板 + 原生 HTML/CSS/JS 为主。请评价：
-- 是否有"旧页面平铺"痕迹（模板堆砌而非组件化）
-- 数据消费面（timeline 的 traceEvents[]、handoff 的 moduleDetails.handoff）是否已可作为 UI 数据合同
-- 交互一致性
+## 期望输出格式
 
-### 4. 重设计方案建议
+请按以下结构回复：
 
-请给出：
-- 建议的前端技术栈（是否引入框架/组件库）
-- 建议的组件拆分方案
-- 建议的 IA 调整（如有）
-- 迁移路径（一次性重写 vs 渐进式替换）
-- 工作量估算
+### 1. 总体判断
+- 当前产品定位是否清楚
+- 当前 IA 是否清楚
+- 当前 UI 最大的问题是什么
 
----
+### 2. 分区评审
+- Overview
+- Runtime
+- Operations
+- Governance
+- Collaboration
+- Architecture Pages
 
-## 不做什么
+### 3. 分阶段重构建议
+- Phase 1
+- Phase 2
+- Phase 3
 
-- **不**要求产出高保真设计稿（此轮只需评估和建议）
-- **不**要求修改后端 API 或数据契约
-- **不**要求处理部署/运维
+### 4. 不可破坏项
+- 列出必须保持的产品契约和技术契约
 
----
-
-## 交付要求
-
-1. 一份评估报告（Markdown 或 PDF）
-2. 至少覆盖上述 4 个评估事项
-3. 如有重设计建议，附带简要的组件树/页面结构草图
-4. 对 IA 的每个页面的独立评价
-
----
-
-## 判断标准
-
-| 维度 | 可接受 | 优秀 |
-|---|---|---|
-| IA 评价 | 指出至少 1 个改进点 | 给出具体重构方案 |
-| 页面分工 | 确认边界清晰 | 提出合并/拆分建议 |
-| 当前实现 | 指出模板平铺问题 | 给出组件化方案 |
-| 重设计建议 | 给出一套合理技术栈 | 附带迁移路径和估时 |
-
----
-
-## 参考资料（仓库内已有）
-
-| 文档 | 路径 |
-|---|---|
-| 交接包 | `docs/ui-design/external-ui-redesign-handoff-2026-05-03.md` |
-| 上位产品文档 | `docs/prd/hermesagent-hosted-flowmind-product-foundation.md` |
-| 页面 PRD（6 页） | `docs/prd/pages/*.md` |
-| 运营实现 PRD | `docs/prd/operations-implementation-prd.md` |
-| 技术实现 PRD | `docs/prd/technical-implementation-prd.md` |
-| WebUI README | `src/webui/README.md` |
-| 联合产品基线 | `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md` |
+### 5. 进入实施前还缺什么
+- 缺失信息
+- 需要补看的文档
+- 需要确认的运行事实

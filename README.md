@@ -118,6 +118,7 @@ multi_agent:
 | [PRD 体系说明](docs/prd/README.md) | 当前生效的 PRD 分层入口 |
 | [联合产品镜像基线](docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md) | Crazy 侧镜像的联合产品主线 |
 | [执行路线图](docs/roadmap/prd-execution-roadmap.md) | 当前生效的执行路线图 |
+| [UI Design Docs](docs/ui-design/README.md) | 外部 UI 重构团队的最新文档入口 |
 
 ## 项目结构
 
