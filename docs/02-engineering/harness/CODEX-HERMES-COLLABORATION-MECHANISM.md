@@ -82,6 +82,14 @@ python3 scripts/runtime/generate_hermes_handoff.py \
 
 The generated output is what should be sent to `@HermesAgent`.
 
+If the round is about FlowMind governance state, the handoff packet should prefer:
+
+1. `bridge/truth` read results
+2. `semanticContext.fieldMappings`
+3. `latestEvidence`
+
+before using free-form runtime summary text.
+
 ### Phase 3: Hermes review
 
 HermesAgent reviews from an operations perspective and responds with:

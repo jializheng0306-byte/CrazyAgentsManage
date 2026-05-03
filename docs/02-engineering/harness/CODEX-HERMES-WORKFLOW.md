@@ -61,10 +61,19 @@ python3 scripts/runtime/generate_hermes_handoff.py \
   --title "Need operations review" \
   --goal "Review runtime and operations impact" \
   --artifacts docs/codex-hermes-role-design.md \
-  --questions "What operator view is still missing?"
+  --questions "What operator view is still missing?" \
+  --candidate-id "219a5914-6c85-43df-ad5e-1d1d36241b39"
 ```
 
 The generated packet is what Codex sends or paraphrases in group chat to `@HermesAgent`.
+
+When the handoff concerns `candidate / promise / truth / trace / review / feedback`,
+the generator should prefer reading FlowMind truth surfaces first:
+
+1. `GET /api/bridge/truth/:candidateId` when a concrete candidate is known
+2. `GET /api/bridge/truth?instanceId=...` when only an instance-level truth snapshot is known
+3. consume `semanticContext + latestEvidence`
+4. only then fall back to `.omx` runtime state as the summary source
 
 If the task is in the semantic-first trigger set, the handoff packet should point HermesAgent to:
 
