@@ -256,6 +256,32 @@ scripts/check_cross_repo_prd_sync.sh
 4. HermesAgent 的 acceptance comments 已解决或被显式延后
 5. 如果联合主规划发生变化，cross-repo PRD sync checker 已通过
 
+## 当前运行态整改入口（2026-05-04）
+
+当前 Crazy 侧更实的整改主线，不再是继续补抽象 PRD，而是围绕 Issue #14 的运行态断链做系统收口。
+
+当前裁定文档：
+
+- `docs/02-engineering/harness/issue-14-governance-ruling-2026-05-04.md`
+
+该裁定把 Issue #14 重分为三组：
+
+1. 可关闭
+2. 降级但不关闭
+3. 当前主阻塞
+
+后续推进顺序固定为：
+
+1. 调度 authority 收口
+2. 反思与学习产物收口
+3. 治理-行动链收口
+4. Promise 治理稳定化
+
+这意味着：
+
+- Issue #14 现在是当前 runtime remediation 的正式入口
+- 但它不改写联合产品主线，只承接运行态整改层
+
 ## 当前立即动作
 
 1. 以上位产品基础文档作为产品身份与 IA 真相来源
