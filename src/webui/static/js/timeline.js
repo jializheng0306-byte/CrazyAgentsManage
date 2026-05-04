@@ -91,13 +91,24 @@
 
   function renderFieldRow(label, value) {
     var normalizedValue = value;
-    if (normalizedValue && typeof normalizedValue === 'object') {
+    if (Array.isArray(normalizedValue)) {
+      normalizedValue = normalizedValue.join(' | ');
+    } else if (normalizedValue && typeof normalizedValue === 'object') {
       normalizedValue = JSON.stringify(normalizedValue);
     }
     return (
       '<div class="tl-handoff-row">' +
         '<span class="tl-handoff-label">' + escapeHtml(label) + '</span>' +
         '<span class="tl-handoff-value">' + escapeHtml(normalizedValue == null || normalizedValue === '' ? '--' : normalizedValue) + '</span>' +
+      '</div>'
+    );
+  }
+
+  function renderBoundaryRow(label, value) {
+    return (
+      '<div class="tl-boundary-row">' +
+        '<span class="tl-boundary-label">' + escapeHtml(label) + '</span>' +
+        '<span class="tl-boundary-value">' + escapeHtml(value == null || value === '' ? '--' : value) + '</span>' +
       '</div>'
     );
   }
@@ -141,6 +152,30 @@
       gaps += '<div class="tl-gap-box"><strong>上游缺口</strong><p>' + escapeHtml(data.gaps.join('；')) + '</p></div>';
     }
 
+    var boundary = data.executionBoundary || null;
+    var boundaryMarkup = '';
+    if (boundary) {
+      boundaryMarkup =
+        '<div class="tl-boundary-card">' +
+          '<div class="tl-boundary-head">' +
+            '<h4 class="tl-boundary-title">Execution Boundary</h4>' +
+            '<span class="tl-boundary-source">' + escapeHtml(data.executionBoundarySource || 'upstream') + '</span>' +
+          '</div>' +
+          '<div class="tl-boundary-grid">' +
+            renderBoundaryRow('Canonical Authority', Array.isArray(boundary.canonicalAuthority) ? boundary.canonicalAuthority.join(' | ') : boundary.canonicalAuthority) +
+            renderBoundaryRow('Local Writable Targets', Array.isArray(boundary.localWritableTargets) ? boundary.localWritableTargets.join(' | ') : boundary.localWritableTargets) +
+            renderBoundaryRow('Human Gate Actions', Array.isArray(boundary.humanGateActions) ? boundary.humanGateActions.join(' | ') : boundary.humanGateActions) +
+            renderBoundaryRow('Forbidden Mutations', Array.isArray(boundary.forbiddenMutations) ? boundary.forbiddenMutations.join(' | ') : boundary.forbiddenMutations) +
+          '</div>' +
+        '</div>';
+    } else {
+      boundaryMarkup =
+        '<div class="tl-gap-box">' +
+          '<strong>Execution Boundary 缺失</strong>' +
+          '<p>当前 replay 与 semanticContext 都没有返回 executionBoundary，页面不会本地推断边界规则。</p>' +
+        '</div>';
+    }
+
     handoffSummaryEl.className = 'tl-handoff-card';
     handoffSummaryEl.innerHTML =
       '<div class="tl-handoff-title-wrap">' +
@@ -149,6 +184,7 @@
       '</div>' +
       meta +
       '<div class="tl-handoff-grid">' + rows + '</div>' +
+      boundaryMarkup +
       gaps;
   }
 

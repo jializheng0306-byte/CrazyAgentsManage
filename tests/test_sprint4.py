@@ -280,7 +280,16 @@ class TestV04ContextManagementAPIs:
                                     {'label': 'Latest Trace Summary', 'value': 'Candidate approved'},
                                     {'label': 'Consumer Hints', 'value': 'show review summary first'},
                                 ],
-                            }
+                            },
+                            {
+                                'title': 'Execution Boundary',
+                                'items': [
+                                    {'label': 'Canonical Authority', 'value': 'truth.status'},
+                                    {'label': 'Local Writable Targets', 'value': 'Crazy main table | Hermes promise status'},
+                                    {'label': 'Human Gate Actions', 'value': 'confirm / reject / clarify / approve / commit'},
+                                    {'label': 'Forbidden Mutations', 'value': 'feedback.eventType must not overwrite truth.status'},
+                                ],
+                            },
                         ],
                     }
                 },
@@ -295,6 +304,79 @@ class TestV04ContextManagementAPIs:
         assert data['latestTraceAction'] == 'approve'
         assert data['traceEventCount'] == 2
         assert data['missingFields'] == []
+
+    def test_runtime_handoffs_extracts_execution_boundary_section(self, client, monkeypatch):
+        monkeypatch.setattr(
+            webui_api,
+            '_safe_flowmind_request',
+            lambda *args, **kwargs: {
+                'record': {'id': 'rec-boundary-1'},
+                'mode': 'trace',
+                'gaps': [],
+                'steps': [],
+                'moduleDetails': {
+                    'handoff': {
+                        'title': 'Unified Handoff Packet',
+                        'summary': 'Upstream semantic packet.',
+                        'sections': [
+                            {
+                                'title': 'Execution Boundary',
+                                'items': [
+                                    {'label': 'Canonical Authority', 'value': 'truth.status'},
+                                    {'label': 'Local Writable Targets', 'value': 'Crazy main table | Hermes promise status'},
+                                    {'label': 'Human Gate Actions', 'value': 'confirm / reject / clarify / approve / commit'},
+                                    {'label': 'Forbidden Mutations', 'value': 'feedback.eventType must not overwrite truth.status'},
+                                ],
+                            }
+                        ],
+                    }
+                },
+            },
+        )
+        resp = client.get('/api/runtime/handoffs?recordId=rec-boundary-1')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['executionBoundarySource'] == 'moduleDetails.handoff.Execution Boundary'
+        assert data['executionBoundary']['canonicalAuthority'] == 'truth.status'
+        assert data['executionBoundary']['localWritableTargets'] == 'Crazy main table | Hermes promise status'
+        assert data['executionBoundary']['humanGateActions'] == 'confirm / reject / clarify / approve / commit'
+        assert data['executionBoundary']['forbiddenMutations'] == 'feedback.eventType must not overwrite truth.status'
+        assert data['executionBoundaryMissingFields'] == []
+
+    def test_runtime_handoffs_falls_back_to_semantic_execution_boundary(self, client, monkeypatch):
+        monkeypatch.setattr(
+            webui_api,
+            '_safe_flowmind_request',
+            lambda *args, **kwargs: {
+                'record': {'id': 'rec-boundary-2'},
+                'mode': 'derived',
+                'gaps': [],
+                'steps': [],
+                'semanticContext': {
+                    'executionBoundary': {
+                        'canonicalAuthority': ['truth.status'],
+                        'localWritableTargets': ['Crazy remarks', 'interaction trace table'],
+                        'humanGateActions': ['POST /bridge/feedback'],
+                        'forbiddenMutations': ['feedback.eventType -> flowmind_status'],
+                    }
+                },
+                'moduleDetails': {
+                    'handoff': {
+                        'title': 'Unified Handoff Packet',
+                        'summary': 'Upstream semantic packet.',
+                        'sections': [],
+                    }
+                },
+            },
+        )
+        resp = client.get('/api/runtime/handoffs?recordId=rec-boundary-2')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['executionBoundarySource'] == 'semanticContext.executionBoundary'
+        assert data['executionBoundary']['canonicalAuthority'] == ['truth.status']
+        assert data['executionBoundary']['humanGateActions'] == ['POST /bridge/feedback']
+        assert data['executionBoundaryMissingFields'] == []
+        assert data['executionBoundary']['forbiddenMutations'] == ['feedback.eventType -> flowmind_status']
 
     def test_runtime_harness_summary_api_reachable(self, client):
         resp = client.get('/api/runtime/harness-summary')
