@@ -43,28 +43,16 @@ The normalized handoff API now returns:
 For the verified live record:
 
 - `moduleDetails.handoff` → present
-- `Execution Boundary` section → **present**
-- `semanticContext.executionBoundary` → **present** on the truth read surface
+- `Execution Boundary` section → **missing**
+- `semanticContext.executionBoundary` → **missing** on the truth read surface
 
 Normalized live handoff result:
 
-- `executionBoundarySource = moduleDetails.handoff.Execution Boundary`
-- `executionBoundaryMissingFields = []`
-- `Canonical Authority`
-  - `truth.status, candidate review status, traceEvents main chain, active constraint semantics`
-- `Local Writable Targets`
-  - `Crazy flowmind_status projection, Hermes promise governance snapshot, timeline rendering, trace summary projections, prompt context assembly, handoff context summary`
-- `Human Gate Actions`
-  - `confirm / reject / clarify / approve / commit, trace-producing governance writes, context-pack source changes`
-- `Forbidden Mutations`
-  - `Do not infer a new truth status from replay prose only.`
-  - `Do not promote feedback into truth authority.`
-  - `Do not append synthetic main-chain events in downstream consumers.`
-  - `Do not merge feedback-only events into traceEvents[].`
-  - `Do not write context-pack output back into canonical truth.`
-  - `Do not treat context-pack summary as a governance decision.`
+- `executionBoundary = null`
+- `executionBoundarySource = null`
+- `executionBoundaryMissingFields = [Canonical Authority, Local Writable Targets, Human Gate Actions, Forbidden Mutations]`
 
-The live page can now render the four execution-boundary blocks from real upstream data instead of a structured missing state.
+The live page therefore renders a structured missing-boundary state instead of inventing local rules.
 
 ## What is already enforced
 
@@ -77,6 +65,9 @@ Even with the boundary payload missing, Crazy still keeps these behaviors:
 
 ## Remaining gap
 
-No Crazy-side consumption gap remains for the verified record.
+Crazy-side consumption code is in place, but the verified live upstream payload still does not expose:
 
-Remaining work, if any, is only to expand upstream field coverage to more records beyond this verified sample.
+1. `moduleDetails.handoff -> Execution Boundary`
+2. `semanticContext.executionBoundary`
+
+Until one of those appears for the verified record, the page cannot truthfully display the four execution-boundary blocks.
