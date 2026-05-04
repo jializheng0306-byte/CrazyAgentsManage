@@ -74,6 +74,20 @@
 scripts/check_cross_repo_prd_sync.sh
 ```
 
+当 `FlowMindDeploy` 的 Phase 6 canonical docs 变化时，Crazy 侧还必须同步以下镜像口径：
+
+- `FlowMindDeploy/docs/01-product/Operator-Console-最小职责边界-2026-05-04.md`
+- `FlowMindDeploy/docs/01-product/handoff-packet-contract-v1-2026-05-04.md`
+- `FlowMindDeploy/docs/01-product/Phase6-默认SOP与提示词同步-2026-05-04.md`
+- `FlowMindDeploy/docs/01-product/外部执行面-读写边界-v1-2026-05-04.md`
+
+至少要保持以下默认规则不漂移：
+
+- `truth.status` 是主状态唯一来源
+- `feedback.eventType` 只进入运营动作层
+- `timeline` 只消费 `traceEvents[]`
+- `handoff` 默认消费 `moduleDetails.handoff + semanticContext + latestEvidence`
+
 ## 当前产品共识
 
 项目已经形成以下产品方向共识：

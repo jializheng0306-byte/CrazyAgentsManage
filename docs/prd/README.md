@@ -25,6 +25,13 @@
 - [HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md](/home/flowmind/CrazyAgentsManage/docs/roadmap/HermesAgent-FlowMind-%E8%81%94%E5%90%88%E4%BA%A7%E5%93%81%E5%8A%9F%E8%83%BD%E5%9F%BA%E7%BA%BF-2026-04-30.md)
 - [prd-execution-roadmap.md](/home/flowmind/CrazyAgentsManage/docs/roadmap/prd-execution-roadmap.md)
 
+当前 FlowMind canonical 的 Phase 6 默认口径还应同时参考：
+
+- [Operator-Console-最小职责边界-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/Operator-Console-%E6%9C%80%E5%B0%8F%E8%81%8C%E8%B4%A3%E8%BE%B9%E7%95%8C-2026-05-04.md)
+- [handoff-packet-contract-v1-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/handoff-packet-contract-v1-2026-05-04.md)
+- [Phase6-默认SOP与提示词同步-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/Phase6-%E9%BB%98%E8%AE%A4SOP%E4%B8%8E%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%90%8C%E6%AD%A5-2026-05-04.md)
+- [外部执行面-读写边界-v1-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E5%A4%96%E9%83%A8%E6%89%A7%E8%A1%8C%E9%9D%A2-%E8%AF%BB%E5%86%99%E8%BE%B9%E7%95%8C-v1-2026-05-04.md)
+
 ### 典型工作流
 
 1. 先确认是技术范围变化、运营范围变化，还是联合产品镜像变化

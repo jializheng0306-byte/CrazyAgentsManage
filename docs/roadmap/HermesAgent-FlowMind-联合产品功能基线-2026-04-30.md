@@ -161,6 +161,20 @@ Crazy 侧直接动作：
    - `runtime heartbeat`
 6. 让 webhook 成为正式触发通道，而不是隐式边界
 
+Phase 6 当前默认口径还必须与 FlowMind canonical docs 保持一致：
+
+- `FlowMindDeploy/docs/01-product/Operator-Console-最小职责边界-2026-05-04.md`
+- `FlowMindDeploy/docs/01-product/handoff-packet-contract-v1-2026-05-04.md`
+- `FlowMindDeploy/docs/01-product/Phase6-默认SOP与提示词同步-2026-05-04.md`
+- `FlowMindDeploy/docs/01-product/外部执行面-读写边界-v1-2026-05-04.md`
+
+Crazy 侧不得自行改写以下默认规则：
+
+- `truth.status` 是主状态唯一来源
+- `feedback.eventType` 只进入运营动作层
+- `timeline` 默认消费 `traceEvents[]`
+- `handoff` 默认消费 `moduleDetails.handoff + semanticContext + latestEvidence`
+
 ---
 
 ## 六、镜像同步规则
@@ -177,6 +191,7 @@ Crazy 侧直接动作：
 1. 本文档
 2. `docs/prd/README.md`
 3. `docs/roadmap/prd-execution-roadmap.md`
+4. `docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md`
 
 检查命令：
 

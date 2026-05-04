@@ -46,6 +46,10 @@
 2. [prd-execution-roadmap.md](/home/flowmind/CrazyAgentsManage/docs/roadmap/prd-execution-roadmap.md)
 3. [hermesagent-hosted-flowmind-product-foundation.md](/home/flowmind/CrazyAgentsManage/docs/prd/hermesagent-hosted-flowmind-product-foundation.md)
 4. [HERMES-FLOWMIND-双仓协同治理方案-2026-04-30.md](/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/HERMES-FLOWMIND-双仓协同治理方案-2026-04-30.md)
+5. [Operator-Console-最小职责边界-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/Operator-Console-最小职责边界-2026-05-04.md)
+6. [handoff-packet-contract-v1-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/handoff-packet-contract-v1-2026-05-04.md)
+7. [Phase6-默认SOP与提示词同步-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/Phase6-默认SOP与提示词同步-2026-05-04.md)
+8. [外部执行面-读写边界-v1-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/外部执行面-读写边界-v1-2026-05-04.md)
 
 这一层回答：
 
@@ -100,3 +104,8 @@
 ## 一句话规则
 
 > 涉及 `candidate / promise / truth / trace / review / feedback` 时，先读语义与契约，再读双仓产品事实，再读 Hermes 宿主平台运行层，最后才读原始实现。
+
+补充：
+
+> 如果任务还要产出 handoff / review / closeout 内容，则默认继续遵守：
+> `truth.status` 定主状态，`feedback.eventType` 只进运营层，`timeline` 读 `traceEvents[]`，`handoff` 读 `moduleDetails.handoff + semanticContext + latestEvidence`，不回退为人工自由文本主体。
