@@ -87,9 +87,9 @@
               <strong id="handoff-source">--</strong>
             </div>
           </div>
-          <div id="handoff-summary" class="tl-empty">
+        <div id="handoff-summary" class="tl-empty">
             <strong>暂无 handoff 摘要</strong>
-            <p>输入 `recordId` 后会从 FlowMind `GET /api/operator/records/:recordId/replay` 读取 `moduleDetails.handoff`。</p>
+            <p>输入 `recordId` 后会从 Crazy `GET /api/runtime/handoffs?recordId=...` 读取 `moduleDetails.handoff + handoffContract`。</p>
           </div>
         </div>
 

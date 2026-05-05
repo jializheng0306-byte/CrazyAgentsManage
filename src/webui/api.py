@@ -449,6 +449,86 @@ def _execution_boundary_from_semantic_context(semantic_context):
     }
 
 
+_HANDOFF_REQUIRED_FIELDS = [
+    'Truth Status',
+    'Latest Evidence Summary',
+    'Latest Evidence Class',
+    'Latest Evidence Source Type',
+    'Latest Evidence Refs',
+    'Semantic Refs',
+    'Trace Events',
+    'Latest Trace Action',
+    'Latest Trace Summary',
+    'Consumer Hints',
+]
+
+_EXECUTION_BOUNDARY_REQUIRED_FIELDS = [
+    'Canonical Authority',
+    'Local Writable Targets',
+    'Human Gate Actions',
+    'Forbidden Mutations',
+]
+
+
+def _missing_execution_boundary_fields(execution_boundary):
+    if not isinstance(execution_boundary, dict):
+        return list(_EXECUTION_BOUNDARY_REQUIRED_FIELDS)
+    return [
+        field for field, key in (
+            ('Canonical Authority', 'canonicalAuthority'),
+            ('Local Writable Targets', 'localWritableTargets'),
+            ('Human Gate Actions', 'humanGateActions'),
+            ('Forbidden Mutations', 'forbiddenMutations'),
+        )
+        if execution_boundary.get(key) in (None, '', [])
+    ]
+
+
+def _normalize_handoff_contract(
+    contract,
+    execution_boundary_missing_fields,
+    execution_boundary_source,
+    missing_fields,
+    replay_gaps,
+):
+    fallback_order = [
+        'semanticContext.fieldMappings',
+        'latestEvidence',
+        'traceSummary',
+    ]
+    if not isinstance(contract, dict):
+        blocking_issues = list(replay_gaps or [])
+        for field in list(missing_fields or []):
+            blocking_issues.append(f'Handoff packet is missing required field: {field}.')
+        if execution_boundary_missing_fields:
+            blocking_issues.append(
+                'Execution boundary is incomplete: ' + ', '.join(execution_boundary_missing_fields) + '.'
+            )
+        return {
+            'version': 'handoff-packet-v1',
+            'primarySource': 'moduleDetails.handoff',
+            'fallbackOrder': fallback_order,
+            'ready': False,
+            'blockingIssues': blocking_issues or ['handoffContract is missing from replay response.'],
+            'missingFields': list(missing_fields or []),
+            'executionBoundarySource': execution_boundary_source or 'upstream',
+            'executionBoundaryMissingFields': list(execution_boundary_missing_fields or []),
+        }
+
+    return {
+        'version': contract.get('version') or 'handoff-packet-v1',
+        'primarySource': contract.get('primarySource') or 'moduleDetails.handoff',
+        'fallbackOrder': contract.get('fallbackOrder') or fallback_order,
+        'ready': bool(contract.get('ready')),
+        'blockingIssues': list(contract.get('blockingIssues') or []),
+        'missingFields': list(contract.get('missingFields') or []),
+        'executionBoundarySource': contract.get('executionBoundarySource') or execution_boundary_source or 'upstream',
+        'executionBoundaryMissingFields': list(
+            contract.get('executionBoundaryMissingFields') or execution_boundary_missing_fields or []
+        ),
+    }
+
+
 def _normalize_runtime_handoff_summary(record_id, replay):
     module_details = replay.get('moduleDetails') or {}
     handoff = module_details.get('handoff')
@@ -456,48 +536,32 @@ def _normalize_runtime_handoff_summary(record_id, replay):
     latest_step = steps[-1] if steps else {}
     semantic_context = replay.get('semanticContext') or {}
 
-    required_fields = [
-        'Truth Status',
-        'Latest Evidence Summary',
-        'Latest Evidence Class',
-        'Latest Evidence Source Type',
-        'Latest Evidence Refs',
-        'Semantic Refs',
-        'Trace Events',
-        'Latest Trace Action',
-        'Latest Trace Summary',
-        'Consumer Hints',
-    ]
-    boundary_required_fields = [
-        'Canonical Authority',
-        'Local Writable Targets',
-        'Human Gate Actions',
-        'Forbidden Mutations',
-    ]
-
     if isinstance(handoff, dict):
         sections = handoff.get('sections') or []
         field_map = _handoff_field_map(sections)
-        missing_fields = [field for field in required_fields if field not in field_map or field_map.get(field) in (None, '')]
+        missing_fields = [
+            field for field in _HANDOFF_REQUIRED_FIELDS
+            if field not in field_map or field_map.get(field) in (None, '')
+        ]
         handoff_boundary = _execution_boundary_from_handoff_sections(sections)
         semantic_boundary = _execution_boundary_from_semantic_context(semantic_context)
         execution_boundary = handoff_boundary or semantic_boundary
-        missing_boundary_fields = []
-        if execution_boundary is None:
-            missing_boundary_fields = list(boundary_required_fields)
-        else:
-            missing_boundary_fields = [
-                field for field, key in (
-                    ('Canonical Authority', 'canonicalAuthority'),
-                    ('Local Writable Targets', 'localWritableTargets'),
-                    ('Human Gate Actions', 'humanGateActions'),
-                    ('Forbidden Mutations', 'forbiddenMutations'),
-                )
-                if execution_boundary.get(key) in (None, '', [])
-            ]
+        execution_boundary_source = (
+            'moduleDetails.handoff.Execution Boundary'
+            if handoff_boundary
+            else ('semanticContext.executionBoundary' if semantic_boundary else None)
+        )
+        missing_boundary_fields = _missing_execution_boundary_fields(execution_boundary)
         gaps = list(replay.get('gaps') or [])
         if execution_boundary is None:
             gaps.append('executionBoundary is missing from moduleDetails.handoff and semanticContext.')
+        handoff_contract = _normalize_handoff_contract(
+            replay.get('handoffContract'),
+            missing_boundary_fields,
+            execution_boundary_source,
+            missing_fields,
+            gaps,
+        )
         return {
             'recordId': record_id,
             'source': 'moduleDetails.handoff',
@@ -508,7 +572,7 @@ def _normalize_runtime_handoff_summary(record_id, replay):
             'fieldMap': field_map,
             'semanticContext': semantic_context,
             'executionBoundary': execution_boundary,
-            'executionBoundarySource': 'moduleDetails.handoff.Execution Boundary' if handoff_boundary else ('semanticContext.executionBoundary' if semantic_boundary else None),
+            'executionBoundarySource': execution_boundary_source,
             'executionBoundaryMissingFields': missing_boundary_fields,
             'traceEventCount': len(steps),
             'latestTraceAction': field_map.get('Latest Trace Action'),
@@ -516,9 +580,16 @@ def _normalize_runtime_handoff_summary(record_id, replay):
             'consumerHints': field_map.get('Consumer Hints'),
             'missingFields': missing_fields,
             'gaps': gaps,
+            'handoffContract': handoff_contract,
         }
 
     semantic_boundary = _execution_boundary_from_semantic_context(semantic_context)
+    gaps = list(replay.get('gaps') or [])
+    gaps.append('moduleDetails.handoff is missing from the current replay payload.')
+    if semantic_boundary is None:
+        gaps.append('executionBoundary is missing from moduleDetails.handoff and semanticContext.')
+    execution_boundary_source = 'semanticContext.executionBoundary' if semantic_boundary else None
+    missing_boundary_fields = _missing_execution_boundary_fields(semantic_boundary)
     return {
         'recordId': record_id,
         'source': 'replay_without_moduleDetails.handoff',
@@ -529,25 +600,54 @@ def _normalize_runtime_handoff_summary(record_id, replay):
         'fieldMap': {},
         'semanticContext': semantic_context,
         'executionBoundary': semantic_boundary,
-        'executionBoundarySource': 'semanticContext.executionBoundary' if semantic_boundary else None,
-        'executionBoundaryMissingFields': [
-            field for field, key in (
-                ('Canonical Authority', 'canonicalAuthority'),
-                ('Local Writable Targets', 'localWritableTargets'),
-                ('Human Gate Actions', 'humanGateActions'),
-                ('Forbidden Mutations', 'forbiddenMutations'),
-            )
-            if (semantic_boundary or {}).get(key) in (None, '', [])
-        ] or boundary_required_fields,
+        'executionBoundarySource': execution_boundary_source,
+        'executionBoundaryMissingFields': missing_boundary_fields,
         'traceEventCount': len(steps),
         'latestTraceAction': latest_step.get('action'),
         'latestTraceSummary': latest_step.get('summary') or latest_step.get('detail') or latest_step.get('label'),
         'consumerHints': None,
-        'missingFields': required_fields,
-        'gaps': (replay.get('gaps') or []) + [
-            'moduleDetails.handoff is missing from the current replay payload.',
-            'executionBoundary is missing from moduleDetails.handoff and semanticContext.',
-        ],
+        'missingFields': list(_HANDOFF_REQUIRED_FIELDS),
+        'gaps': gaps,
+        'handoffContract': _normalize_handoff_contract(
+            replay.get('handoffContract'),
+            missing_boundary_fields,
+            execution_boundary_source,
+            _HANDOFF_REQUIRED_FIELDS,
+            gaps,
+        ),
+    }
+
+
+def _runtime_handoff_unavailable_payload(record_id, gap_message):
+    missing_boundary_fields = list(_EXECUTION_BOUNDARY_REQUIRED_FIELDS)
+    gaps = [gap_message]
+    handoff_contract = _normalize_handoff_contract(
+        None,
+        missing_boundary_fields,
+        None,
+        _HANDOFF_REQUIRED_FIELDS,
+        gaps,
+    )
+    handoff_contract['blockingIssues'] = [gap_message]
+    return {
+        'recordId': record_id,
+        'source': 'flowmind_unavailable',
+        'mode': '',
+        'title': 'Handoff Summary',
+        'summary': '',
+        'sections': [],
+        'fieldMap': {},
+        'semanticContext': {},
+        'executionBoundary': None,
+        'executionBoundarySource': None,
+        'executionBoundaryMissingFields': missing_boundary_fields,
+        'traceEventCount': 0,
+        'latestTraceAction': None,
+        'latestTraceSummary': None,
+        'consumerHints': None,
+        'missingFields': list(_HANDOFF_REQUIRED_FIELDS),
+        'gaps': gaps,
+        'handoffContract': handoff_contract,
     }
 def _flowmind_records(limit=80, source_agent=None):
     agent_filter = source_agent if source_agent is not None else _get_flowmind_source_agent()
@@ -1212,32 +1312,12 @@ def runtime_handoffs():
         )
         if isinstance(replay, dict):
             return jsonify(_normalize_runtime_handoff_summary(record_id, replay))
-        return jsonify({
-            'recordId': record_id,
-            'source': 'flowmind_unavailable',
-            'mode': '',
-            'title': 'Handoff Summary',
-            'summary': '',
-            'sections': [],
-            'fieldMap': {},
-            'traceEventCount': 0,
-            'latestTraceAction': None,
-            'latestTraceSummary': None,
-            'consumerHints': None,
-            'missingFields': [
-                'Truth Status',
-                'Latest Evidence Summary',
-                'Latest Evidence Class',
-                'Latest Evidence Source Type',
-                'Latest Evidence Refs',
-                'Semantic Refs',
-                'Trace Events',
-                'Latest Trace Action',
-                'Latest Trace Summary',
-                'Consumer Hints',
-            ],
-            'gaps': ['FlowMind replay upstream unavailable for the provided recordId.'],
-        }), 502
+        return jsonify(
+            _runtime_handoff_unavailable_payload(
+                record_id,
+                'FlowMind replay upstream unavailable for the provided recordId.',
+            )
+        ), 502
 
     repo_root = _get_repo_root()
     outbox = repo_root / '.omx' / 'crazyagents' / 'outbox'

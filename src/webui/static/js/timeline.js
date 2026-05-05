@@ -105,10 +105,14 @@
   }
 
   function renderBoundaryRow(label, value) {
+    var normalizedValue = value;
+    if (Array.isArray(normalizedValue)) {
+      normalizedValue = normalizedValue.join(' | ');
+    }
     return (
       '<div class="tl-boundary-row">' +
         '<span class="tl-boundary-label">' + escapeHtml(label) + '</span>' +
-        '<span class="tl-boundary-value">' + escapeHtml(value == null || value === '' ? '--' : value) + '</span>' +
+        '<span class="tl-boundary-value">' + escapeHtml(normalizedValue == null || normalizedValue === '' ? '--' : normalizedValue) + '</span>' +
       '</div>'
     );
   }
@@ -116,6 +120,7 @@
   function renderHandoff(data) {
     handoffRecordEl.textContent = data.recordId || '--';
     handoffSourceEl.textContent = data.source || '--';
+    var contract = data.handoffContract || {};
 
     var fieldMap = data.fieldMap || {};
     var requiredFields = [
@@ -145,8 +150,14 @@
     );
 
     var gaps = '';
-    if (data.missingFields && data.missingFields.length) {
-      gaps += '<div class="tl-gap-box"><strong>仍缺字段</strong><p>' + escapeHtml(data.missingFields.join('，')) + '</p></div>';
+    if (contract.blockingIssues && contract.blockingIssues.length) {
+      gaps += '<div class="tl-gap-box"><strong>契约阻塞</strong><p>' + escapeHtml(contract.blockingIssues.join('；')) + '</p></div>';
+    }
+    if (contract.missingFields && contract.missingFields.length) {
+      gaps += '<div class="tl-gap-box"><strong>仍缺字段</strong><p>' + escapeHtml(contract.missingFields.join('，')) + '</p></div>';
+    }
+    if (contract.executionBoundaryMissingFields && contract.executionBoundaryMissingFields.length) {
+      gaps += '<div class="tl-gap-box"><strong>边界缺口</strong><p>' + escapeHtml(contract.executionBoundaryMissingFields.join('，')) + '</p></div>';
     }
     if (data.gaps && data.gaps.length) {
       gaps += '<div class="tl-gap-box"><strong>上游缺口</strong><p>' + escapeHtml(data.gaps.join('；')) + '</p></div>';
@@ -183,6 +194,11 @@
         '<p class="tl-handoff-copy">' + escapeHtml(data.summary || '模块摘要由 FlowMind replay 提供。') + '</p>' +
       '</div>' +
       meta +
+      '<div class="tl-handoff-meta">' +
+        renderFieldRow('Contract Ready', contract.ready ? 'yes' : 'no') +
+        renderFieldRow('Primary Source', contract.primarySource || '--') +
+        renderFieldRow('Execution Boundary Source', contract.executionBoundarySource || '--') +
+      '</div>' +
       '<div class="tl-handoff-grid">' + rows + '</div>' +
       boundaryMarkup +
       gaps;
@@ -220,7 +236,9 @@
       .then(function(data) {
         renderHandoff(data);
         rawEl.textContent = JSON.stringify(data, null, 2);
-        setHandoffState('已加载', data.source === 'moduleDetails.handoff' ? 'ok' : 'error');
+        var ready = data.handoffContract && data.handoffContract.ready === true;
+        var stateText = ready ? '契约就绪' : '契约阻塞';
+        setHandoffState(stateText, ready ? 'ok' : 'error');
       })
       .catch(function(error) {
         renderHandoffEmpty('无法读取 replay handoff，请检查 recordId 或 upstream 连通性。');
