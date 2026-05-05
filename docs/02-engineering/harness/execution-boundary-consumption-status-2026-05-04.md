@@ -2,7 +2,8 @@
 
 > Date: 2026-05-04  
 > Branch: `feat/auto-capture-trace`  
-> Scope: Crazy handoff / review consumer surface
+> Scope: Crazy handoff / review consumer surface  
+> **⚠️ 已过期**：本文结论（`executionBoundary = null`）已被 `handoff-live-closeout-2026-05-05.md` 覆盖。Execution Boundary 现已通过 `semanticContext.executionBoundary` 回退完整闭环。
 
 ## Verified live record
 
