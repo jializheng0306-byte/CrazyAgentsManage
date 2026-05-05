@@ -257,6 +257,16 @@ class TestV04ContextManagementAPIs:
                 'record': {'id': 'rec-1'},
                 'mode': 'trace',
                 'gaps': [],
+                'handoffContract': {
+                    'version': 'handoff-packet-v1',
+                    'primarySource': 'moduleDetails.handoff',
+                    'fallbackOrder': ['semanticContext.fieldMappings', 'latestEvidence', 'traceSummary'],
+                    'ready': True,
+                    'blockingIssues': [],
+                    'missingFields': [],
+                    'executionBoundarySource': 'semanticPacket.executionBoundary',
+                    'executionBoundaryMissingFields': [],
+                },
                 'steps': [
                     {'moduleId': 'agent', 'label': 'Agent ingress', 'detail': 'first step'},
                     {'moduleId': 'review', 'label': 'Review handoff', 'detail': 'latest summary'},
@@ -304,6 +314,8 @@ class TestV04ContextManagementAPIs:
         assert data['latestTraceAction'] == 'approve'
         assert data['traceEventCount'] == 2
         assert data['missingFields'] == []
+        assert data['handoffContract']['ready'] is True
+        assert data['handoffContract']['blockingIssues'] == []
 
     def test_runtime_handoffs_extracts_execution_boundary_section(self, client, monkeypatch):
         monkeypatch.setattr(
@@ -342,6 +354,7 @@ class TestV04ContextManagementAPIs:
         assert data['executionBoundary']['humanGateActions'] == 'confirm / reject / clarify / approve / commit'
         assert data['executionBoundary']['forbiddenMutations'] == 'feedback.eventType must not overwrite truth.status'
         assert data['executionBoundaryMissingFields'] == []
+        assert data['handoffContract']['executionBoundarySource'] == 'moduleDetails.handoff.Execution Boundary'
 
     def test_runtime_handoffs_falls_back_to_semantic_execution_boundary(self, client, monkeypatch):
         monkeypatch.setattr(
@@ -377,6 +390,86 @@ class TestV04ContextManagementAPIs:
         assert data['executionBoundary']['humanGateActions'] == ['POST /bridge/feedback']
         assert data['executionBoundaryMissingFields'] == []
         assert data['executionBoundary']['forbiddenMutations'] == ['feedback.eventType -> flowmind_status']
+        assert data['handoffContract']['ready'] is False
+        assert data['handoffContract']['executionBoundarySource'] == 'semanticContext.executionBoundary'
+        assert 'Handoff packet is missing required field: Truth Status.' in data['handoffContract']['blockingIssues']
+        assert 'Handoff packet is missing required field: Consumer Hints.' in data['handoffContract']['blockingIssues']
+
+    def test_runtime_handoffs_uses_upstream_handoff_contract_blockers(self, client, monkeypatch):
+        monkeypatch.setattr(
+            webui_api,
+            '_safe_flowmind_request',
+            lambda *args, **kwargs: {
+                'record': {'id': 'rec-contract-1'},
+                'mode': 'derived',
+                'gaps': [],
+                'handoffContract': {
+                    'version': 'handoff-packet-v1',
+                    'primarySource': 'moduleDetails.handoff',
+                    'fallbackOrder': ['semanticContext.fieldMappings', 'latestEvidence', 'traceSummary'],
+                    'ready': False,
+                    'blockingIssues': ['Truth status approved requires latestEvidence, but no evidence snapshot is present.'],
+                    'missingFields': ['Semantic Core.latestEvidence'],
+                    'executionBoundarySource': 'semanticPacket.executionBoundary',
+                    'executionBoundaryMissingFields': [],
+                },
+                'steps': [],
+                'moduleDetails': {
+                    'handoff': {
+                        'title': 'Unified Handoff Packet',
+                        'summary': 'Upstream semantic packet.',
+                        'sections': [],
+                    }
+                },
+            },
+        )
+        resp = client.get('/api/runtime/handoffs?recordId=rec-contract-1')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['handoffContract']['ready'] is False
+        assert data['handoffContract']['missingFields'] == ['Semantic Core.latestEvidence']
+        assert data['handoffContract']['blockingIssues'] == [
+            'Truth status approved requires latestEvidence, but no evidence snapshot is present.'
+        ]
+
+    def test_runtime_handoffs_unavailable_keeps_contract_shape(self, client, monkeypatch):
+        monkeypatch.setattr(webui_api, '_safe_flowmind_request', lambda *args, **kwargs: None)
+        resp = client.get('/api/runtime/handoffs?recordId=rec-missing')
+        assert resp.status_code == 502
+        data = resp.get_json()
+        assert data['recordId'] == 'rec-missing'
+        assert data['source'] == 'flowmind_unavailable'
+        assert data['semanticContext'] == {}
+        assert data['executionBoundary'] is None
+        assert data['executionBoundarySource'] is None
+        assert data['executionBoundaryMissingFields'] == [
+            'Canonical Authority',
+            'Local Writable Targets',
+            'Human Gate Actions',
+            'Forbidden Mutations',
+        ]
+        assert data['handoffContract']['ready'] is False
+        assert data['handoffContract']['blockingIssues'] == [
+            'FlowMind replay upstream unavailable for the provided recordId.'
+        ]
+        assert data['handoffContract']['missingFields'] == [
+            'Truth Status',
+            'Latest Evidence Summary',
+            'Latest Evidence Class',
+            'Latest Evidence Source Type',
+            'Latest Evidence Refs',
+            'Semantic Refs',
+            'Trace Events',
+            'Latest Trace Action',
+            'Latest Trace Summary',
+            'Consumer Hints',
+        ]
+        assert data['handoffContract']['executionBoundaryMissingFields'] == [
+            'Canonical Authority',
+            'Local Writable Targets',
+            'Human Gate Actions',
+            'Forbidden Mutations',
+        ]
 
     def test_runtime_harness_summary_api_reachable(self, client):
         resp = client.get('/api/runtime/harness-summary')
@@ -424,6 +517,8 @@ class TestPromiseTimeline:
         data = resp.data.decode()
         assert 'fetchTrace' in data
         assert '/api/promise-review/trace/' in data
+        assert 'contract.missingFields' in data
+        assert 'contract.executionBoundaryMissingFields' in data
 
     def test_promise_review_trace_api_normalizes_upstream(self, client, monkeypatch):
         monkeypatch.setattr(
