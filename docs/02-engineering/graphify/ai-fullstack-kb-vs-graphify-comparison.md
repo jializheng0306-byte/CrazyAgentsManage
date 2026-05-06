@@ -2,6 +2,7 @@
 
 > 对比日期：2026-05-07
 > 左侧：《AI全栈研发知识基座》（淘天集团·天猫品牌行业前端团队，珈文）
+>   原文存档：[ai-fullstack-knowledge-base-article.md](./ai-fullstack-knowledge-base-article.md)
 > 右侧：Graphify（Karpathy /raw 理念启发，Nous Research HermesAgent 部署）
 > 制表：HermesAgent @ CrazyAgentsManage
 
