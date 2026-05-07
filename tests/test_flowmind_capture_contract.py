@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 
 
@@ -46,3 +47,70 @@ def test_priority_confidence_uses_percentage_scale():
     assert MODULE.priority_confidence("P0") == 85
     assert MODULE.priority_confidence("P1") == 70
     assert MODULE.priority_confidence("P2") == 55
+
+
+def test_build_record_from_radar_name_uses_real_radar_shape(tmp_path, monkeypatch):
+    radar_file = tmp_path / "tech-radar.json"
+    radar_file.write_text(
+        json.dumps(
+            {
+                "entries": [
+                    {
+                        "name": "Sample",
+                        "priority": "P1",
+                        "impact_assessment": "impact",
+                        "action_suggested": "action",
+                        "source": "arxiv",
+                        "url": "https://example.com",
+                        "notes": "note",
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(MODULE, "RADAR_FILE", radar_file)
+
+    record = MODULE.build_record_from_radar_name("Sample")
+
+    assert record["name"] == "Sample"
+    assert record["priority"] == "P1"
+    assert record["impact"] == "impact"
+    assert record["action"] == "action"
+
+
+def test_build_trace_check_url_uses_manage_proxy_for_ali_hermes_runtime():
+    runtime = {
+        "base_url": "http://111.229.194.203:3301",
+        "server_id": "ali-hermes",
+        "watcher_trace_base_url": "",
+    }
+
+    url = MODULE.build_trace_check_url(runtime, "candidate-123")
+
+    assert url == "http://127.0.0.1/manage/api/promise-review/trace/candidate-123"
+
+
+def test_build_trace_check_url_uses_bridge_trace_endpoint_outside_manage_proxy():
+    runtime = {
+        "base_url": "http://111.229.194.203:3301",
+        "server_id": "tx-newhost",
+        "watcher_trace_base_url": "",
+    }
+
+    url = MODULE.build_trace_check_url(runtime, "candidate-123")
+
+    assert url == "http://111.229.194.203:3301/api/bridge/trace/candidate-123"
+
+
+def test_build_trace_check_url_honors_explicit_watcher_base_url():
+    runtime = {
+        "base_url": "http://111.229.194.203:3301",
+        "server_id": "ali-hermes",
+        "watcher_trace_base_url": "http://47.99.217.1/manage",
+    }
+
+    url = MODULE.build_trace_check_url(runtime, "candidate-123")
+
+    assert url == "http://47.99.217.1/manage/api/promise-review/trace/candidate-123"

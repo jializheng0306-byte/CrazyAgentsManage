@@ -36,7 +36,8 @@ echo "" >> "$OUTPUT"
 for f in ERRORS.md LEARNINGS.md FEATURE_REQUESTS.md; do
     filepath="$LEARNINGS_DIR/$f"
     if [ -f "$filepath" ]; then
-        PENDING_COUNT=$(grep -c "status: pending" "$filepath" 2>/dev/null || echo 0)
+        PENDING_COUNT=$(grep -Ec '^- \[LRN-[0-9]{8}-[0-9]+\].*status: pending' "$filepath" 2>/dev/null || true)
+        PENDING_COUNT=${PENDING_COUNT:-0}
         if [ "$PENDING_COUNT" -gt 0 ]; then
             echo "### $f ($PENDING_COUNT 条 pending)" >> "$OUTPUT"
             grep -B2 -A3 "status: pending" "$filepath" >> "$OUTPUT" 2>/dev/null || true

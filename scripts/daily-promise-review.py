@@ -35,7 +35,9 @@ STATUS_MAP = {
     "done": "已完成",
     "overdue": "已过期",
     "rejected": "已拒绝",
-    "blocked": "进行中",
+    "blocked": "blocked",
+    "deferred": "deferred",
+    "cancelled": "cancelled",
 }
 
 PRIORITY_MAP = {
@@ -46,6 +48,11 @@ PRIORITY_MAP = {
 }
 
 FLOWMIND_STATUS_VALUES = {"draft", "submitted", "approved", "committed", "rejected"}
+FEEDBACK_STATUS_MAP = {
+    "blocked": "blocked",
+    "deferred": "deferred",
+    "cancelled": "cancelled",
+}
 
 
 def run_cmd(cmd, timeout=30):
@@ -461,6 +468,15 @@ def build_feedback_summary(feedback_events):
     }
 
 
+def resolve_local_status(status_raw, feedback_summary, flowmind_status=""):
+    latest_feedback_type = str(feedback_summary.get("latest_feedback_type") or "").strip().lower()
+    if latest_feedback_type in FEEDBACK_STATUS_MAP:
+        return FEEDBACK_STATUS_MAP[latest_feedback_type]
+    if str(flowmind_status or "").strip().lower() == "committed":
+        return STATUS_MAP["done"]
+    return STATUS_MAP.get(status_raw, "待处理")
+
+
 def build_trace_summary(truth_payload, trace_events):
     truth_payload = unwrap_flowmind_payload(truth_payload)
     truth_status = str(truth_payload.get("status") or "").strip().lower()
@@ -529,6 +545,8 @@ def ensure_main_table_fields(app_token, table_id):
         {"name": "flowmind_status", "type": "text"},
         {"name": "last_trace_at", "type": "datetime", "style": {"format": "yyyy/MM/dd HH:mm"}},
         {"name": "trace_summary", "type": "text"},
+        {"name": "last_governance_status", "type": "text"},
+        {"name": "last_governance_feedback", "type": "text"},
     ]
 
     for spec in required_specs:
@@ -674,7 +692,11 @@ def sync_to_bitable(promises, config):
             "title": str(promise.get("title", ""))[:200],
             "description": str(promise.get("description", ""))[:500],
             "source": str(promise.get("source", ""))[:100],
-            "status": STATUS_MAP.get(status_raw, "待处理"),
+            "status": resolve_local_status(
+                status_raw,
+                feedback_summary,
+                trace_summary["flowmind_status"],
+            ),
             "priority": PRIORITY_MAP.get(priority_raw, "P3"),
             "flowmind_status": trace_summary["flowmind_status"],
             "trace_summary": trace_summary["trace_summary"],
@@ -682,6 +704,10 @@ def sync_to_bitable(promises, config):
             "last_trace_summary": trace_summary["last_trace_summary"],
             "备注": " | ".join(note_parts)[:1000],
         }
+        if "last_governance_status" in main_fields:
+            fields["last_governance_status"] = trace_summary["flowmind_status"]
+        if "last_governance_feedback" in main_fields:
+            fields["last_governance_feedback"] = feedback_summary["latest_feedback_type"]
 
         created_at = datetime_to_ms(promise.get("created_at", ""))
         if created_at:
@@ -692,6 +718,8 @@ def sync_to_bitable(promises, config):
             fields["due_date"] = due_date
 
         completed_at = datetime_to_ms(promise.get("completed_at", ""))
+        if not completed_at and trace_summary["flowmind_status"] == "committed":
+            completed_at = trace_summary["last_trace_at"]
         if completed_at:
             fields["completed_at"] = completed_at
 

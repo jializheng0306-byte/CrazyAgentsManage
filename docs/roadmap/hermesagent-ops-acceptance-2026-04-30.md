@@ -227,7 +227,7 @@ HUD / Operator Console 不通过。当前 operator 没有一个可用的、正�
 | state.db output tokens | 1,526,197 |
 | state.db estimated_cost_usd | 全部为 0（未生效） |
 | gateway platforms | feishu=connected, webhook=connected, api_server=connected |
-| cron jobs | 2 (FlowMind巡检 08:00/20:00, 每日反思 23:30) |
+| cron jobs | 2 (FlowMind巡检 08:00/20:00, 默认反思 job-root 23:30) |
 | Bitable records | 13 |
 | Bitable FlowMind同步 | 1 条"不需要", 12 条"未同步" |
 | WebUI port 8080 | /opt/hermes-webui/ 运行中（参考实现） |

@@ -38,7 +38,7 @@ def load_config():
 def load_sync_state():
     if SYNC_STATE_FILE.exists():
         return json.loads(SYNC_STATE_FILE.read_text())
-    return {"synced_ids": []}
+    return {"synced_ids": [], "record_map": {}}
 
 
 def save_sync_state(state):
@@ -151,16 +151,19 @@ def main():
     print(f"发现 {len(new_entries)} 个新条目，同步到 Bitable...")
 
     synced_names = []
+    record_map = state.get("record_map", {})
     for entry in new_entries:
         record_id = create_record(config, entry)
         if record_id:
             print(f"  ✅ {entry['name']} → {record_id}")
             synced_names.append(entry["name"])
+            record_map[entry["name"]] = record_id
         else:
             print(f"  ❌ {entry['name']} 同步失败")
 
     # 更新同步状态
     state["synced_ids"].extend(synced_names)
+    state["record_map"] = record_map
     state["last_sync"] = datetime.now().isoformat()
     save_sync_state(state)
 

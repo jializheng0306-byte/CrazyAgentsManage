@@ -417,8 +417,8 @@ Zoe: @承诺管家 [state=final] [ack_id=review-20260426]
 | `evening-trend-analysis` | 20:00 | 情报哨兵 | 分析今日技术趋势 | 🔴计划开发 |
 | `daily-content-publish` | 20:00 | 内容策展 | 执行发布计划 | 🔴计划开发 |
 | `nightly-ops-check` | 22:00 | Zoe | 执行晚间系统巡检 | 🔴计划开发 |
-| `daily-reflection` | 23:00 | 各专家 | 执行每日反思 | 🔴计划开发 |
-| `daily-summary` | 23:30 | Zoe | 汇总全团队产出 | 🔴计划开发 |
+| `daily-reflection` | 23:00 | 各专家 | legacy 反思入口（非默认 authority） | 🟡legacy |
+| `auto-reflection` | 23:30 | Zoe / 反思链 | 默认反思 job-root；采集窗口固定为上一日 23:30 到本次运行时刻 | 🟡部分实现 |
 | `daily-digest` | 23:45 | Zoe | 推送日报到飞书群 | 🔴计划开发 |
 | `weekly-promise-audit` | 18:00 周五 | 承诺管家 | 生成本周承诺盘点 | 🔴计划开发 |
 | `weekly-content-review` | 18:00 周日 | 内容策展 | 分析本周内容效果 | 🔴计划开发 |
@@ -461,21 +461,23 @@ Zoe: @承诺管家 [state=final] [ack_id=review-20260426]
 | L1 身份层 | SOUL.md | 永恒 | 人工确认修改 | 🟢已实现 |
 | L2 长期记忆 | MEMORY.md | 长期 | Agent 自主维护 | 🟢已实现 |
 | L3 中期记忆 | memory/YYYY-MM-DD.md | 中期 | 自动提取 | 🟡部分实现（compaction 机制存在但无结构化归档） |
-| L4 短期记忆 | .learnings/ | 短期 | 即时记录 | 🔴计划开发 |
+| L4 短期记忆 | .learnings/ | 短期 | 即时记录 + 23:30 反思链 promote | 🟡部分实现 |
 | L5 持久化 | Skills + Obsidian | 持久 | 共享/归档 | 🟡Skills 已实现，Obsidian 未集成 |
 
 #### 3.6.2 记忆自主迭代循环
 
-> **【目标】** 以下循环为设计规范，自动 promote 机制尚未实现。
+> 当前口径：默认反思 `job-root` 已接入 `.learnings/ -> MEMORY.md` promote；L3 结构化归档仍未完成。
 
 ```
 触发事件（操作失败/用户纠正/发现更优做法）
     ↓
 .learnings/ 即时记录
     ↓
-每日反思 Cron (23:00)
+23:30 auto-reflection
     ↓
-评估复现频率 → ≥3 次？ → promote 到 MEMORY.md
+memory_promote.py 评估复现频率 / 用户明确纠正信号
+    ↓
+满足规则 → promote 到 MEMORY.md，并把源条目标记为 promoted
     ↓
 下次 Session 加载（bootstrap hook）
     ↓

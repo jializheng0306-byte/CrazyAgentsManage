@@ -12,9 +12,10 @@
 | 维度 | CrazyAgentsManage | FlowMindDeploy | 状态 | 说明 |
 |---|---|---|---|---|
 | 运营主线 | `feat/auto-capture-trace@3c5815d` | `main@f9dda9a` | `compatible_with_conditions` | 主方向成立；capture 管道仍有条件项（见 §2） |
-| Candidate ingress | `scripts/flowmind_capture.py` | `POST /api/integrations/candidate-ingress` | `partially_compatible` | 接口可达（2026-05-03 冒烟 201 created），但 capture 脚本的 baseURL/body 对齐未在真实 Bitable→FlowMind 链路上闭合验证 |
+| Candidate ingress | `scripts/flowmind_capture.py` | `POST /api/integrations/candidate-ingress` | `partially_compatible` | 接口可达（2026-05-03 冒烟 201 created）；2026-05-04 已补 `FlowMind success -> Tech Radar writeback` 默认代码路径，且默认回写已去除额外 Bitable 读依赖；同日已用真实 Radar 条目跑通 1 条 live success 样本（candidate `27489697-8fd8-4c47-b6f8-d84196f4bc45`），但完整 `Bitable 已确认记录 -> FlowMind -> Radar` 闭合仍待具备读权限后的复验 |
 | Truth / Review read | `scripts/runtime/generate_hermes_handoff.py` + HUD/webui | `review-queue` + `bridge/truth` | `compatible` ✅ | **已真实跑通**：2026-05-03 通过 `bridge/truth` 成功读取 `semanticContext` + `latestEvidence`，直接注入 Hermes handoff packet |
 | Hermes handoff packet | `scripts/runtime/generate_hermes_handoff.py` | `bridge/truth` | `compatible` ✅ | **真实 round 已验证**：packet 包含 semantic refs、field mappings、consumer hints、latestEvidence，HermesAgent 无需人工补充即可完成运营 review |
+| Crazy handoff health contract | `src/webui/api.py` + `src/webui/static/js/timeline.js` | `operator/records/:recordId/replay` + `handoffContract` | `compatible` ✅ | **2026-05-05 已收口**：Crazy 现以 `handoffContract.ready / blockingIssues` 作为默认 handoff 健康判定，不再本地推断“是否阻塞” |
 | Handshake smoke | `docs/02-engineering/harness/handshake-smoke-status-2026-05-03.md` | (全覆盖) | `partial_pass_with_evidence` | 仓库证据已补；当前 5/8 通过、3/8 仅接口可达，尚未形成全链路 `handshake-passed` |
 | Feedback | **未消费** | `bridge/feedback/:instanceId` | `endpoint_only` | FlowMind 端点存在（HTTP 401 → endpoint 可达，需 x-instance-token），Crazy 侧无消费入口 |
 | Context Pack | **未消费** | `bridge/context-pack` | `endpoint_only` | FlowMind 端点存在（HTTP 401 → endpoint 可达，需 x-instance-token），Crazy 侧无消费入口 |
@@ -30,8 +31,11 @@
    - 脚本层面：`send_to_flowmind()` 使用 `POST /api/integrations/candidate-ingress`，路径正确  
    - 仍缺失：Bitable 真实"已确认"记录 → FlowMind candidate 的端到端闭合验证
 
-2. **`decision → Bitable/Tech Radar` 状态回写未完成**  
-   - 兼容矩阵条件项原 #2，状态无变化
+2. **`decision → Bitable/Tech Radar` 状态回写已形成默认代码路径，但缺 live 复验**  
+   - 2026-05-04 已新增 `tech_radar_writeback.py`
+   - `flowmind_capture.py` 成功后会自动触发 Radar 回写
+   - 仍缺一次真实 Bitable 决策记录上的端到端复验
+   - `base:record:read` 现仅影响独立 CLI 全量/单条回写，不再阻塞默认 capture 成功路径
 
 3. **webhook 还是运行时触发通道，尚未纳入正式双仓兼容校验**  
    - 兼容矩阵条件项原 #3，状态无变化

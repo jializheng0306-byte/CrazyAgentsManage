@@ -92,14 +92,15 @@ CrazyAgentsManage项目的每日工作流，覆盖07:00-23:45全天运营节奏�
   - 规划下一步行动
 
 ### 23:00 - 23:45 每日反思 (Daily Reflection)
-- **23:00** 当日回顾
+- **23:00** legacy 反思窗口（旧口径，非当前默认 authority）
   - 完成情况评估
   - 效率分析
   - 经验总结
-- **23:30** 改进计划
+- **23:30** `auto-reflection` 默认反思窗口（当前默认 `job-root`）
   - 识别改进点
   - 制定改进措施
   - 更新工作流程
+  - 采集窗口固定为“上一日 23:30 -> 本次运行时刻”，23:30 后活动自动并入下一次反思
 - **23:45** 系统维护
   - 日志清理
   - 数据备份
@@ -121,8 +122,12 @@ CrazyAgentsManage项目的每日工作流，覆盖07:00-23:45全天运营节奏�
 # 晚间趋势分析 (20:00)
 0 20 * * * /root/.hermes/scripts/evening-trend-analysis.sh
 
-# 每日反思 (23:00)
+# 每日反思 legacy 入口 (23:00)
 0 23 * * * /root/.hermes/scripts/daily-reflection.sh
+
+# 默认反思 job-root (23:30)
+# 当前仓库可审计实现: scripts/auto-reflection.sh
+# 当前采集窗口: 上一日 23:30 -> 本次运行时刻
 ```
 
 ## 工作流工具

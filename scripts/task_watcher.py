@@ -168,6 +168,8 @@ class TaskWatcher:
         self.watcher_log = self.monitor_dir / "watcher.log"
         self.audit_log = self.monitor_dir / "audit.log"
         self.dlq_file = self.monitor_dir / "dlq.jsonl"
+        self.status_file = self.monitor_dir / "watcher-status.json"
+        self.heartbeat_file = self.monitor_dir / "watcher-heartbeat.json"
 
     def register_task(self, name: str, adapter: str, check_target: str,
                       priority: TaskPriority = TaskPriority.P1,
@@ -274,9 +276,66 @@ class TaskWatcher:
 
         # Save updated tasks
         self._save_tasks(updated_tasks)
+        self._write_runtime_state(results, updated_tasks)
 
         self._log(f"Check complete: {json.dumps(results)}")
         return results
+
+    def _write_runtime_state(self, results: Dict, tasks: List[MonitoredTask]):
+        """回写 watcher 状态和心跳面。"""
+        checked_at = datetime.now().isoformat()
+        task_counts = {
+            "total": len(tasks),
+            "pending": 0,
+            "in_progress": 0,
+            "completed": 0,
+            "failed": 0,
+            "timed_out": 0,
+        }
+        task_summaries = []
+        for task in tasks:
+            task_counts[task.status.value] += 1
+            task_summaries.append(
+                {
+                    "task_id": task.task_id,
+                    "name": task.name,
+                    "adapter": task.adapter,
+                    "status": task.status.value,
+                    "retry_count": task.retry_count,
+                    "last_check": task.last_check,
+                    "last_result": task.last_result,
+                    "deadline": task.deadline,
+                }
+            )
+
+        self.status_file.write_text(
+            json.dumps(
+                {
+                    "checkedAt": checked_at,
+                    "results": results,
+                    "taskCounts": task_counts,
+                    "tasks": task_summaries,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n"
+        )
+        self.heartbeat_file.write_text(
+            json.dumps(
+                {
+                    "lastRunAt": checked_at,
+                    "ok": True,
+                    "checked": results["checked"],
+                    "completed": results["completed"],
+                    "failed": results["failed"],
+                    "timed_out": results["timed_out"],
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n"
+        )
 
     def _load_tasks(self) -> List[MonitoredTask]:
         """加载所有任务"""

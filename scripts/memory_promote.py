@@ -8,6 +8,7 @@
   触发事件 → .learnings/ 即时记录 → [本脚本] → promote 到 MEMORY.md → bootstrap 注入 → 行为改进
 """
 
+import argparse
 import json
 import os
 import re
@@ -53,7 +54,7 @@ def parse_learnings(filepath: Path) -> List[Dict]:
                 "source": str(filepath),
                 "reproduce_count": 1,
             }
-        elif current and line.strip().startswith(("- ", "  ")):
+        elif current and (line.startswith("  ") or line.startswith("\t")):
             current["content"].append(line.strip())
 
     if current:
@@ -71,17 +72,28 @@ def count_reproductions(entry: Dict) -> int:
     return 1
 
 
+def has_explicit_user_correction(entry: Dict) -> bool:
+    """检测条目是否包含“用户明确纠正”信号。"""
+    joined = "\n".join(entry["content"])
+    markers = [
+        "用户明确纠正",
+        "用户纠正",
+        "明确纠正",
+    ]
+    return any(marker in joined for marker in markers)
+
+
 def should_promote(entry: Dict) -> Tuple[bool, str]:
     """判断条目是否应该 promote"""
     if entry["status"] != "pending":
         return False, f"状态是 {entry['status']}，跳过"
 
     reproduce_count = count_reproductions(entry)
+    if has_explicit_user_correction(entry):
+        return True, "命中用户明确纠正信号，立即 promote"
+
     if reproduce_count >= 3:
         return True, f"复现 {reproduce_count} 次 ≥ 3，promote"
-
-    if entry["priority"] == "high":
-        return True, f"high 优先级，立即 promote（复现 {reproduce_count} 次）"
 
     return False, f"复现 {reproduce_count} 次 < 3，继续观察"
 
@@ -97,11 +109,25 @@ def get_memory_tokens() -> int:
 def promote_to_memory(entry: Dict) -> bool:
     """将条目 promote 到 MEMORY.md"""
     current_tokens = get_memory_tokens()
+    if MEMORY_FILE.exists() and entry["id"] in MEMORY_FILE.read_text():
+        print(f"  ℹ️ MEMORY.md 已存在该条目，跳过重复 promote: {entry['id']}")
+        return True
 
     # 构造要追加的内容
     type_emoji = {"ERR": "❌", "LRN": "💡", "FEAT": "📌"}.get(entry["type"], "📝")
-    content_lines = "\n".join(entry["content"])
-    new_entry = f"\n§\n{type_emoji} [{entry['id']}] {content_lines}\n"
+    content_lines = "\n".join(
+        f"  {line}" if line else line for line in entry["content"]
+    )
+    promoted_at = datetime.now().strftime("%Y-%m-%d")
+    new_entry = (
+        f"\n### {promoted_at} promote\n"
+        f"- id: {entry['id']}\n"
+        f"- type: {entry['type']}\n"
+        f"- priority: {entry['priority']}\n"
+        f"- source: {entry['source']}\n"
+        f"{type_emoji} 记录内容:\n"
+        f"{content_lines}\n"
+    )
 
     new_tokens = int(len(new_entry) * 2 / 3)
 
@@ -111,6 +137,7 @@ def promote_to_memory(entry: Dict) -> bool:
         return False
 
     # 追加到 MEMORY.md
+    MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(MEMORY_FILE, "a") as f:
         f.write(new_entry)
 
@@ -197,7 +224,14 @@ def run_promote_check() -> Dict:
     return results
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Promote pending learnings to MEMORY.md")
+    parser.add_argument("--json-out", help="Write JSON result to this path")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_args()
     print(f"=== 记忆 promote 检查 {datetime.now().isoformat()} ===")
     print(f"MEMORY.md: {MEMORY_FILE} ({get_memory_tokens()} tokens / {MEMORY_CHAR_LIMIT} limit)")
     print(f"learnings: {LEARNINGS_DIR}")
@@ -220,4 +254,7 @@ if __name__ == "__main__":
 
     # 输出 JSON 供 cron agent 读取
     print()
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    payload = json.dumps(results, ensure_ascii=False, indent=2)
+    print(payload)
+    if args.json_out:
+        Path(args.json_out).write_text(payload)

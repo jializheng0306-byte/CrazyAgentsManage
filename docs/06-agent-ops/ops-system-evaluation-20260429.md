@@ -108,7 +108,7 @@
 | 1 | **Agent 独立进程** | 当前是单实例角色切换 | 每个 Agent 有独立 SOUL/AGENTS/MEMORY/Cron |
 | 2 | **三态通信协议** | 设计文档完成，代码零实现 | 在飞书群协作中先人工遵守，再代码化 |
 | 3 | **Task Watcher** | 设计文档完成，代码零实现 | 先实现 file-adapter（最简单的适配器） |
-| 4 | **记忆自主迭代** | .learnings/ 模板就绪，promote 逻辑待验证 | 等反思 cron 首次执行后评估 |
+| 4 | **记忆自主迭代** | `.learnings/` promote 已接入 `23:30 auto-reflection`，可自动回写 `MEMORY.md` | 下一步补 L3 结构化归档 |
 
 ### 中优先级（影响系统完整性）
 

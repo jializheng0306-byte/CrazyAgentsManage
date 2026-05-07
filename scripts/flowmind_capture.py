@@ -26,10 +26,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from tech_radar_writeback import run_writeback_for_records
+from task_watcher import TaskPriority, TaskWatcher
+
 
 CRAZY_ROOT = Path(os.environ.get("CRAZY_ROOT", os.path.expanduser("~/CrazyAgentsManage")))
 BITABLE_CONFIG = CRAZY_ROOT / "shared-context" / "bitable-config.json"
 LINK_STATE_FILE = CRAZY_ROOT / "shared-context" / "flowmind-link-state.json"
+RADAR_FILE = CRAZY_ROOT / "shared-context" / "tech-radar.json"
 
 DEFAULT_FLOWMIND_BASE_URL = os.environ.get("FLOWMIND_BASE_URL", "http://111.229.194.203:3301")
 DEFAULT_FLOWMIND_API_KEY = os.environ.get("FLOWMIND_API_KEY", "flowmind-dev-token")
@@ -38,11 +46,13 @@ DEFAULT_FLOWMIND_SOURCE_AGENT = os.environ.get("FLOWMIND_SOURCE_AGENT", "hermes"
 DEFAULT_FLOWMIND_SERVER_ID = os.environ.get("FLOWMIND_SERVER_ID", "ali-hermes")
 DEFAULT_FLOWMIND_PLUGIN_VERSION = os.environ.get("FLOWMIND_PLUGIN_VERSION", "crazyagentsmanage-link-v1")
 DEFAULT_FLOWMIND_ROUTE_ID = os.environ.get("FLOWMIND_ROUTE_ID", "crazyagentsmanage-bitable-capture")
+DEFAULT_WATCHER_TRACE_BASE_URL = os.environ.get("CRAZY_WATCHER_TRACE_BASE_URL", "")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Sync confirmed Bitable value items into FlowMind candidates")
     parser.add_argument("record_id", nargs="?", help="只同步指定的 Bitable record_id")
+    parser.add_argument("--radar-name", help="在缺少 Bitable 读权限时，直接用 Tech Radar 条目做 live 复验")
     parser.add_argument("--dry-run", action="store_true", help="打印将发送的 payload，不真正调用 FlowMind")
     parser.add_argument("--register-instance", action="store_true", help="在发送前向 FlowMind 注册/刷新 instance 并保存返回的 apiKey")
     parser.add_argument("--base-url", default=DEFAULT_FLOWMIND_BASE_URL, help="FlowMind base URL")
@@ -52,6 +62,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--server-id", default=DEFAULT_FLOWMIND_SERVER_ID, help="FlowMind integration serverId")
     parser.add_argument("--plugin-version", default=DEFAULT_FLOWMIND_PLUGIN_VERSION, help="FlowMind integration pluginVersion")
     parser.add_argument("--route-id", default=DEFAULT_FLOWMIND_ROUTE_ID, help="sourceContext.route_id")
+    parser.add_argument(
+        "--watcher-trace-base-url",
+        default=DEFAULT_WATCHER_TRACE_BASE_URL,
+        help="Task Watcher trace check base URL; when omitted, runtime defaults are used",
+    )
     return parser.parse_args()
 
 
@@ -126,6 +141,16 @@ def load_link_state() -> dict[str, Any]:
         return {}
 
 
+def load_tech_radar_entries() -> list[dict[str, Any]]:
+    if not RADAR_FILE.exists():
+        return []
+    try:
+        radar = json.loads(RADAR_FILE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    return radar.get("entries", [])
+
+
 def save_link_state(data: dict[str, Any]) -> None:
     LINK_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     LINK_STATE_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -138,6 +163,24 @@ def normalize_priority(value: Any) -> str:
 
 def priority_confidence(priority: str) -> int:
     return {"P0": 85, "P1": 70, "P2": 55}[priority]
+
+
+def build_record_from_radar_name(target_name: str) -> dict[str, Any]:
+    entries = load_tech_radar_entries()
+    for entry in entries:
+        if entry.get("name") != target_name:
+            continue
+        return {
+            "record_id": entry.get("bitable_record_id", ""),
+            "name": entry.get("name", ""),
+            "priority": entry.get("priority", "P2"),
+            "impact": entry.get("impact_assessment", ""),
+            "action": entry.get("action_suggested", ""),
+            "source": entry.get("source", ""),
+            "url": entry.get("url", ""),
+            "notes": entry.get("notes", ""),
+        }
+    raise ValueError(f"未在 tech-radar.json 中找到条目: {target_name}")
 
 
 def build_candidate_payload(record: dict[str, Any], runtime: dict[str, str]) -> dict[str, Any]:
@@ -186,6 +229,42 @@ def build_candidate_payload(record: dict[str, Any], runtime: dict[str, str]) -> 
         },
         "timestamp": now_iso(),
     }
+
+
+def resolve_trace_check_base_url(runtime: dict[str, str]) -> str:
+    explicit = runtime.get("watcher_trace_base_url", "").strip()
+    if explicit:
+        return explicit.rstrip("/")
+
+    link_state = load_link_state()
+    linked = str(link_state.get("watcherTraceBaseUrl") or "").strip()
+    if linked:
+        return linked.rstrip("/")
+
+    if runtime.get("server_id") == "ali-hermes":
+        # On ALI-HERMES, the local manage proxy is reachable without FlowMind auth.
+        return "http://127.0.0.1/manage"
+
+    return runtime["base_url"].rstrip("/")
+
+
+def build_trace_check_url(runtime: dict[str, str], candidate_id: str) -> str:
+    base_url = resolve_trace_check_base_url(runtime)
+    if base_url.endswith("/manage"):
+        return f"{base_url}/api/promise-review/trace/{candidate_id}"
+    return f"{base_url}/api/bridge/trace/{candidate_id}"
+
+
+def register_trace_watch(runtime: dict[str, str], candidate_id: str) -> str:
+    watcher = TaskWatcher()
+    task = watcher.register_task(
+        name=f"flowmind-trace-{candidate_id[:8]}",
+        adapter="http",
+        check_target=build_trace_check_url(runtime, candidate_id),
+        priority=TaskPriority.P1,
+        timeout_hours=24,
+    )
+    return task.task_id
 
 
 def get_pending_records(config: dict[str, Any]) -> list[dict[str, Any]]:
@@ -300,6 +379,8 @@ def send_to_flowmind(record: dict[str, Any], runtime: dict[str, str]) -> tuple[b
 
 
 def update_bitable_status(config: dict[str, Any], record_id: str, status: str) -> None:
+    if not record_id:
+        return
     app_token = config["app_token"]
     table_id = config["table_id"]
     payload = json.dumps({"fields": {"FlowMind同步": status}}, ensure_ascii=False)
@@ -327,6 +408,7 @@ def build_runtime_config(args: argparse.Namespace) -> dict[str, str]:
         "server_id": args.server_id,
         "plugin_version": args.plugin_version,
         "route_id": args.route_id,
+        "watcher_trace_base_url": args.watcher_trace_base_url,
     }
 
 
@@ -349,7 +431,10 @@ def main() -> int:
             return 1
 
     try:
-        records = [get_record_by_id(config, args.record_id)] if args.record_id else get_pending_records(config)
+        if args.radar_name:
+            records = [build_record_from_radar_name(args.radar_name)]
+        else:
+            records = [get_record_by_id(config, args.record_id)] if args.record_id else get_pending_records(config)
     except Exception as exc:
         print(f"❌ 读取 Bitable 失败: {exc}")
         return 1
@@ -377,7 +462,24 @@ def main() -> int:
 
         if success:
             update_bitable_status(config, record["record_id"], "已同步")
+            try:
+                writeback_record = dict(record)
+                writeback_record["flowmind_sync"] = "已同步"
+                writeback = run_writeback_for_records([writeback_record], dry_run=False)
+                print(
+                    "    ↩️ Tech Radar 回写: "
+                    f"matched={writeback['matched']}, updated={writeback['updated']}"
+                )
+            except Exception as exc:
+                print(f"    ⚠️ Tech Radar 回写失败: {exc}")
             response_data = result["response"].get("data", {})
+            candidate_id = response_data.get("candidateId")
+            if candidate_id:
+                try:
+                    task_id = register_trace_watch(runtime, candidate_id)
+                    print(f"    👀 Task Watcher 已注册: {task_id}")
+                except Exception as exc:
+                    print(f"    ⚠️ Task Watcher 注册失败: {exc}")
             print(f"    ✅ 同步成功: candidateId={response_data.get('candidateId')}")
         else:
             failures += 1
