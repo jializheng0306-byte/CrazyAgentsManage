@@ -28,15 +28,19 @@
 
 1. [轻量本体DSL规范-v0-2026-05-02.md](/home/flowmind/FlowMindDeploy/docs/01-product/轻量本体DSL规范-v0-2026-05-02.md)
 2. [下一阶段任务规划-2026-05-02.md](/home/flowmind/FlowMindDeploy/docs/01-product/下一阶段任务规划-2026-05-02.md)
-3. [Graphify-轻量本体方案借鉴评估-2026-05-02.md](/home/flowmind/FlowMindDeploy/docs/01-product/Graphify-轻量本体方案借鉴评估-2026-05-02.md)
-4. [hermes-flowmind-compatibility-matrix-2026-04-30.md](/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/hermes-flowmind-compatibility-matrix-2026-04-30.md)
-5. [hermes-flowmind-link-manifest-v1.json](/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/hermes-flowmind-link-manifest-v1.json)
+3. [治理动作分层口径-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E6%B2%BB%E7%90%86%E5%8A%A8%E4%BD%9C%E5%88%86%E5%B1%82%E5%8F%A3%E5%BE%84-v1-2026-05-07.md)
+4. [执行包字段对照与消费顺序-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E6%89%A7%E8%A1%8C%E5%8C%85%E5%AD%97%E6%AE%B5%E5%AF%B9%E7%85%A7%E4%B8%8E%E6%B6%88%E8%B4%B9%E9%A1%BA%E5%BA%8F-v1-2026-05-07.md)
+5. [Graphify-轻量本体方案借鉴评估-2026-05-02.md](/home/flowmind/FlowMindDeploy/docs/01-product/Graphify-轻量本体方案借鉴评估-2026-05-02.md)
+6. [hermes-flowmind-compatibility-matrix-2026-04-30.md](/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/hermes-flowmind-compatibility-matrix-2026-04-30.md)
+7. [hermes-flowmind-link-manifest-v1.json](/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/hermes-flowmind-link-manifest-v1.json)
 
 这一层回答：
 
 - 该对象的稳定名字与边界是什么
 - 哪些状态只是 candidate，哪些已经进入 truth 可读面
 - 哪些通道是正式支持的，哪些仍是 partial/incompatible
+- 当前动作属于 review decision、truth promotion 还是 operational feedback
+- 当前执行包字段属于展示壳、解释层、证据锚点、边界层还是 readiness gate
 
 ### 第 2 层：双仓产品与协同层
 
@@ -109,3 +113,15 @@
 
 > 如果任务还要产出 handoff / review / closeout 内容，则默认继续遵守：
 > `truth.status` 定主状态，`feedback.eventType` 只进运营层，`timeline` 读 `traceEvents[]`，`handoff` 读 `moduleDetails.handoff + semanticContext + latestEvidence`，不回退为人工自由文本主体。
+
+补充：
+
+> 如果任务还涉及 `confirm / reject / clarify / approve / commit / deferred / cancelled` 等动作或事件，必须先按 FlowMind canonical 判断它属于 review decision、truth promotion 还是 operational feedback，再继续分析入口、回写与消费面。
+
+补充：
+
+> 如果任务还涉及 `moduleDetails.handoff / semanticContext / latestEvidence / executionBoundary / handoffContract`，必须先按 FlowMind canonical 判断字段职责与默认消费顺序，再继续分析执行面或 closeout。
+
+补充：
+
+> 如果任务还涉及 closeout / acceptance / deploy 结论组合，默认再参考 `FlowMindDeploy/docs/05-version-control/治理证据资产索引-v1-2026-05-07.md`，按 shared 证据资产顺序读取，而不是只挑单一 deploy 文档或 change record。
