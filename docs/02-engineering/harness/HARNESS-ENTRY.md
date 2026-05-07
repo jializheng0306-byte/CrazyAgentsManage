@@ -89,6 +89,7 @@ Never invert that rule.
 9. `docs/02-engineering/harness/PRD-DOCUMENT-GOVERNANCE.md`
 10. `docs/02-engineering/harness/HARNESS-CAPABILITY-MAPPING.md`
 11. `docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md`
+12. [docs/02-engineering/graphify/README.md](/home/flowmind/CrazyAgentsManage/docs/02-engineering/graphify/README.md)
 
 ## Required Artifacts For A Collaboration Round
 

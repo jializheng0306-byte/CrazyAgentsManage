@@ -62,7 +62,21 @@
       "requiredLinks": [
         "docs/02-engineering/harness/CODEX-HERMES-WORKFLOW.md",
         "docs/02-engineering/harness/CROSS-REVIEW-PROCESS.md",
-        "docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md"
+        "docs/02-engineering/harness/SEMANTIC-FIRST-READING-RULE.md",
+        "docs/02-engineering/graphify/README.md"
+      ]
+    },
+    {
+      "path": "docs/02-engineering/graphify/README.md",
+      "mustContain": [
+        "# Graphify Research Surface",
+        "## One-Page Summary",
+        "## Usage Rule"
+      ],
+      "requiredLinks": [
+        "docs/02-engineering/graphify/ai-fullstack-knowledge-base-article.md",
+        "docs/02-engineering/graphify/ai-fullstack-kb-vs-graphify-comparison.md",
+        "docs/02-engineering/harness/HARNESS-ENTRY.md"
       ]
     },
     {

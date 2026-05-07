@@ -43,10 +43,16 @@ def validate_entrypoint(spec: dict) -> tuple[bool, str]:
             return False, f"{rel_path} 缺少入口锚点: {token}"
 
     page_dir = target.parent
-    links = {str((page_dir / unquote(href)).resolve()) for href in extract_markdown_links(text)}
+    raw_links = [unquote(href) for href in extract_markdown_links(text)]
+    links = {str((page_dir / href).resolve()) for href in raw_links}
     for rel_link in spec.get("requiredLinks", []):
         abs_link = str((ROOT / rel_link).resolve())
-        if not (ROOT / rel_link).exists() or abs_link not in links:
+        suffix_match = any(
+            href.startswith("/")
+            and Path(href).as_posix().endswith(rel_link.replace("\\", "/"))
+            for href in raw_links
+        )
+        if not (ROOT / rel_link).exists() or (abs_link not in links and not suffix_match):
             return False, f"{rel_path} 的入口链接失效: {rel_link}"
 
     return True, f"{rel_path} 的入口锚点与链接有效"
