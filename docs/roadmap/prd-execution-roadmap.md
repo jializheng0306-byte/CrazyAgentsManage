@@ -80,6 +80,9 @@ scripts/check_cross_repo_prd_sync.sh
 - `FlowMindDeploy/docs/01-product/handoff-packet-contract-v1-2026-05-04.md`
 - `FlowMindDeploy/docs/01-product/Phase6-默认SOP与提示词同步-2026-05-04.md`
 - `FlowMindDeploy/docs/01-product/外部执行面-读写边界-v1-2026-05-04.md`
+- `FlowMindDeploy/docs/01-product/治理动作分层口径-v1-2026-05-07.md`
+- `FlowMindDeploy/docs/01-product/执行包字段对照与消费顺序-v1-2026-05-07.md`
+- `FlowMindDeploy/docs/05-version-control/治理证据资产索引-v1-2026-05-07.md`
 
 至少要保持以下默认规则不漂移：
 
@@ -87,6 +90,11 @@ scripts/check_cross_repo_prd_sync.sh
 - `feedback.eventType` 只进入运营动作层
 - `timeline` 只消费 `traceEvents[]`
 - `handoff` 默认消费 `moduleDetails.handoff + semanticContext + latestEvidence`
+- `confirm / reject / clarify` 属于 review decision actions
+- `approve / commit` 属于 truth promotion actions
+- `confirmed / blocked / clarified / deferred / cancelled` 属于 operational feedback events
+- `moduleDetails.handoff / semanticContext / latestEvidence / executionBoundary / handoffContract` 不得混写成同一种摘要
+- closeout / governance 结论应按 `change record -> deploy fact -> acceptance/eval -> closeout seed -> governance report` 组合读取，而不是分散挑读
 
 ## 当前产品共识
 

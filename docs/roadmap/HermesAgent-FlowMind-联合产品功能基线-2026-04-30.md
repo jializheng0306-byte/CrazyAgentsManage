@@ -167,6 +167,8 @@ Phase 6 当前默认口径还必须与 FlowMind canonical docs 保持一致：
 - `FlowMindDeploy/docs/01-product/handoff-packet-contract-v1-2026-05-04.md`
 - `FlowMindDeploy/docs/01-product/Phase6-默认SOP与提示词同步-2026-05-04.md`
 - `FlowMindDeploy/docs/01-product/外部执行面-读写边界-v1-2026-05-04.md`
+- `FlowMindDeploy/docs/01-product/治理动作分层口径-v1-2026-05-07.md`
+- `FlowMindDeploy/docs/01-product/执行包字段对照与消费顺序-v1-2026-05-07.md`
 
 Crazy 侧不得自行改写以下默认规则：
 
@@ -174,6 +176,10 @@ Crazy 侧不得自行改写以下默认规则：
 - `feedback.eventType` 只进入运营动作层
 - `timeline` 默认消费 `traceEvents[]`
 - `handoff` 默认消费 `moduleDetails.handoff + semanticContext + latestEvidence`
+- `confirm / reject / clarify` 属于 review decision actions，而不是运营反馈
+- `approve / commit` 属于 truth promotion actions，而不是 review decision 或本地 done 投影
+- `moduleDetails.handoff / semanticContext / latestEvidence / executionBoundary / handoffContract` 应按执行包五层解释
+- 双仓 closeout / governance 结论应参考 `FlowMindDeploy/docs/05-version-control/治理证据资产索引-v1-2026-05-07.md`
 
 ---
 
