@@ -1,9 +1,9 @@
 # HermesAgent × FlowMind Compatibility Matrix
 
-> 日期: 2026-05-03（更新自 2026-04-30 initial-baseline）  
-> 状态: updated-post-real-round  
+> 日期: 2026-05-08（更新自 2026-04-30 initial-baseline）  
+> 状态: updated-post-mirror-sync  
 > 仓库视角: `CrazyAgentsManage`  
-> 触发更新: 真实 handoff generator round (candidate `219a5914`, instance `hermes-agent`)
+> 触发更新: 真实 handoff generator round + PR #17 mirror sync landed
 
 ---
 
@@ -15,6 +15,9 @@
 | Candidate ingress | `scripts/flowmind_capture.py` | `POST /api/integrations/candidate-ingress` | `partially_compatible` | 接口可达（2026-05-03 冒烟 201 created），但 capture 脚本的 baseURL/body 对齐未在真实 Bitable→FlowMind 链路上闭合验证 |
 | Truth / Review read | `scripts/runtime/generate_hermes_handoff.py` + HUD/webui | `review-queue` + `bridge/truth` | `compatible` ✅ | **已真实跑通**：2026-05-03 通过 `bridge/truth` 成功读取 `semanticContext` + `latestEvidence`，直接注入 Hermes handoff packet |
 | Hermes handoff packet | `scripts/runtime/generate_hermes_handoff.py` | `bridge/truth` | `compatible` ✅ | **真实 round 已验证**：packet 包含 semantic refs、field mappings、consumer hints、latestEvidence，HermesAgent 无需人工补充即可完成运营 review |
+| Action-family interpretation | Crazy PRD/roadmap/semantic-first 入口 | `治理动作分层口径-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到 Crazy 入口层**：现在明确区分 `review decision actions / truth promotion actions / operational feedback events`，不再把三类动作混写成同一种状态推进 |
+| Execution packet field layering | Crazy PRD/roadmap/semantic-first 入口 | `执行包字段对照与消费顺序-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到 Crazy 入口层**：现在明确区分 `moduleDetails.handoff / semanticContext / latestEvidence / executionBoundary / handoffContract` 五层职责 |
+| Governance evidence reading order | Crazy PRD/roadmap/semantic-first 入口 | `治理证据资产索引-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到入口层**：Crazy 侧已承认 `change record -> deploy fact -> acceptance/eval -> closeout seed -> governance report` 的 shared 读取顺序；更深对等 shared 入口仍可后续增强 |
 | Handshake smoke | `docs/02-engineering/harness/handshake-smoke-status-2026-05-03.md` | (全覆盖) | `partial_pass_with_evidence` | 仓库证据已补；当前 5/8 通过、3/8 仅接口可达，尚未形成全链路 `handshake-passed` |
 | Feedback | **未消费** | `bridge/feedback/:instanceId` | `endpoint_only` | FlowMind 端点存在（HTTP 401 → endpoint 可达，需 x-instance-token），Crazy 侧无消费入口 |
 | Context Pack | **未消费** | `bridge/context-pack` | `endpoint_only` | FlowMind 端点存在（HTTP 401 → endpoint 可达，需 x-instance-token），Crazy 侧无消费入口 |
@@ -43,6 +46,10 @@
    - 两个端点均存在且可达（HTTP 401 证明端点存活），但 Crazy 侧无消费脚本/流程
    - 仓库证据已补到 `feedback-context-consumption-status-2026-05-03.md`，但结论仍是“仅接口存在，未消费”
 
+6. **shared 治理证据资产目前只是入口层镜像，不是 Crazy 的对等 shared 证据系统**  
+   - 这不阻塞当前 mirror / sync gate 基线
+   - 但后续若 Crazy 侧需要自己的 governance-report 汇总面，应单独扩设计
+
 ---
 
 ## 3. 升级到 `handshake-passed` 的条件
@@ -63,4 +70,4 @@
 
 ## 4. 一句话结论
 
-> 2026-05-03 更新：**Truth read + handoff packet 链已真实跑通**，`semanticContext` + `latestEvidence` 可自动注入 Hermes review。Capture 管道接口层可达，但端到端闭合验证仍缺；feedback/context-pack 仍停留在"端点存在但无人消费"状态。
+> 2026-05-08 更新：**Truth read + handoff packet 链已真实跑通，且第一轮 mirror sync 已合并到 Crazy 主开发线。** Crazy 入口层现在已经承认动作分层、执行包字段分层与 shared 证据读取顺序；Capture 管道端到端闭合验证与 feedback/context-pack 消费入口仍待后续补齐。
