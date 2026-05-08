@@ -56,6 +56,12 @@
 - closeout 记录
 - 是否回写 PRD / roadmap / 文档
 - 缺失 writeback 提示
+- 如需组合治理结论，按 shared 治理证据顺序展示：
+  - change record
+  - deploy fact
+  - acceptance / eval
+  - closeout seed
+  - governance report
 
 ### 4. 协作链路图
 

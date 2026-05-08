@@ -99,6 +99,7 @@ Every non-trivial Codex ↔ HermesAgent round should leave behind:
 3. one durable repository artifact when the round changes shared project truth
 4. one harness success/failure record at closeout
 5. one PRD/roadmap update when the iteration changes implementation or operations truth
+6. when a round needs combined governance evidence, read it in the shared order defined by FlowMind's governance evidence index rather than ad hoc picking single deploy or change artifacts
 
 ## Semantic-First Reading Rule
 
@@ -143,3 +144,7 @@ These commands complement the Python runtime scripts under `scripts/runtime/`; t
 - `scripts/harness-doc-entrypoints.manifest.json`
 - `docs/02-engineering/harness/harness-governance-report.md`
 - `node scripts/harness-closeout-writeback.cjs` 生成的 closeout payload / harness trace 中的 `governanceReports`
+
+当 closeout / acceptance / deploy 结论需要组合判断时，还应参考：
+
+- `FlowMindDeploy/docs/05-version-control/治理证据资产索引-v1-2026-05-07.md`
