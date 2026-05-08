@@ -3,7 +3,7 @@
 > 日期: 2026-05-08（更新自 2026-04-30 initial-baseline）  
 > 状态: updated-post-mirror-sync  
 > 仓库视角: `CrazyAgentsManage`  
-> 触发更新: 真实 handoff generator round + PR #17 mirror sync landed
+> 触发更新: 真实 handoff generator round + PR #17 mirror sync landed + feedback/context-pack 消费判面纠偏
 
 ---
 
@@ -19,8 +19,8 @@
 | Execution packet field layering | Crazy PRD/roadmap/semantic-first 入口 | `执行包字段对照与消费顺序-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到 Crazy 入口层**：现在明确区分 `moduleDetails.handoff / semanticContext / latestEvidence / executionBoundary / handoffContract` 五层职责 |
 | Governance evidence reading order | Crazy PRD/roadmap/semantic-first 入口 | `治理证据资产索引-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到入口层**：Crazy 侧已承认 `change record -> deploy fact -> acceptance/eval -> closeout seed -> governance report` 的 shared 读取顺序；更深对等 shared 入口仍可后续增强 |
 | Handshake smoke | `docs/02-engineering/harness/handshake-smoke-status-2026-05-03.md` | (全覆盖) | `partial_pass_with_evidence` | 仓库证据已补；当前 5/8 通过、3/8 仅接口可达，尚未形成全链路 `handshake-passed` |
-| Feedback | **未消费** | `bridge/feedback/:instanceId` | `endpoint_only` | FlowMind 端点存在（HTTP 401 → endpoint 可达，需 x-instance-token），Crazy 侧无消费入口 |
-| Context Pack | **未消费** | `bridge/context-pack` | `endpoint_only` | FlowMind 端点存在（HTTP 401 → endpoint 可达，需 x-instance-token），Crazy 侧无消费入口 |
+| Feedback | **脚本级部分消费** | `bridge/feedback/:instanceId` | `partially_consumed` | `scripts/daily-promise-review.py` 已读取、归一化并把 feedback 投影到承诺审查主表/Trace 子表；但还没有统一页面/产品化消费面。`GET /bridge/feedback/:instanceId` 当前代码口径允许 `ui_bearer` 或 `x-instance-token` |
+| Context Pack | **仅 probe 调用** | `bridge/context-pack` | `probe_only` | 当前只在 `scripts/flowmind_handshake_smoke.py` 中做 handshake 级探测；没有 durable 主线消费入口，`POST /bridge/context-pack` 仍要求 `x-instance-token` |
 | Health / Ops | Hermes 巡检任务 | `healthz` | `compatible` ✅ | 当前最成熟的一条联动链 |
 | Webhook route | Hermes webhook runtime | FlowMind ingress / evidence | `partial` | 可以联动，但需要纳入 manifest 与 handshake smoke |
 
@@ -42,9 +42,10 @@
 4. **HUD 当前仍是"设计 + webui + 外部 collector 参考实现"的组合，不是单一产品模块**  
    - 兼容矩阵条件项原 #4，状态无变化
 
-5. **feedback/context-pack 消费证据仍不足**  
-   - 两个端点均存在且可达（HTTP 401 证明端点存活），但 Crazy 侧无消费脚本/流程
-   - 仓库证据已补到 `feedback-context-consumption-status-2026-05-03.md`，但结论仍是“仅接口存在，未消费”
+5. **feedback/context-pack 判面已分叉，旧口径需要拆开维护**
+   - `feedback` 已有脚本级消费与运营字段投影，但还缺统一页面/产品化消费面与持续运行证据
+   - `context-pack` 目前仍停留在 handshake/probe 调用，尚无 durable 主线消费入口
+   - `feedback-context-consumption-status-2026-05-03.md` 与 link manifest 已按本轮结论纠偏，后续不能再把两者并列写成“都只是 endpoint_only”
 
 6. **shared 治理证据资产目前只是入口层镜像，不是 Crazy 的对等 shared 证据系统**  
    - 这不阻塞当前 mirror / sync gate 基线
@@ -60,14 +61,14 @@
    - ✅ review queue — 接口可达
    - ⚠️ decision — 接口可达但未在真实 review 轮次中触发
    - ✅ truth — 已通过 handoff generator 真实消费
-   - ⚠️ feedback — 接口可达，但 Crazy 侧未消费
-   - ⚠️ context-pack — 接口可达，但 Crazy 侧未消费
+   - ⚠️ feedback — 已有脚本级消费，但仍缺统一产品化入口与持续运行证据
+   - ⚠️ context-pack — 当前仅 probe 调用，仍缺 durable 主线消费入口
 3. webhook 路由纳入 manifest 并通过一次联动验证
 4. 双边 manifest / compatibility matrix 同步更新
-5. **feedback/context-pack 至少一侧形成可运行的消费入口（P2）**
+5. **context-pack 形成至少一条 durable 可运行消费入口（P2），feedback 则补齐契约/运行证据面**
 
 ---
 
 ## 4. 一句话结论
 
-> 2026-05-08 更新：**Truth read + handoff packet 链已真实跑通，且第一轮 mirror sync 已合并到 Crazy 主开发线。** Crazy 入口层现在已经承认动作分层、执行包字段分层与 shared 证据读取顺序；Capture 管道端到端闭合验证与 feedback/context-pack 消费入口仍待后续补齐。
+> 2026-05-08 更新：**Truth read + handoff packet 链已真实跑通，且第一轮 mirror sync 已合并到 Crazy 主开发线。** Crazy 入口层现在已经承认动作分层、执行包字段分层与 shared 证据读取顺序；`feedback` 已进入脚本级消费，`context-pack` 仍缺 durable 主线消费入口，capture 管道端到端闭合验证也仍待补齐。

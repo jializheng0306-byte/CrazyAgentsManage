@@ -1,6 +1,6 @@
 {
   "manifestVersion": "hermes-flowmind-link-v1",
-  "updatedAt": "2026-04-30T00:00:00+08:00",
+  "updatedAt": "2026-05-08T00:00:00+08:00",
   "repoPerspective": "CrazyAgentsManage",
   "systems": {
     "crazyagentsmanage": {
@@ -62,7 +62,13 @@
     "feedback": {
       "recordEndpoint": "/api/bridge/feedback",
       "pullEndpoint": "/api/bridge/feedback/:instanceId",
-      "auth": "x_instance_token"
+      "auth": {
+        "record": "x_instance_token",
+        "pull": [
+          "ui_bearer",
+          "x_instance_token"
+        ]
+      }
     },
     "contextPack": {
       "endpoint": "/api/bridge/context-pack",
