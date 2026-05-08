@@ -52,6 +52,7 @@
 
 - 标题、目标、关联 artifacts、问题清单、状态必须可见
 - handoff 不得只停留在 chat 或 tmux 上下文里
+- 当 handoff 需要携带治理上下文摘要时，默认应继承 Crazy page-facing canonical surface（`/api/runtime/handoffs?recordId=...`）或其上游 replay 结果，**不得**让 generator 再独立直连 `context-pack` 自造另一套摘要主链
 
 ### 2. Runtime Snapshot Surface
 
