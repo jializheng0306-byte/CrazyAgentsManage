@@ -68,6 +68,25 @@
 - error details
 - cost indicators
 
+### 5. Record-Level Handoff / Context Summary
+
+内容：
+
+- `handoffContract.ready`
+- `blockingIssues`
+- `executionBoundary`
+- page-facing `contextSummary`
+  - `Active Commitments`
+  - `Recent Decisions`
+  - `Active Constraints`
+  - `Consumer Hints`
+
+要求：
+
+- 当前默认从 Crazy `/api/runtime/handoffs?recordId=...` 消费
+- 不直接把 raw replay adapter 当成页面最终契约
+- 不在此阶段强行把三项 context 计数字段全部升级为阻塞项
+
 ## 页面信息架构
 
 建议页面结构自上而下为：
@@ -75,8 +94,9 @@
 1. session 列表与筛选区
 2. session 详情区
 3. trace / lineage 区
-4. tool evidence 区
-5. 性能与成本区
+4. record-level handoff / context summary 区
+5. tool evidence 区
+6. 性能与成本区
 
 ## 页面模块树
 
@@ -85,6 +105,7 @@
   - SessionListPanel
   - SessionDetailPanel
   - LineageTracePanel
+  - HandoffContextPanel
   - ToolEvidencePanel
   - RuntimeMetricsPanel
 

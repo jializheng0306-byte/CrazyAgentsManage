@@ -58,7 +58,7 @@
 | Crazy 是否真的在某条主链里读取了 `bridge/context-pack`？ | **否** |
 | 入口脚本 / 页面 / 流程是什么？ | **无主线消费入口**。当前只见 `scripts/flowmind_handshake_smoke.py` 的 probe 调用，没有持续消费 `bridge/context-pack` 的页面、脚本或运营流程 |
 | 消费到哪个面？ | **无消费** |
-| 当前缺什么？ | 缺少：① durable 消费入口；② context-pack 字段到 handoff / 日审 / 运营页面的映射；③ 何时请求、谁负责消费、消费后写到哪里 的治理口径 |
+| 当前缺什么？ | 缺少：① durable 消费入口；② context-pack 字段到 handoff / 日审 / 运营页面的映射；③ 何时请求、谁负责消费、消费后写到哪里 的治理口径；④ 一个冻结后的 page-facing 主链顺序 |
 | 属于设计缺口、实现缺口还是运行缺口？ | **设计+实现缺口**。契约已定义（manifest contracts.contextPack），但 Crazy 侧未定义"需要什么样的 context"，也未实现消费端 |
 | 是否只是"接口存在但无人消费"？ | **不完全是**。更准确的说法是：已有 probe 调用，但仍无 durable 主线消费逻辑 |
 
@@ -92,3 +92,27 @@
 > 当前 `generate_hermes_handoff.py` **只消费 `bridge/truth`**，不读取 feedback 或 context-pack。
 > 这是合理分层：handoff packet 主读面仍应聚焦 truth read；feedback 已在日审脚本形成脚本级消费，context-pack 仍缺独立 durable consumer。
 > 如需增强 handoff packet（例如在 packet 中附带 feedback summary 或 context-pack 摘要），应在 generator 中增加可选读取参数，而不是回退成混杂 truth/feedback/context-pack 的单一自由文本入口。
+
+---
+
+## 6. 当前冻结的补强顺序
+
+针对 `context-pack`，Crazy 当前冻结的下一优先主线不是：
+
+1. 让 `generate_hermes_handoff.py` 直接直连 `POST /bridge/context-pack`
+2. 直接新开 instance-level context 页面
+
+而是：
+
+> **先补强 Crazy `/api/runtime/handoffs?recordId=...` 的 page-facing `contextSummary`。**
+
+冻结点如下：
+
+1. `/api/runtime/handoffs?recordId=...`
+   - 作为当前 page-facing canonical surface
+2. `/api/flowmind/records/:recordId/replay`
+   - 只作为 upstream replay adapter
+3. `generate_hermes_handoff.py`
+   - 未来只能继承该主链结果，作为 downstream distributor
+4. instance-level context surface
+   - 当前不立项
