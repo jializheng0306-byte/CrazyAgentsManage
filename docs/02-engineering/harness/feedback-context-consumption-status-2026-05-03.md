@@ -1,7 +1,7 @@
 # Feedback / Context-Pack 消费状态
 
-> 日期: 2026-05-03  
-> 类型: 消费证据普查（CrazyAgentsManage 侧视角）  
+> 日期: 2026-05-08（更新自 2026-05-03 初版）
+> 类型: 消费证据普查 + 口径纠偏（CrazyAgentsManage 侧视角）
 > 触发: 补收口任务（兼容矩阵条件项 #6）  
 > 参照链路: `docs/02-engineering/harness/hermes-flowmind-link-manifest-v1.json` contracts.feedback / contracts.contextPack
 
@@ -12,7 +12,9 @@
 | 分类 | 含义 |
 |---|---|
 | **已消费** | Crazy 侧存在入口脚本/流程，能读取该端点数据并将其用于运营/开发决策 |
-| **仅接口存在** | FlowMind 端点可达（HTTP 返回非 404），但 Crazy 侧没有任何消费入口 |
+| **部分消费** | Crazy 侧已有脚本级消费入口和运营字段投影，但尚未形成统一页面/产品化主链 |
+| **探测性消费** | Crazy 侧存在 handshake/smoke/probe 调用，但没有 durable 主线消费入口 |
+| **仅接口存在** | FlowMind 端点可达（HTTP 返回非 404），但 Crazy 侧没有任何消费入口或探测入口 |
 | **未消费** | 端点不可达或 Crazy 侧无任何相关代码/流程引用 |
 
 ---
@@ -23,25 +25,27 @@
 
 | 问题 | 回答 |
 |---|---|
-| Crazy 是否真的在某条主链里读取了 `bridge/feedback/:instanceId`？ | **否** |
-| 入口脚本是什么？ | **无主线消费入口**。仓库存在 `scripts/flowmind_handshake_smoke.py` 的探测性调用，但没有持续消费 `bridge/feedback/:instanceId` 的运营/开发流程 |
-| 消费到哪个状态面？ | **无消费** |
-| 当前缺什么？ | 缺少：① 正确的 x-instance-token；② 消费入口脚本/流程；③ 反馈数据到运营决策面的映射 |
-| 属于设计缺口、实现缺口还是运行缺口？ | **实现缺口**。FlowMind manifest 已定义该契约（§1.1 contracts.feedback），Crazy 侧尚未实现消费端 |
+| Crazy 是否真的在某条主链里读取了 `bridge/feedback/:instanceId`？ | **是，但层级仍停留在脚本级主链。** `scripts/daily-promise-review.py` 已真实读取并汇总 feedback；尚未形成统一页面/产品化消费面 |
+| 入口脚本是什么？ | 主入口是 `scripts/daily-promise-review.py`；此外 `scripts/flowmind_handshake_smoke.py` 也会做一次 feedback pull probe |
+| 消费到哪个状态面？ | 已进入承诺审查主表 `备注` 文本汇总、Trace 子表 `module=feedback` 事件写回，以及 `latest_feedback_* / notes_text` 这类运营投影 |
+| 当前缺什么？ | 缺少：① 统一页面/产品化消费入口；② `feedback pull` / `feedback record` 分离后的契约口径同步；③ 持续运行证据与验收口径补齐 |
+| 属于设计缺口、实现缺口还是运行缺口？ | **产品化消费缺口 + 契约文档漂移**。不能再简单归类为“无人消费” |
 
 ### 2.2 端点状态
 
 | 项 | 值 |
 |---|---|
-| 端点 | `GET /api/bridge/feedback/:instanceId` |
-| auth 要求 | `x-instance-token`（manifest contracts.feedback） |
-| HTTP 状态 (2026-05-03) | **401 Unauthorized** |
-| 路由匹配 | ✅ 是（401 证明路由存在，非 404） |
-| Bearer token 可用？ | ❌ 不适用，端点使用 `x-instance-token` 而非 Bearer |
+| pull 端点 | `GET /api/bridge/feedback/:instanceId` |
+| record 端点 | `POST /api/bridge/feedback` |
+| pull auth（代码口径，2026-05-08） | `ui_bearer` **或** `x-instance-token`。FlowMind `packages/mcp-server/src/api/bridge-routes.ts` 中 `GET /bridge/feedback/:instanceId` 走 `truthReadAuth` |
+| record auth（代码口径，2026-05-08） | `x-instance-token` |
+| 历史冒烟 (2026-05-03) | **401 Unauthorized**；该次结果只能证明当时鉴权生效，不能再据此推出“feedback 无消费入口” |
+| 路由匹配 | ✅ 是 |
+| Bearer token 可用？ | ✅ **对 pull 端点可用**；❌ 对 record 端点不适用 |
 
 ### 2.3 结论
 
-> **仅接口存在**。端点存活但 Crazy 侧无消费入口。待实现。
+> **部分消费**。Crazy 已有脚本级 feedback pull、事件归一化与运营字段写回；但还没有统一页面/产品化消费面，也缺持续运行证据面。
 
 ---
 
@@ -52,25 +56,25 @@
 | 问题 | 回答 |
 |---|---|
 | Crazy 是否真的在某条主链里读取了 `bridge/context-pack`？ | **否** |
-| 入口脚本 / 页面 / 流程是什么？ | **无主线消费入口**。仓库存在 `scripts/flowmind_handshake_smoke.py` 的探测性调用，但没有持续消费 `bridge/context-pack` 的页面、脚本或运营流程 |
+| 入口脚本 / 页面 / 流程是什么？ | **无主线消费入口**。当前只见 `scripts/flowmind_handshake_smoke.py` 的 probe 调用，没有持续消费 `bridge/context-pack` 的页面、脚本或运营流程 |
 | 消费到哪个面？ | **无消费** |
-| 当前缺什么？ | 缺少：① 正确的 x-instance-token；② 消费入口；③ context-pack 语义定义与 Crazy 运营面的映射 |
+| 当前缺什么？ | 缺少：① durable 消费入口；② context-pack 字段到 handoff / 日审 / 运营页面的映射；③ 何时请求、谁负责消费、消费后写到哪里 的治理口径 |
 | 属于设计缺口、实现缺口还是运行缺口？ | **设计+实现缺口**。契约已定义（manifest contracts.contextPack），但 Crazy 侧未定义"需要什么样的 context"，也未实现消费端 |
-| 是否只是"接口存在但无人消费"？ | **是**。精确描述：FlowMind 端点存在且可达，Crazy 侧无任何消费逻辑 |
+| 是否只是"接口存在但无人消费"？ | **不完全是**。更准确的说法是：已有 probe 调用，但仍无 durable 主线消费逻辑 |
 
 ### 3.2 端点状态
 
 | 项 | 值 |
 |---|---|
 | 端点 | `POST /api/bridge/context-pack` |
-| auth 要求 | `x-instance-token`（manifest contracts.contextPack） |
-| HTTP 状态 (2026-05-03) | **401 Unauthorized** |
-| 路由匹配 | ✅ 是（401 证明路由存在，非 404） |
+| auth 要求 | `x-instance-token`（FlowMind `packages/mcp-server/src/api/bridge-routes.ts`） |
+| 历史冒烟 (2026-05-03) | **401 Unauthorized**；说明当时接口存在但缺有效 token，不构成主线消费证明 |
+| 路由匹配 | ✅ 是 |
 | Bearer token 可用？ | ❌ 不适用 |
 
 ### 3.3 结论
 
-> **仅接口存在**。端点存活但 Crazy 侧无消费入口。待实现。
+> **探测性消费**。当前只有 handshake smoke 级调用；没有 durable 主线消费入口，也没有稳定运营投影。
 
 ---
 
@@ -78,13 +82,13 @@
 
 | 维度 | 状态 | 分类 | 阻塞项 |
 |---|---|---|---|
-| Feedback | 无人消费 | **仅接口存在** | ① x-instance-token；② 消费脚本；③ 反馈→运营映射 |
-| Context-Pack | 无人消费 | **仅接口存在** | ① x-instance-token；② 消费入口；③ context 语义定义 |
+| Feedback | 已有脚本级消费与运营字段投影 | **部分消费** | ① 统一产品化入口；② 契约口径与 manifest 同步；③ 持续运行证据 |
+| Context-Pack | 仅有 handshake/probe 调用 | **探测性消费** | ① durable 消费入口；② context 语义定义；③ 消费后写回/展示规则 |
 
 ---
 
 ## 5. 与当前 handoff generator 的关系
 
-> 当前 `generate_hermes_handoff.py` **只消费 `bridge/truth`**，不读取 feedback 或 context-pack。  
-> 这是正确的分层——handoff packet 聚焦 truth read surface，feedback/context-pack 属于独立消费链路。  
-> 如需增强 handoff packet（例如在 packet 中附带 feedback summary），应在 generator 中增加可选的 feedback/context-pack 读取参数，而非混入 truth read 逻辑。
+> 当前 `generate_hermes_handoff.py` **只消费 `bridge/truth`**，不读取 feedback 或 context-pack。
+> 这是合理分层：handoff packet 主读面仍应聚焦 truth read；feedback 已在日审脚本形成脚本级消费，context-pack 仍缺独立 durable consumer。
+> 如需增强 handoff packet（例如在 packet 中附带 feedback summary 或 context-pack 摘要），应在 generator 中增加可选读取参数，而不是回退成混杂 truth/feedback/context-pack 的单一自由文本入口。
