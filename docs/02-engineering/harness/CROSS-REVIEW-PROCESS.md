@@ -33,6 +33,7 @@
 - 关联 exec plan
 - 验证结果
 - 如适用，Hermes handoff 与 closeout evidence
+- 如需组合治理证据，再按 `FlowMindDeploy/docs/05-version-control/治理证据资产索引-v1-2026-05-07.md` 的 shared 顺序读取 change/deploy/eval/closeout/governance report
 - 推荐治理总入口：`./scripts/check_harness_governance_all.sh`
 - 治理检查结果：`./scripts/check_harness_governance.sh`
 - 如已具备 FlowMind 双仓同步检查器，再补 `./scripts/check_harness_governance.sh --with-cross-repo`

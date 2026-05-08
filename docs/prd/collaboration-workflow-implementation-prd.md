@@ -19,6 +19,7 @@
 - handoff packets
 - runtime snapshots
 - closeout evidence
+- governance evidence reading order
 - `.omx/` 与 `docs/` / `harness/` 的证据链
 - 技术架构页中的协作链路状态投影
 
@@ -73,6 +74,12 @@
 
 - closeout 应能回链到 PRD、roadmap、handoff、相关文档
 - 必须区分“已接受事实”和“运行时临时状态”
+- 当需要组合治理结论时，应按 shared 顺序读取：
+  - change record
+  - deploy fact
+  - acceptance / eval
+  - closeout seed
+  - governance report
 
 ### 4. Collaboration Graph Projection
 
