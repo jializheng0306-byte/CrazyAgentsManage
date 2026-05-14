@@ -289,7 +289,6 @@ def _read_optional_json(path):
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
-
 def _get_flowmind_base_url():
     return os.environ.get('FLOWMIND_API_BASE_URL', 'http://127.0.0.1:3001').rstrip('/')
 
@@ -330,6 +329,140 @@ def _safe_flowmind_request(path, query=None, method='GET', data=None, default=No
         return default
 
 
+def _normalize_bridge_trace(candidate_id, upstream):
+    if not isinstance(upstream, dict):
+        return {
+            'candidateId': candidate_id,
+            'candidateStatus': '',
+            'semanticContext': {},
+            'traceCount': 0,
+            'traceEvents': [],
+            'latestStatus': '',
+            'upstream': _get_flowmind_base_url(),
+        }
+
+    payload = upstream.get('data')
+    if isinstance(payload, dict):
+        upstream = payload
+
+    if isinstance(upstream.get('traceEvents'), list):
+        trace_events = [event for event in upstream.get('traceEvents', []) if isinstance(event, dict)]
+        latest_status = upstream.get('candidateStatus') or (trace_events[-1].get('toStatus') if trace_events else '')
+        return {
+            'candidateId': upstream.get('candidateId') or candidate_id,
+            'candidateStatus': upstream.get('candidateStatus') or '',
+            'semanticContext': upstream.get('semanticContext') or {},
+            'traceCount': upstream.get('traceCount') if isinstance(upstream.get('traceCount'), int) else len(trace_events),
+            'traceEvents': trace_events,
+            'latestStatus': latest_status or '',
+            'upstream': _get_flowmind_base_url(),
+        }
+
+    raw_events = []
+    if isinstance(upstream.get('events'), list):
+        raw_events = upstream.get('events', [])
+    elif isinstance(upstream.get('trace'), list):
+        raw_events = upstream.get('trace', [])
+    elif isinstance(upstream.get('data'), list):
+        raw_events = upstream.get('data', [])
+
+    trace_events = []
+    for index, event in enumerate(raw_events):
+        if not isinstance(event, dict):
+            continue
+        summary = event.get('summary') or event.get('detail') or event.get('label') or event.get('action') or ''
+        trace_events.append({
+            'traceId': event.get('traceId') or event.get('id') or f'{candidate_id}:{index}',
+            'candidateId': event.get('candidateId') or candidate_id,
+            'action': event.get('action') or event.get('eventType') or 'query',
+            'actor': event.get('actor') or 'system',
+            'fromStatus': event.get('fromStatus'),
+            'toStatus': event.get('toStatus') or event.get('status'),
+            'module': event.get('module') or event.get('moduleId') or 'bridge',
+            'timestamp': event.get('timestamp') or event.get('createdAt') or event.get('occurredAt'),
+            'summary': summary,
+            'payload': event.get('payload') or event.get('requestPayload') or {},
+            'semanticRefs': event.get('semanticRefs') or [],
+        })
+
+    trace_events.sort(key=lambda item: item.get('timestamp') or '')
+    latest_status = trace_events[-1].get('toStatus') if trace_events else ''
+    return {
+        'candidateId': upstream.get('candidateId') or candidate_id,
+        'candidateStatus': upstream.get('candidateStatus') or latest_status or '',
+        'semanticContext': upstream.get('semanticContext') or {},
+        'traceCount': upstream.get('traceCount') if isinstance(upstream.get('traceCount'), int) else len(trace_events),
+        'traceEvents': trace_events,
+        'latestStatus': latest_status or '',
+        'upstream': _get_flowmind_base_url(),
+    }
+
+
+def _handoff_field_map(sections):
+    field_map = {}
+    for section in sections or []:
+        for item in section.get('items') or []:
+            label = item.get('label')
+            if not label:
+                continue
+            field_map[label] = item.get('value')
+    return field_map
+
+
+def _normalize_runtime_handoff_summary(record_id, replay):
+    module_details = replay.get('moduleDetails') or {}
+    handoff = module_details.get('handoff')
+    steps = [step for step in (replay.get('steps') or []) if isinstance(step, dict)]
+    latest_step = steps[-1] if steps else {}
+
+    required_fields = [
+        'Truth Status',
+        'Latest Evidence Summary',
+        'Latest Evidence Class',
+        'Latest Evidence Source Type',
+        'Latest Evidence Refs',
+        'Semantic Refs',
+        'Trace Events',
+        'Latest Trace Action',
+        'Latest Trace Summary',
+        'Consumer Hints',
+    ]
+
+    if isinstance(handoff, dict):
+        sections = handoff.get('sections') or []
+        field_map = _handoff_field_map(sections)
+        missing_fields = [field for field in required_fields if field not in field_map or field_map.get(field) in (None, '')]
+        return {
+            'recordId': record_id,
+            'source': 'moduleDetails.handoff',
+            'mode': replay.get('mode'),
+            'title': handoff.get('title') or 'Handoff Summary',
+            'summary': handoff.get('summary') or '',
+            'sections': sections,
+            'fieldMap': field_map,
+            'traceEventCount': len(steps),
+            'latestTraceAction': field_map.get('Latest Trace Action'),
+            'latestTraceSummary': field_map.get('Latest Trace Summary'),
+            'consumerHints': field_map.get('Consumer Hints'),
+            'missingFields': missing_fields,
+            'gaps': replay.get('gaps') or [],
+        }
+
+    return {
+        'recordId': record_id,
+        'source': 'replay_without_moduleDetails.handoff',
+        'mode': replay.get('mode'),
+        'title': 'Handoff Summary',
+        'summary': '',
+        'sections': [],
+        'fieldMap': {},
+        'traceEventCount': len(steps),
+        'latestTraceAction': latest_step.get('action'),
+        'latestTraceSummary': latest_step.get('summary') or latest_step.get('detail') or latest_step.get('label'),
+        'consumerHints': None,
+        'missingFields': required_fields,
+        'gaps': (replay.get('gaps') or []) + ['moduleDetails.handoff is missing from the current replay payload.'],
+    }
 def _flowmind_records(limit=80, source_agent=None):
     agent_filter = source_agent if source_agent is not None else _get_flowmind_source_agent()
     sessions_resp = _safe_flowmind_request(
@@ -615,7 +748,6 @@ def _build_derived_replay(record):
         'moduleDetails': module_details,
     }
 
-
 # ═══════════════════════════════════════════
 # Overview APIs
 # ═══════════════════════════════════════════
@@ -623,8 +755,7 @@ def _build_derived_replay(record):
 @api.route('/overview/stats')
 def overview_stats():
     now = time.time()
-    if (_overview_stats_cache['data'] is not None and
-            (now - _overview_stats_cache['timestamp']) < _overview_stats_cache_ttl):
+    if _overview_stats_cache['data'] is not None and (now - _overview_stats_cache['timestamp']) < _overview_stats_cache_ttl:
         return jsonify(_overview_stats_cache['data'])
 
     stats = {
@@ -967,121 +1098,6 @@ def dashboard_gateway_status():
 # CrazyAgents runtime / handoff APIs
 # ═══════════════════════════════════════════
 
-@api.route('/runtime/summary')
-def runtime_summary():
-    now = time.time()
-    cache_key = 'runtime_summary'
-    if hasattr(runtime_summary, '_cache') and runtime_summary._cache.get('key') == cache_key and (now - runtime_summary._cache.get('timestamp', 0)) < 30:
-        return jsonify(runtime_summary._cache['data'])
-
-    result = {
-        'metrics': {},
-        'active_sessions': [],
-        'tool_usage': [],
-        'performance': {},
-        'recent_errors': [],
-        'sources': [],
-        'agents': [],
-        'gateway': {},
-    }
-
-    totals = _db_query(
-        "SELECT "
-        "COUNT(*) as total_sessions, "
-        "COUNT(CASE WHEN ended_at IS NULL THEN 1 END) as active_sessions, "
-        "COALESCE(SUM(input_tokens), 0) as total_input, "
-        "COALESCE(SUM(output_tokens), 0) as total_output, "
-        "COALESCE(SUM(tool_call_count), 0) as total_tool_calls "
-        "FROM sessions"
-    )
-    if totals:
-        t = totals[0]
-        result['metrics'] = {
-            'total_sessions': t.get('total_sessions', 0) or 0,
-            'active_sessions': t.get('active_sessions', 0) or 0,
-            'total_input': t.get('total_input', 0) or 0,
-            'total_output': t.get('total_output', 0) or 0,
-            'total_tool_calls': t.get('total_tool_calls', 0) or 0,
-            'error_count': 0,
-        }
-
-    errors = _db_query(
-        "SELECT COUNT(DISTINCT session_id) as cnt FROM messages WHERE error_message IS NOT NULL"
-    )
-    if errors:
-        result['metrics']['error_count'] = errors[0].get('cnt', 0) or 0
-
-    active = _db_query(
-        "SELECT id, source, model, started_at, ended_at, end_reason, title, "
-        "input_tokens, output_tokens, tool_call_count "
-        "FROM sessions WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 8"
-    )
-    for row in active:
-        result['active_sessions'].append({
-            'id': row.get('id', ''),
-            'source': row.get('source', ''),
-            'model': row.get('model', ''),
-            'title': row.get('title') or row.get('id', '')[:20],
-            'started_at': row.get('started_at'),
-            'ended_at': row.get('ended_at'),
-            'end_reason': row.get('end_reason'),
-            'input_tokens': row.get('input_tokens', 0) or 0,
-            'output_tokens': row.get('output_tokens', 0) or 0,
-            'tool_call_count': row.get('tool_call_count', 0) or 0,
-        })
-
-    tool_usage = _db_query(
-        "SELECT tool_name, COUNT(*) as call_count, "
-        "AVG(tool_duration_ms) as avg_duration, "
-        "COUNT(CASE WHEN tool_result_status = 'error' THEN 1 END) as errors "
-        "FROM messages WHERE role = 'tool' AND tool_name IS NOT NULL "
-        "GROUP BY tool_name ORDER BY call_count DESC LIMIT 10"
-    )
-    for row in tool_usage:
-        result['tool_usage'].append({
-            'tool_name': row.get('tool_name', ''),
-            'call_count': row.get('call_count', 0) or 0,
-            'avg_duration': row.get('avg_duration'),
-            'errors': row.get('errors', 0) or 0,
-        })
-
-    perf_ttft = _db_query(
-        "SELECT AVG(ttft_ms) as avg_ttft FROM messages WHERE ttft_ms IS NOT NULL AND ttft_ms > 0"
-    )
-    perf_tps = _db_query(
-        "SELECT AVG(tps) as avg_tps FROM messages WHERE tps IS NOT NULL AND tps > 0"
-    )
-    perf_duration = _db_query(
-        "SELECT AVG(CASE WHEN ended_at IS NOT NULL THEN ended_at - started_at END) as avg_duration FROM sessions"
-    )
-
-    result['performance'] = {
-        'avg_ttft': perf_ttft[0].get('avg_ttft') if perf_ttft else None,
-        'avg_tps': perf_tps[0].get('avg_tps') if perf_tps else None,
-        'avg_duration': perf_duration[0].get('avg_duration') if perf_duration else None,
-        'error_rate': result['metrics']['error_count'] / max(result['metrics']['total_sessions'], 1),
-    }
-
-    sources = _db_query(
-        "SELECT COALESCE(source, 'unknown') as src, COUNT(*) as cnt "
-        "FROM sessions GROUP BY source ORDER BY cnt DESC"
-    )
-    for row in sources:
-        result['sources'].append({
-            'src': row.get('src', ''),
-            'cnt': row.get('cnt', 0) or 0,
-        })
-
-    try:
-        gw_resp = dashboard_gateway_status()
-        result['gateway'] = json.loads(gw_resp.get_data(as_text=True))
-    except Exception:
-        pass
-
-    runtime_summary._cache = {'key': cache_key, 'data': result, 'timestamp': now}
-    return jsonify(result)
-
-
 @api.route('/runtime/state')
 def runtime_state():
     repo_root = _get_repo_root()
@@ -1102,6 +1118,41 @@ def runtime_state():
 
 @api.route('/runtime/handoffs')
 def runtime_handoffs():
+    record_id = (request.args.get('recordId') or '').strip()
+    if record_id:
+        replay = _safe_flowmind_request(
+            f'/api/operator/records/{record_id}/replay',
+            default=None,
+        )
+        if isinstance(replay, dict):
+            return jsonify(_normalize_runtime_handoff_summary(record_id, replay))
+        return jsonify({
+            'recordId': record_id,
+            'source': 'flowmind_unavailable',
+            'mode': '',
+            'title': 'Handoff Summary',
+            'summary': '',
+            'sections': [],
+            'fieldMap': {},
+            'traceEventCount': 0,
+            'latestTraceAction': None,
+            'latestTraceSummary': None,
+            'consumerHints': None,
+            'missingFields': [
+                'Truth Status',
+                'Latest Evidence Summary',
+                'Latest Evidence Class',
+                'Latest Evidence Source Type',
+                'Latest Evidence Refs',
+                'Semantic Refs',
+                'Trace Events',
+                'Latest Trace Action',
+                'Latest Trace Summary',
+                'Consumer Hints',
+            ],
+            'gaps': ['FlowMind replay upstream unavailable for the provided recordId.'],
+        }), 502
+
     repo_root = _get_repo_root()
     outbox = repo_root / '.omx' / 'crazyagents' / 'outbox'
     if not outbox.exists():
@@ -1155,7 +1206,6 @@ def runtime_harness_summary():
         summary['latest_failure'] = _read_optional_json(failure_files[0])
 
     return jsonify(summary)
-
 
 @api.route('/flowmind/records')
 def flowmind_records():
@@ -1260,6 +1310,18 @@ def flowmind_record_replay(record_id):
     return jsonify(_build_derived_replay(record))
 
 
+@api.route('/promise-review/trace/<candidate_id>')
+def promise_review_trace(candidate_id):
+    upstream = _safe_flowmind_request(
+        f"/api/bridge/trace/{urlparse.quote(candidate_id)}",
+        default=None,
+    )
+    if upstream is None:
+        payload = _normalize_bridge_trace(candidate_id, None)
+        payload['error'] = 'FlowMind trace upstream unavailable'
+        return jsonify(payload), 502
+
+    return jsonify(_normalize_bridge_trace(candidate_id, upstream))
 # ═══════════════════════════════════════════
 # Cron APIs
 # ═══════════════════════════════════════════
@@ -2296,12 +2358,20 @@ def server_info():
 def overview_data():
     """Aggregated overview data for the macro-level monitoring dashboard"""
 
-    if (_overview_dashboard_cache['data'] and
-            (time.time() - _overview_dashboard_cache['timestamp']) < _overview_dashboard_cache_ttl):
+    now = time.time()
+    if _overview_dashboard_cache['data'] and (now - _overview_dashboard_cache['timestamp']) < _overview_dashboard_cache_ttl:
         return jsonify(_overview_dashboard_cache['data'])
 
     result = {
-        'metrics': {},
+        'metrics': {
+            'total_sessions': 0,
+            'active_sessions': 0,
+            'total_input': 0,
+            'total_output': 0,
+            'total_tool_calls': 0,
+            'error_count': 0,
+            'avg_tps': None,
+        },
         'active_sessions': [],
         'tool_usage': [],
         'performance': {},
@@ -2323,15 +2393,13 @@ def overview_data():
     )
     if totals:
         t = totals[0]
-        result['metrics'] = {
+        result['metrics'].update({
             'total_sessions': t.get('total_sessions', 0) or 0,
             'active_sessions': t.get('active_sessions', 0) or 0,
             'total_input': t.get('total_input', 0) or 0,
             'total_output': t.get('total_output', 0) or 0,
             'total_tool_calls': t.get('total_tool_calls', 0) or 0,
-            'error_count': 0,
-            'avg_tps': None,
-        }
+        })
 
     # Error count
     errors = _db_query(
@@ -2487,467 +2555,137 @@ def overview_data():
     result['tool_registry'] = [{'tool_name': t.get('tool_name', '')} for t in (tools or []) if t.get('tool_name')]
 
     _overview_dashboard_cache['data'] = result
-    _overview_dashboard_cache['timestamp'] = time.time()
-
+    _overview_dashboard_cache['timestamp'] = now
     return jsonify(result)
 
 
 # ═══════════════════════════════════════════
-# Agent Roles APIs (v0.1.0)
+# Operations Integrations APIs (executor façade)
 # ═══════════════════════════════════════════
 
-@api.route('/agents/roles')
-def agents_roles():
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.agent.agent_factory import available_roles
-        return jsonify(available_roles())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+from executor_bridge import get_executor_provider, get_provider_mode
 
 
-@api.route('/agents/roles/<role_name>')
-def agents_role_detail(role_name):
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.agent.agent_factory import resolve_role, build_role_config
-        role = resolve_role(role_name)
-        config = build_role_config(role, goal="")
-        return jsonify(config)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+@api.route('/operations/integrations/sources')
+def ops_integrations_sources():
+    data = get_executor_provider().get_sources()
+    return jsonify(data)
+
+
+@api.route('/operations/integrations/tools')
+def ops_integrations_tools():
+    source_id = request.args.get('sourceId', '')
+    data = get_executor_provider().get_tools(source_id=source_id)
+    return jsonify(data)
+
+
+@api.route('/operations/integrations/credentials')
+def ops_integrations_credentials():
+    data = get_executor_provider().get_credentials()
+    return jsonify(data)
+
+
+@api.route('/operations/integrations/providers')
+def ops_integrations_providers():
+    data = get_executor_provider().get_providers()
+    return jsonify(data)
+
+
+@api.route('/operations/integrations/summary')
+def ops_integrations_summary():
+    data = get_executor_provider().get_summary()
+    return jsonify(data)
+
+
+@api.route('/operations/integrations/provider-mode')
+def ops_integrations_provider_mode():
+    provider = get_executor_provider()
+    mode = get_provider_mode()
+    return jsonify({
+        'mode': mode,
+        'executor_url': os.environ.get('EXECUTOR_API_BASE_URL', ''),
+        'capabilities': provider.get_capabilities(),
+    })
 
 
 # ═══════════════════════════════════════════
-# Task Orchestrator APIs (v0.1.0)
+# Phase 2 — Write operations
 # ═══════════════════════════════════════════
 
-@api.route('/tasks/orchestrator/create', methods=['POST'])
-def tasks_orchestrator_create():
+
+@api.route('/operations/integrations/sources', methods=['POST'])
+def ops_integrations_create_source():
     data = request.get_json()
-    if not data or not data.get('goal') or not data.get('role'):
-        return jsonify({'error': 'goal and role are required'}), 400
-
+    if not data or not data.get('type'):
+        return jsonify({'error': 'type is required'}), 400
+    source_type = data.get('type')
+    if source_type == 'openapi' and not data.get('spec'):
+        return jsonify({'error': 'spec is required for openapi source creation'}), 400
+    if source_type == 'graphql' and not data.get('endpoint'):
+        return jsonify({'error': 'endpoint is required for graphql source creation'}), 400
+    if source_type == 'mcp':
+        transport = data.get('transport', 'remote')
+        if transport == 'remote' and not data.get('endpoint'):
+            return jsonify({'error': 'endpoint is required for remote mcp source creation'}), 400
+        if transport == 'stdio' and not data.get('command'):
+            return jsonify({'error': 'command is required for stdio mcp source creation'}), 400
+    if source_type == 'discovery' and not data.get('discoveryUrl'):
+        return jsonify({'error': 'discoveryUrl is required for discovery source creation'}), 400
+    provider = get_executor_provider()
     try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.agent.agent_factory import resolve_role
-        from src.agent.task_orchestrator import TaskOrchestrator
-
-        role = resolve_role(data['role'])
-        orchestrator = TaskOrchestrator()
-        task = orchestrator.create_task(
-            goal=data['goal'],
-            role=role,
-            context=data.get('context', ''),
-            dependencies=data.get('dependencies'),
-            team=data.get('team', ''),
-            model=data.get('model', ''),
-            toolsets=data.get('toolsets'),
-            max_iterations=data.get('max_iterations', 50),
-        )
-        return jsonify(task.to_dict())
+        source = provider.create_source(data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 409
+    return jsonify(source), 201
 
 
-@api.route('/tasks/orchestrator/graph')
-def tasks_orchestrator_graph():
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.agent.task_orchestrator import TaskOrchestrator
-        orchestrator = TaskOrchestrator()
-        orchestrator.load_from_disk()
-        return jsonify(orchestrator.get_task_graph())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@api.route('/tasks/orchestrator/<task_id>')
-def tasks_orchestrator_detail(task_id):
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.agent.task_orchestrator import TaskOrchestrator
-        orchestrator = TaskOrchestrator()
-        orchestrator.load_from_disk()
-        task = orchestrator.get_task(task_id)
-        if task:
-            return jsonify(task.to_dict())
-        return jsonify({'error': 'Task not found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# ═══════════════════════════════════════════
-# Memory System APIs (v0.2.0)
-# ═══════════════════════════════════════════
-
-@api.route('/memory/layers')
-def memory_layers():
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.memory.memory_loader import MemoryLoader
-        loader = MemoryLoader()
-        return jsonify(loader.get_memory_summary())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@api.route('/memory/load')
-def memory_load():
-    task_id = request.args.get('task_id', '')
-    team = request.args.get('team', '')
-    context = request.args.get('context', '')
-
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.memory.memory_loader import MemoryLoader
-        loader = MemoryLoader()
-        result = loader.load_all(task_id=task_id, team=team, context=context)
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@api.route('/memory/search')
-def memory_search():
-    query = request.args.get('q', '')
-    limit = int(request.args.get('limit', 10))
-    team = request.args.get('team', '')
-
-    if not query:
-        return jsonify([])
-
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.memory.retrieval import MemoryRetrieval
-        retrieval = MemoryRetrieval()
-        results = retrieval.search(query=query, max_results=limit, team=team)
-        return jsonify(results)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@api.route('/memory/experiences')
-def memory_experiences():
-    limit = int(request.args.get('limit', 10))
-    exp_type = request.args.get('type', None)
-
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.memory.memory_improvement import SelfImprovementLoop
-        loop = SelfImprovementLoop()
-        experiences = loop.get_recent_experiences(limit=limit, experience_type=exp_type)
-        return jsonify(experiences)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# ═══════════════════════════════════════════
-# Cron Enhanced APIs (v0.3.0)
-# ═══════════════════════════════════════════
-
-@api.route('/cron/stats')
-def cron_stats():
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from cron.jobs import get_cron_stats
-        return jsonify(get_cron_stats())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@api.route('/cron/<job_id>/bind-team', methods=['POST'])
-def cron_bind_team(job_id):
+@api.route('/operations/integrations/sources/<source_id>', methods=['PATCH'])
+def ops_integrations_update_source(source_id):
     data = request.get_json()
-    if not data or not data.get('team'):
-        return jsonify({'error': 'team is required'}), 400
-
+    if not data:
+        return jsonify({'error': 'request body is required'}), 400
+    provider = get_executor_provider()
     try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from cron.jobs import update_job_team
-        job = update_job_team(job_id, data['team'])
-        if job:
-            return jsonify(job)
-        return jsonify({'error': 'Job not found'}), 404
+        result = provider.update_source(source_id, data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# ═══════════════════════════════════════════
-# Delegate Tool APIs (v0.1.0)
-# ═══════════════════════════════════════════
-
-@api.route('/delegate/task', methods=['POST'])
-def delegate_task():
-    data = request.get_json()
-    if not data or not data.get('role') or not data.get('goal'):
-        return jsonify({'error': 'role and goal are required'}), 400
-
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from tools.delegate_tool import DelegateTool
-        tool = DelegateTool()
-        result = tool.delegate_task(
-            role=data['role'],
-            goal=data['goal'],
-            context=data.get('context', ''),
-            team=data.get('team', ''),
-            dependencies=data.get('dependencies'),
-            override_toolsets=data.get('toolsets'),
-            override_model=data.get('model'),
-            max_iterations=data.get('max_iterations', 50),
-        )
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@api.route('/delegate/children')
-def delegate_children():
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from tools.delegate_tool import DelegateTool
-        tool = DelegateTool()
-        return jsonify(tool.list_children())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# ═══════════════════════════════════════════
-# Context Management APIs (v0.4.0)
-# ═══════════════════════════════════════════
-
-@api.route('/context/summary')
-def context_summary():
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.context.harness import HarnessManager
-        manager = HarnessManager()
-        return jsonify(manager.get_summary())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@api.route('/context/snapshot/<agent_id>')
-def context_snapshot(agent_id):
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.context.harness import HarnessManager
-        manager = HarnessManager()
-        snapshot = manager.get_snapshot(agent_id)
-        if snapshot:
-            return jsonify(snapshot.to_dict())
-        return jsonify({'error': 'No snapshot found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@api.route('/context/compress', methods=['POST'])
-def context_compress():
-    data = request.get_json()
-    if not data or not data.get('memory_layers'):
-        return jsonify({'error': 'memory_layers is required'}), 400
-
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.agent.context_compressor import CompressionStrategy, ContextCompressor
-        compressor = ContextCompressor(
-            max_context_tokens=data.get('max_tokens', 128000),
-        )
-        strategy = CompressionStrategy(data.get('strategy', 'layer_aware'))
-        compressed_layers, compressed_ctx, result = compressor.compress(
-            memory_layers=data['memory_layers'],
-            task_context=data.get('task_context', ''),
-            strategy=strategy,
-            target_tokens=data.get('target_tokens'),
-        )
-        return jsonify({
-            'compressed_layers': compressed_layers,
-            'compressed_context': compressed_ctx,
-            'result': result.to_dict(),
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@api.route('/monitoring/task-watcher/status')
-def task_watcher_status():
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.monitoring.task_watcher import TaskWatcher
-        watcher = TaskWatcher()
-        return jsonify(watcher.get_status())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@api.route('/monitoring/task-watcher/discover')
-def task_watcher_discover():
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.monitoring.task_watcher import TaskWatcher
-        watcher = TaskWatcher()
-        tasks = watcher.discover_tasks()
-        return jsonify({'tasks': tasks, 'count': len(tasks)})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# ═══════════════════════════════════════════
-# Agent Dashboard APIs (v0.5.0)
-# ═══════════════════════════════════════════
-
-@api.route('/agent-dashboard/stats')
-def agent_dashboard_stats():
-    result = {
-        'total_agents': 0,
-        'active_agents': 0,
-        'total_tasks': 0,
-        'running_tasks': 0,
-        'completed_tasks': 0,
-        'failed_tasks': 0,
-        'context_utilization': {},
-        'health_summary': {},
-    }
-
-    agents = _db_query(
-        "SELECT source, COUNT(*) as session_count, "
-        "COALESCE(SUM(input_tokens), 0) as input_tokens, "
-        "COALESCE(SUM(output_tokens), 0) as output_tokens "
-        "FROM sessions GROUP BY source"
-    )
-    result['total_agents'] = len(agents)
-    active = _db_query("SELECT COUNT(*) as cnt FROM sessions WHERE ended_at IS NULL")
-    result['active_agents'] = active[0].get('cnt', 0) if active else 0
-
-    tasks_data = _db_query(
-        "SELECT "
-        "COUNT(*) as total, "
-        "COUNT(CASE WHEN ended_at IS NULL THEN 1 END) as running, "
-        "COUNT(CASE WHEN ended_at IS NOT NULL AND end_reason != 'error' THEN 1 END) as completed, "
-        "COUNT(CASE WHEN end_reason = 'error' THEN 1 END) as failed "
-        "FROM sessions"
-    )
-    if tasks_data:
-        t = tasks_data[0]
-        result['total_tasks'] = t.get('total', 0) or 0
-        result['running_tasks'] = t.get('running', 0) or 0
-        result['completed_tasks'] = t.get('completed', 0) or 0
-        result['failed_tasks'] = t.get('failed', 0) or 0
-
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.context.harness import HarnessManager
-        manager = HarnessManager()
-        result['context_utilization'] = manager.get_summary()
-    except Exception:
-        pass
-
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from src.monitoring.health_monitor import HealthMonitor
-        monitor = HealthMonitor()
-        result['health_summary'] = monitor.get_summary()
-    except Exception:
-        pass
-
+        return jsonify({'error': str(e)}), 409
+    if result is None:
+        return jsonify({'error': 'Source not found'}), 404
     return jsonify(result)
 
 
-@api.route('/agent-dashboard/timeline')
-def agent_dashboard_timeline():
-    limit = int(request.args.get('limit', 50))
-    source = request.args.get('source', None)
-
-    params = []
-    where = ""
-    if source:
-        where = "WHERE source = ?"
-        params.append(source)
-
-    events = _db_query(
-        f"SELECT id, source, model, started_at, ended_at, end_reason, title, "
-        f"message_count, tool_call_count, input_tokens, output_tokens, "
-        f"parent_session_id "
-        f"FROM sessions {where} ORDER BY started_at DESC LIMIT ?",
-        params + [limit]
-    )
-
-    timeline = []
-    for row in events:
-        status = 'running'
-        if row.get('ended_at'):
-            if row.get('end_reason') == 'error':
-                status = 'failed'
-            else:
-                status = 'completed'
-
-        duration = None
-        if row.get('started_at'):
-            end = row.get('ended_at') or time.time()
-            duration = end - row['started_at']
-
-        timeline.append({
-            'id': row.get('id', ''),
-            'title': row.get('title') or row.get('id', '')[:20],
-            'source': row.get('source', ''),
-            'status': status,
-            'started_at': row.get('started_at'),
-            'ended_at': row.get('ended_at'),
-            'duration': duration,
-            'message_count': row.get('message_count', 0) or 0,
-            'tool_call_count': row.get('tool_call_count', 0) or 0,
-            'input_tokens': row.get('input_tokens', 0) or 0,
-            'output_tokens': row.get('output_tokens', 0) or 0,
-            'parent_session_id': row.get('parent_session_id'),
-        })
-
-    return jsonify(timeline)
+@api.route('/operations/integrations/sources/<source_id>', methods=['DELETE'])
+def ops_integrations_delete_source(source_id):
+    provider = get_executor_provider()
+    ok = provider.delete_source(source_id)
+    if not ok:
+        return jsonify({'error': 'Source not found'}), 404
+    return jsonify({'success': True})
 
 
-@api.route('/agent-dashboard/events')
-def agent_dashboard_events():
-    limit = int(request.args.get('limit', 100))
-    since = request.args.get('since', None)
+@api.route('/operations/integrations/credentials', methods=['POST'])
+def ops_integrations_bind_credential():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'request body is required'}), 400
+    source_type = data.get('sourceType')
+    slot = data.get('slot')
+    if source_type and slot and not data.get('targetId'):
+        return jsonify({'error': 'targetId is required for source binding'}), 400
+    if (not source_type or not slot) and (not data.get('provider') or not data.get('targetId')):
+        return jsonify({'error': 'provider and targetId are required'}), 400
+    provider = get_executor_provider()
+    try:
+        credential = provider.bind_credential(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 409
+    return jsonify(credential), 201
 
-    params = []
-    where_clauses = []
-    if since:
-        try:
-            since_ts = float(since)
-            where_clauses.append("timestamp > ?")
-            params.append(since_ts)
-        except ValueError:
-            pass
 
-    where = ""
-    if where_clauses:
-        where = "WHERE " + " AND ".join(where_clauses)
-
-    events = _db_query(
-        f"SELECT id, session_id, role, tool_name, timestamp, "
-        f"substr(content, 1, 200) as preview, finish_reason "
-        f"FROM messages {where} ORDER BY timestamp DESC LIMIT ?",
-        params + [limit]
-    )
-
-    result = []
-    for row in events:
-        event_type = 'message'
-        if row.get('role') == 'tool':
-            event_type = 'tool_call'
-        elif row.get('role') == 'system':
-            event_type = 'system'
-
-        result.append({
-            'id': row.get('id'),
-            'session_id': row.get('session_id', ''),
-            'type': event_type,
-            'role': row.get('role', ''),
-            'tool_name': row.get('tool_name'),
-            'timestamp': row.get('timestamp'),
-            'preview': row.get('preview', ''),
-            'finish_reason': row.get('finish_reason'),
-        })
-
-    return jsonify(result)
+@api.route('/operations/integrations/credentials/<credential_id>', methods=['DELETE'])
+def ops_integrations_unbind_credential(credential_id):
+    provider = get_executor_provider()
+    ok = provider.unbind_credential(credential_id)
+    if not ok:
+        return jsonify({'error': 'Credential not found'}), 404
+    return jsonify({'success': True})
