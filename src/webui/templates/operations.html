@@ -3,44 +3,272 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>运营面 - CrazyAgentsManage</title>
+  <title>运营工作台 - CrazyAgentsManage</title>
   <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/operations.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
 </head>
 <body>
   {% set active_nav = 'operations' %}
   {% include 'ia-nav.html' %}
 
-  <main class="container mt-lg">
-    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
-      <h1 class="page-title">运营面</h1>
-      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
-        聚合技能、定时任务、团队记忆与异常处理，形成 HermesAgent 的运营工作台。
-      </p>
+  <main id="ops-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+
+    <!-- ======== Page Header ======== -->
+    <section class="console-page-header">
+      <div>
+        <div class="console-page-kicker">Hermes-hosted FlowMind Console</div>
+        <h1 class="console-page-title">
+          <span class="console-page-title-icon">⚙️</span>
+          运营工作台
+        </h1>
+        <p class="console-page-subtitle">运营对象池、集成能力面与异常证据统一控制台。</p>
+      </div>
+      <div class="console-surface-map" aria-label="console-zones">
+        <span class="console-surface-chip active">左侧对象树</span>
+        <span class="console-surface-chip">中央主工作台</span>
+        <span class="console-surface-chip">右侧详情面板</span>
+      </div>
+    </section>
+
+    <!-- ======== Metrics Strip ======== -->
+    <div class="ops-metrics-strip">
+      <div class="ops-metric-card">
+        <span class="ops-metric-icon">⚡</span>
+        <div class="ops-metric-body">
+          <div class="ops-metric-value" id="ops-skills-count">--</div>
+          <div class="ops-metric-label">技能</div>
+        </div>
+      </div>
+      <div class="ops-metric-card">
+        <span class="ops-metric-icon">⏰</span>
+        <div class="ops-metric-body">
+          <div class="ops-metric-value" id="ops-cron-count">--</div>
+          <div class="ops-metric-label">定时任务</div>
+        </div>
+      </div>
+      <div class="ops-metric-card">
+        <span class="ops-metric-icon">📝</span>
+        <div class="ops-metric-body">
+          <div class="ops-metric-value" id="ops-memory-count">--</div>
+          <div class="ops-metric-label">记忆文件</div>
+        </div>
+      </div>
+      <div class="ops-metric-card">
+        <span class="ops-metric-icon">🔌</span>
+        <div class="ops-metric-body">
+          <div class="ops-metric-value" id="ops-integrations-count">--</div>
+          <div class="ops-metric-label">集成源</div>
+        </div>
+      </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
-      <div class="card" style="padding: var(--spacing-lg);">
-        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">运营对象</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm);">
-          <a class="btn btn-primary btn-sm" href="{{ BASE }}/operations/skills">技能中心</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/operations/cron">定时任务</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/operations/team-memory">团队记忆</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/operations/alerts">告警中心</a>
+    <!-- ======== Three-column Workbench ======== -->
+    <div class="ops-workbench">
+
+      <!-- ========== LEFT: Object Tree ========== -->
+      <aside class="ops-left-tree" id="ops-tree">
+        <div class="ops-tree-group-label">运营对象</div>
+
+        <div class="ops-tree-item active" data-family="cron" onclick="switchFamily('cron')">
+          <span class="ops-tree-item-icon">⏰</span>
+          <span>Cron Jobs</span>
+          <span class="ops-tree-item-count" data-count="cron">--</span>
+        </div>
+        <div class="ops-tree-item" data-family="alerts" onclick="switchFamily('alerts')">
+          <span class="ops-tree-item-icon">🔔</span>
+          <span>Alerts</span>
+          <span class="ops-tree-item-count" data-count="alerts">--</span>
+        </div>
+        <div class="ops-tree-item" data-family="skills" onclick="switchFamily('skills')">
+          <span class="ops-tree-item-icon">⚡</span>
+          <span>Skills</span>
+          <span class="ops-tree-item-count" data-count="skills">--</span>
+        </div>
+        <div class="ops-tree-item" data-family="memory" onclick="switchFamily('memory')">
+          <span class="ops-tree-item-icon">📝</span>
+          <span>Team Memory</span>
+          <span class="ops-tree-item-count" data-count="memory">--</span>
+        </div>
+
+        <div class="ops-tree-divider"></div>
+        <div class="ops-tree-group-label">集成能力</div>
+
+        <div class="ops-tree-item" data-family="sources" onclick="switchFamily('sources')">
+          <span class="ops-tree-item-icon">🔌</span>
+          <span>Sources</span>
+          <span class="ops-tree-item-count" data-count="sources">--</span>
+        </div>
+        <div class="ops-tree-item" data-family="tools" onclick="switchFamily('tools')">
+          <span class="ops-tree-item-icon">🧰</span>
+          <span>Tool Catalog</span>
+          <span class="ops-tree-item-count" data-count="tools">--</span>
+        </div>
+        <div class="ops-tree-item" data-family="credentials" onclick="switchFamily('credentials')">
+          <span class="ops-tree-item-icon">🔑</span>
+          <span>Credential Health</span>
+          <span class="ops-tree-item-count" data-count="credentials">--</span>
+        </div>
+        <div class="ops-tree-item" data-family="providers" onclick="switchFamily('providers')">
+          <span class="ops-tree-item-icon">📡</span>
+          <span>Provider Health</span>
+          <span class="ops-tree-item-count" data-count="providers">--</span>
+        </div>
+      </aside>
+
+      <!-- ========== CENTER: Main Workspace ========== -->
+      <section class="ops-center" id="ops-center">
+        <div class="ops-workspace-header">
+          <h2 class="ops-workspace-title" id="ops-workspace-title">
+            <span>⏰</span> Cron Jobs
+          </h2>
+          <div class="ops-workspace-actions" id="ops-workspace-actions"></div>
+        </div>
+        <div id="ops-workspace-content">
+          <!-- populated by JS -->
+          <div class="ops-empty"><div class="ops-empty-icon">⏳</div><p>加载中...</p></div>
+        </div>
+      </section>
+
+      <!-- ========== RIGHT: Detail Rail ========== -->
+      <aside class="ops-right-rail" id="ops-rail">
+        <div class="ops-detail-card">
+          <div class="ops-detail-empty">选择一个对象查看详情</div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- ======== Modals ======== -->
+
+  <div class="ops-modal-overlay" id="ops-modal-overlay" style="display:none;" onclick="closeModal(event)">
+    <div class="ops-modal" onclick="event.stopPropagation()">
+
+      <!-- Import Source -->
+      <div id="ops-modal-import-source" style="display:none;">
+        <div class="ops-modal-header">
+          <h3 class="ops-modal-title">导入 Source</h3>
+          <button class="ops-modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="ops-modal-body">
+          <label class="ops-form-label">类型 *</label>
+          <select class="ops-form-select" id="src-import-type" onchange="onImportTypeChange()">
+            <option value="openapi">OpenAPI</option>
+            <option value="graphql">GraphQL</option>
+            <option value="mcp">MCP</option>
+            <option value="discovery">Discovery</option>
+          </select>
+
+          <label class="ops-form-label">名称</label>
+          <input class="ops-form-input" id="src-import-name" placeholder="例如: My API">
+
+          <label class="ops-form-label">命名空间</label>
+          <input class="ops-form-input" id="src-import-namespace" placeholder="可选；默认由 executor 推导">
+
+          <div id="src-import-openapi-fields">
+            <label class="ops-form-label">OpenAPI Spec *</label>
+            <textarea class="ops-form-textarea" id="src-import-spec" rows="8" placeholder='粘贴 OpenAPI YAML / JSON'></textarea>
+            <label class="ops-form-label">Base URL</label>
+            <input class="ops-form-input" id="src-import-base-url" placeholder="例如: https://api.example.com">
+          </div>
+
+          <div id="src-import-graphql-fields" style="display:none;">
+            <label class="ops-form-label">GraphQL Endpoint *</label>
+            <input class="ops-form-input" id="src-import-endpoint" placeholder="例如: https://api.example.com/graphql">
+            <label class="ops-form-label">Introspection JSON</label>
+            <textarea class="ops-form-textarea" id="src-import-introspection" rows="6" placeholder='可选；预先提供 introspection JSON'></textarea>
+          </div>
+
+          <div id="src-import-mcp-fields" style="display:none;">
+            <label class="ops-form-label">MCP Transport *</label>
+            <select class="ops-form-select" id="src-import-mcp-transport" onchange="onMcpTransportChange()">
+              <option value="remote">Remote</option>
+              <option value="stdio">Stdio</option>
+            </select>
+            <div id="src-import-mcp-remote-fields">
+              <label class="ops-form-label">Endpoint *</label>
+              <input class="ops-form-input" id="src-import-mcp-endpoint" placeholder="例如: https://mcp.example.com">
+              <label class="ops-form-label">Remote Transport</label>
+              <select class="ops-form-select" id="src-import-mcp-remote-transport">
+                <option value="auto">auto</option>
+                <option value="streamable-http">streamable-http</option>
+                <option value="sse">sse</option>
+              </select>
+            </div>
+            <div id="src-import-mcp-stdio-fields" style="display:none;">
+              <label class="ops-form-label">Command *</label>
+              <input class="ops-form-input" id="src-import-mcp-command" placeholder="例如: npx -y @modelcontextprotocol/server-filesystem">
+              <label class="ops-form-label">Args</label>
+              <input class="ops-form-input" id="src-import-mcp-args" placeholder="以空格分隔参数，例如: . --read-only">
+              <label class="ops-form-label">CWD</label>
+              <input class="ops-form-input" id="src-import-mcp-cwd" placeholder="可选工作目录">
+            </div>
+          </div>
+
+          <div id="src-import-discovery-fields" style="display:none;">
+            <label class="ops-form-label">Discovery URL *</label>
+            <input class="ops-form-input" id="src-import-discovery-url" placeholder="例如: https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest">
+          </div>
+        </div>
+        <div class="ops-modal-footer">
+          <button class="ops-btn ops-btn-secondary" onclick="closeModal()">取消</button>
+          <button class="ops-btn ops-btn-primary" onclick="submitImportSource()">导入</button>
         </div>
       </div>
 
-      <div class="card" style="padding: var(--spacing-lg);">
-        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">运营原则</h3>
-        <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.8; margin: 0; padding-left: 18px;">
-          <li>先识别异常，再进入处理动作，而不是把动作入口散落在各页。</li>
-          <li>运营面优先接 Hermes 既有能力，不在 WebUI 重造运行时。</li>
-          <li>运营结论需要可回流到协作与治理表面。</li>
-        </ul>
+      <!-- Bind Credential -->
+      <div id="ops-modal-bind-cred" style="display:none;">
+        <div class="ops-modal-header">
+          <h3 class="ops-modal-title">绑定凭证</h3>
+          <button class="ops-modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="ops-modal-body">
+          <label class="ops-form-label">绑定到 Source</label>
+          <select class="ops-form-select" id="cred-bind-source" onchange="onCredentialSourceChange()"></select>
+
+          <label class="ops-form-label">Slot *</label>
+          <input class="ops-form-input" id="cred-bind-slot" placeholder="例如: header:authorization / auth:oauth2:connection">
+
+          <label class="ops-form-label">值类型 *</label>
+          <select class="ops-form-select" id="cred-bind-value-kind" onchange="onCredentialValueKindChange()">
+            <option value="secret">Secret</option>
+            <option value="text">Text</option>
+            <option value="connection">Connection</option>
+          </select>
+
+          <div id="cred-bind-secret-fields">
+            <label class="ops-form-label">Secret Provider</label>
+            <input class="ops-form-input" id="cred-bind-provider" placeholder="例如: file, keychain">
+            <label class="ops-form-label">Secret Name</label>
+            <input class="ops-form-input" id="cred-bind-secret-name" placeholder="例如: api-token">
+            <label class="ops-form-label">Secret Value *</label>
+            <input class="ops-form-input" id="cred-bind-secret-value" placeholder="输入 secret 值">
+          </div>
+
+          <div id="cred-bind-text-fields" style="display:none;">
+            <label class="ops-form-label">Text Value *</label>
+            <input class="ops-form-input" id="cred-bind-text-value" placeholder="例如: Bearer static-token">
+          </div>
+
+          <div id="cred-bind-connection-fields" style="display:none;">
+            <label class="ops-form-label">Connection ID *</label>
+            <input class="ops-form-input" id="cred-bind-connection-id" placeholder="例如: conn-123">
+          </div>
+        </div>
+        <div class="ops-modal-footer">
+          <button class="ops-btn ops-btn-secondary" onclick="closeModal()">取消</button>
+          <button class="ops-btn ops-btn-primary" onclick="submitBindCredential()">绑定</button>
+        </div>
       </div>
+
     </div>
-  </main>
+  </div>
+
+  <div id="ops-toast-stack" class="ops-toast-stack" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/operations.js"></script>
 </body>
 </html>

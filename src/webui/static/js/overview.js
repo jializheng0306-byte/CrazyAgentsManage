@@ -1,22 +1,20 @@
 /**
- * CrazyAgentsManage — Overview Dashboard JS
- * Macro-level monitoring of Hermes Agent system
+ * CrazyAgentsManage — Overview Workbench JS
+ * Stage 2: object-driven overview centered on active monitored sessions
  */
 
-const OVERVIEW_CONFIG = {
-  apiBase: document.body && document.body.dataset ? (document.body.dataset.base || '') : '',
+var OVERVIEW_CONFIG = {
+  apiBase: (function() {
+    var path = window.location.pathname || '';
+    return path === '/manage' || path.indexOf('/manage/') === 0 ? '/manage' : '';
+  })(),
   refreshInterval: 15000,
-  maxErrors: 10,
-  maxActiveSessions: 12,
+  maxErrors: 6,
+  maxActiveSessions: 8,
+  maxToolTracks: 5,
+  maxSourceRows: 5,
 };
 
-function withBase(path) {
-  var base = OVERVIEW_CONFIG.apiBase || '';
-  var normalizedPath = path.startsWith('/') ? path : '/' + path;
-  return base + normalizedPath;
-}
-
-/* ---- Utilities ---- */
 function fmt(n) {
   if (n == null) return '--';
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -27,14 +25,14 @@ function fmt(n) {
 function fmtDuration(sec) {
   if (!sec) return '--';
   if (sec >= 3600) {
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
     return h + 'h ' + m + 'm';
   }
   if (sec >= 60) {
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return m + 'm ' + s + 's';
+    var m2 = Math.floor(sec / 60);
+    var s = Math.floor(sec % 60);
+    return m2 + 'm ' + s + 's';
   }
   return Math.round(sec) + 's';
 }
@@ -47,246 +45,434 @@ function fmtMs(ms) {
 
 function relativeTime(ts) {
   if (!ts) return '--';
-  const diff = Date.now() / 1000 - ts;
-  if (diff < 60) return Math.round(diff) + 's ago';
+  var diff = Date.now() / 1000 - ts;
+  if (diff < 60) return Math.max(1, Math.round(diff)) + 's ago';
   if (diff < 3600) return Math.round(diff / 60) + 'm ago';
   if (diff < 86400) return Math.round(diff / 3600) + 'h ago';
   return Math.round(diff / 86400) + 'd ago';
 }
 
 function fetchJSON(url) {
-  return fetch(withBase(url))
-    .then(r => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    });
+  return fetch(OVERVIEW_CONFIG.apiBase + url).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
 }
 
-/* ---- Renderers ---- */
-
-function renderMetrics(data) {
-  document.getElementById('metric-total-sessions').textContent = fmt(data.total_sessions || 0);
-  document.getElementById('metric-active-count').textContent = data.active_sessions || 0;
-  document.getElementById('active-count-badge').textContent = data.active_sessions || 0;
-
-  const totalTokens = (data.total_input || 0) + (data.total_output || 0);
-  document.getElementById('metric-total-tokens').textContent = fmt(totalTokens);
-
-  document.getElementById('metric-tool-calls').textContent = fmt(data.total_tool_calls || 0);
-  document.getElementById('metric-error-count').textContent = fmt(data.error_count || 0);
-
-  const avgTps = data.avg_tps ? data.avg_tps.toFixed(1) : '--';
-  document.getElementById('metric-avg-tps').textContent = avgTps;
-
-  /* Active indicator */
-  const indicator = document.getElementById('indicator-active');
-  indicator.className = 'ov-metric-indicator ' + (data.active_sessions > 0 ? 'active' : 'inactive');
+function setText(id, text) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = text;
 }
 
-function renderActiveSessions(sessions) {
-  const grid = document.getElementById('active-sessions-grid');
-  const limited = (sessions || []).slice(0, OVERVIEW_CONFIG.maxActiveSessions);
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
-  if (limited.length === 0) {
-    grid.innerHTML = '<div class="ov-empty"><div class="ov-empty-icon">&#128274;</div><p>暂无活跃会话</p></div>';
-    return;
+function getSessionStatus(session) {
+  if (!session) return { key: 'idle', label: '空闲' };
+  if (session.end_reason === 'error') return { key: 'error', label: '异常' };
+  if (session.ended_at) return { key: 'done', label: '已完成' };
+  return { key: 'running', label: '运行中' };
+}
+
+function sessionDuration(session) {
+  if (!session || !session.started_at) return 0;
+  var endAt = session.ended_at || Date.now() / 1000;
+  return Math.max(0, endAt - session.started_at);
+}
+
+function sessionTokenTotal(session) {
+  return (session && ((session.input_tokens || 0) + (session.output_tokens || 0))) || 0;
+}
+
+function pickFocusSession(data) {
+  var sessions = (data && data.active_sessions) || [];
+  if (!sessions.length) return null;
+
+  var errorSession = sessions.find(function(s) { return s.end_reason === 'error'; });
+  if (errorSession) return errorSession;
+
+  var runningSession = sessions.find(function(s) { return !s.ended_at; });
+  return runningSession || sessions[0];
+}
+
+function renderGlobalStatus(metrics, focusSession) {
+  var dot = document.getElementById('health-dot');
+  var text = document.getElementById('health-text');
+  var errors = (metrics.error_count || 0);
+  var active = (metrics.active_sessions || 0);
+
+  if (errors > 0) {
+    dot.className = 'ov-status-dot error';
+    text.textContent = '存在异常对象需要关注';
+  } else if (focusSession) {
+    dot.className = 'ov-status-dot healthy';
+    text.textContent = '对象工作台已绑定当前监控上下文';
+  } else if (active > 0) {
+    dot.className = 'ov-status-dot healthy';
+    text.textContent = '系统正常运行';
+  } else {
+    dot.className = 'ov-status-dot idle';
+    text.textContent = '当前没有活跃对象';
   }
 
-  grid.innerHTML = limited.map(function(s) {
-    var statusClass = s.ended_at ? 'done' : 'running';
-    var statusText = s.ended_at ? '已完成' : '运行中';
-    if (s.end_reason === 'error') { statusClass = 'error'; statusText = '错误'; }
-
-    var tokens = (s.input_tokens || 0) + (s.output_tokens || 0);
-    var duration = s.ended_at ? (s.ended_at - s.started_at) : (Date.now() / 1000 - s.started_at);
-
-    var tools = (s.tool_names || []).slice(0, 6);
-    var toolsHtml = tools.map(function(t) {
-      return '<span class="ov-tool-badge">' + t + '</span>';
-    }).join('');
-
-    var toolsUsed = s.tool_call_count || 0;
-
-    return '<a class="ov-session-card" href="' + withBase('/runtime/dashboard') + '?session=' + encodeURIComponent(s.id) + '">' +
-      '<div class="ov-session-card-header">' +
-        '<h3 class="ov-session-title" title="' + (s.title || s.id) + '">' + (s.title || s.id) + '</h3>' +
-        '<span class="ov-session-status ' + statusClass + '">' +
-          '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor"></span>' +
-          statusText +
-        '</span>' +
-      '</div>' +
-      '<div class="ov-session-meta">' +
-        '<div class="ov-session-meta-item">' +
-          '<span class="ov-session-meta-label">来源</span>' +
-          '<span class="ov-session-meta-value">' + (s.source || '—') + '</span>' +
-        '</div>' +
-        '<div class="ov-session-meta-item">' +
-          '<span class="ov-session-meta-label">模型</span>' +
-          '<span class="ov-session-meta-value">' + (s.model || '—') + '</span>' +
-        '</div>' +
-        '<div class="ov-session-meta-item">' +
-          '<span class="ov-session-meta-label">Token</span>' +
-          '<span class="ov-session-meta-value">' + fmt(tokens) + '</span>' +
-        '</div>' +
-        '<div class="ov-session-meta-item">' +
-          '<span class="ov-session-meta-label">耗时</span>' +
-          '<span class="ov-session-meta-value">' + fmtDuration(duration) + '</span>' +
-        '</div>' +
-      '</div>' +
-      '<div class="ov-session-tools">' +
-        '<div class="ov-session-tools-label">工具调用 (' + toolsUsed + ')</div>' +
-        '<div class="ov-session-tools-list">' + (toolsHtml || '<span style="color:var(--ov-text-muted);font-size:11px">无</span>') + '</div>' +
-      '</div>' +
-    '</a>';
-  }).join('');
+  var now = new Date();
+  setText('last-updated', '更新于 ' + now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0'));
 }
 
-function renderToolUsage(tools) {
-  var chart = document.getElementById('tools-bar-chart');
-  var legend = document.getElementById('tools-legend');
+function renderObjectCluster(metrics, sessions) {
+  var el = document.getElementById('object-cluster-summary');
+  if (!el) return;
 
-  if (!tools || tools.length === 0) {
-    chart.innerHTML = '<div class="ov-empty"><div class="ov-empty-icon">&#128295;</div><p>暂无工具使用数据</p></div>';
-    legend.innerHTML = '';
-    return;
-  }
+  var activeSessions = metrics.active_sessions || 0;
+  var errorCount = metrics.error_count || 0;
+  var totalToolCalls = metrics.total_tool_calls || 0;
+  var totalTokens = (metrics.total_input || 0) + (metrics.total_output || 0);
 
-  var maxCount = Math.max.apply(null, tools.map(function(t) { return t.call_count || 0; }));
-  var colors = ['blue', 'green', 'orange', 'purple', 'cyan', 'pink', 'red'];
-
-  chart.innerHTML = tools.map(function(t, i) {
-    var pct = maxCount > 0 ? ((t.call_count || 0) / maxCount * 100) : 0;
-    var color = colors[i % colors.length];
-    var duration = t.avg_duration ? fmtMs(t.avg_duration) : '--';
-    return '<div class="ov-tool-bar">' +
-      '<span class="ov-tool-name" title="' + t.tool_name + '">' + t.tool_name + '</span>' +
-      '<div class="ov-tool-bar-track">' +
-        '<div class="ov-tool-bar-fill ' + color + '" style="width:' + pct + '%">' + (t.call_count || 0) + '</div>' +
-      '</div>' +
+  el.innerHTML = [
+    { label: '活跃对象', value: activeSessions },
+    { label: '异常对象', value: errorCount },
+    { label: '工具调用', value: fmt(totalToolCalls) },
+    { label: '总 Token', value: fmt(totalTokens) }
+  ].map(function(item) {
+    return '<div class="ov-cluster-card">' +
+      '<span class="ov-cluster-label">' + escapeHtml(item.label) + '</span>' +
+      '<div class="ov-cluster-value">' + escapeHtml(item.value) + '</div>' +
     '</div>';
   }).join('');
-
-  var totalCalls = tools.reduce(function(sum, t) { return sum + (t.call_count || 0); }, 0);
-  var totalErrors = tools.reduce(function(sum, t) { return sum + (t.errors || 0); }, 0);
-  var totalTokens = tools.reduce(function(sum, t) { return sum + (t.total_tokens || 0); }, 0);
-
-  legend.innerHTML =
-    '<div class="ov-legend-item"><span>工具种类</span><span class="ov-legend-value">' + tools.length + '</span></div>' +
-    '<div class="ov-legend-item"><span>总调用次数</span><span class="ov-legend-value">' + fmt(totalCalls) + '</span></div>' +
-    '<div class="ov-legend-item"><span>总错误数</span><span class="ov-legend-value">' + totalErrors + '</span></div>' +
-    '<div class="ov-legend-item"><span>总Token</span><span class="ov-legend-value">' + fmt(totalTokens) + '</span></div>';
 }
 
-function renderPerformance(data) {
-  var ttft = data.avg_ttft || 0;
-  var tps = data.avg_tps || 0;
-  var duration = data.avg_duration || 0;
-  var errorRate = data.error_rate || 0;
+function renderObjectTree(sessions, focusSession) {
+  var tree = document.getElementById('object-session-list');
+  if (!tree) return;
 
-  document.getElementById('perf-ttft').textContent = fmtMs(ttft);
-  document.getElementById('perf-ttft-bar').style.width = Math.min(ttft / 50, 100) + '%';
-  document.getElementById('perf-ttft-bar').className = 'ov-perf-bar-fill' + (ttft > 30 ? ' warn' : '') + (ttft > 50 ? ' error' : '');
+  var limited = (sessions || []).slice(0, OVERVIEW_CONFIG.maxActiveSessions);
+  if (!limited.length) {
+    tree.innerHTML = '<div class="ov-empty">暂无活跃对象，Overview 将在有监控对象时绑定工作上下文。</div>';
+    return;
+  }
 
-  document.getElementById('perf-tps').textContent = tps.toFixed(1) + ' tok/s';
-  document.getElementById('perf-tps-bar').style.width = Math.min(tps / 50 * 100, 100) + '%';
+  tree.innerHTML = limited.map(function(session) {
+    var status = getSessionStatus(session);
+    var isSelected = focusSession && focusSession.id === session.id;
+    var tools = (session.tool_names || []).slice(0, 3).map(function(tool) {
+      return '<span class="ov-tool-pill">' + escapeHtml(tool) + '</span>';
+    }).join('');
 
-  document.getElementById('perf-duration').textContent = fmtDuration(duration);
-  document.getElementById('perf-duration-bar').style.width = Math.min(duration / 3600 * 100, 100) + '%';
+    return '<article class="ov-session-node' + (isSelected ? ' is-selected' : '') + '">' +
+      '<div class="ov-session-node-head">' +
+        '<div>' +
+          '<h3 class="ov-tree-title">' + escapeHtml(session.title || session.id || '未命名对象') + '</h3>' +
+          '<span class="ov-tree-meta">' + escapeHtml(session.id || '--') + '</span>' +
+        '</div>' +
+        '<span class="ov-tree-status ' + status.key + '">' + status.label + '</span>' +
+      '</div>' +
+      '<div class="ov-tree-meta-row">' +
+        '<span class="ov-tree-pill">来源 ' + escapeHtml(session.source || '—') + '</span>' +
+        '<span class="ov-tree-pill">模型 ' + escapeHtml(session.model || '—') + '</span>' +
+        '<span class="ov-tree-pill">耗时 ' + escapeHtml(fmtDuration(sessionDuration(session))) + '</span>' +
+      '</div>' +
+      '<div class="ov-tree-tool-row" style="margin-top:8px;">' +
+        (tools || '<span class="ov-tree-meta">当前无工具轨迹</span>') +
+      '</div>' +
+    '</article>';
+  }).join('');
+}
 
-  document.getElementById('perf-error-rate').textContent = (errorRate * 100).toFixed(1) + '%';
-  document.getElementById('perf-error-rate-bar').style.width = Math.min(errorRate * 100, 100) + '%';
-  document.getElementById('perf-error-rate-bar').className = 'ov-perf-bar-fill' + (errorRate > 0.05 ? ' warn' : '') + (errorRate > 0.1 ? ' error' : '');
+function renderWorkspaceHeader(focusSession) {
+  if (!focusSession) {
+    setText('workspace-object-title', '当前没有活跃监控对象');
+    setText('workspace-object-subtitle', 'Overview 已准备为对象工作台，但当前无可绑定的对象上下文。');
+    setText('workspace-status-pill', '空闲');
+    return;
+  }
+
+  var status = getSessionStatus(focusSession);
+  setText('workspace-object-title', focusSession.title || focusSession.id || '未命名对象');
+  setText('workspace-object-subtitle', '围绕当前监控对象展开：来源、模型、工具轨迹、性能与异常全部收束到同一工作上下文。');
+
+  var pill = document.getElementById('workspace-status-pill');
+  if (pill) {
+    pill.className = 'ov-workspace-status ' + status.key;
+    pill.textContent = status.label;
+  }
+}
+
+function renderWorkspaceMetrics(metrics, focusSession) {
+  var el = document.getElementById('workspace-metrics');
+  if (!el) return;
+
+  if (!focusSession) {
+    el.innerHTML = '<div class="ov-empty">暂无对象指标</div>';
+    return;
+  }
+
+  var sessionTokens = sessionTokenTotal(focusSession);
+  var sessionTools = focusSession.tool_call_count || 0;
+  var activeShare = metrics.total_sessions ? (((metrics.active_sessions || 0) / metrics.total_sessions) * 100).toFixed(1) + '%' : '--';
+  var sessionAge = relativeTime(focusSession.started_at);
+
+  var cards = [
+    { label: '对象 Token', value: fmt(sessionTokens) },
+    { label: '对象工具调用', value: fmt(sessionTools) },
+    { label: '活跃占比', value: activeShare },
+    { label: '对象起始', value: sessionAge }
+  ];
+
+  el.innerHTML = cards.map(function(card) {
+    return '<div class="ov-metric-tile">' +
+      '<span class="ov-metric-caption">' + escapeHtml(card.label) + '</span>' +
+      '<div class="ov-metric-value">' + escapeHtml(card.value) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderFocusCard(metrics, focusSession, data) {
+  var el = document.getElementById('workspace-focus-card');
+  if (!el) return;
+
+  if (!focusSession) {
+    el.innerHTML = '<div class="ov-empty">对象上下文未激活。</div>';
+    return;
+  }
+
+  var status = getSessionStatus(focusSession);
+  var toolNames = (focusSession.tool_names || []).slice(0, 6);
+  var score = focusSession.end_reason === 'error'
+    ? '需介入'
+    : status.key === 'running'
+      ? '进行中'
+      : '已归档';
+
+  var sourceTop = ((data.sources || [])[0] || {}).src || 'unknown';
+  var avgDuration = fmtDuration((data.performance || {}).avg_duration || 0);
+
+  el.innerHTML = '<div class="ov-focus-hero">' +
+    '<div>' +
+      '<h3 class="ov-focus-headline">' + escapeHtml(focusSession.title || focusSession.id || '未命名对象') + '</h3>' +
+      '<p class="ov-focus-note">当前对象是 Overview 中央主语，不再与跨域摘要平权竞争。</p>' +
+    '</div>' +
+    '<div class="ov-focus-score">' +
+      '<span class="ov-tree-meta">对象态势</span>' +
+      '<strong>' + escapeHtml(score) + '</strong>' +
+    '</div>' +
+  '</div>' +
+  '<div class="ov-focus-lanes">' +
+    '<div class="ov-focus-lane"><strong>对象来源</strong><p class="ov-focus-context">' + escapeHtml(focusSession.source || '—') + ' / ' + escapeHtml(focusSession.model || '—') + '</p></div>' +
+    '<div class="ov-focus-lane"><strong>对象耗时</strong><p class="ov-focus-context">' + escapeHtml(fmtDuration(sessionDuration(focusSession))) + '，系统均值 ' + escapeHtml(avgDuration) + '</p></div>' +
+    '<div class="ov-focus-lane"><strong>主要工具</strong><p class="ov-focus-context">' + escapeHtml(toolNames.join(' · ') || '暂无工具轨迹') + '</p></div>' +
+    '<div class="ov-focus-lane"><strong>全局来源主峰</strong><p class="ov-focus-context">' + escapeHtml(sourceTop) + '，用于校准对象所处群组</p></div>' +
+  '</div>' +
+  '<div class="ov-tree-meta">对象 ID：' + escapeHtml(focusSession.id || '--') + '</div>';
+}
+
+function renderWorkspaceTools(toolUsage, focusSession) {
+  var el = document.getElementById('workspace-tools');
+  if (!el) return;
+
+  if (!focusSession || !toolUsage || !toolUsage.length) {
+    el.innerHTML = '<div class="ov-empty">暂无工具行为数据</div>';
+    return;
+  }
+
+  var maxCount = Math.max.apply(null, toolUsage.map(function(item) { return item.call_count || 0; }));
+  el.innerHTML = toolUsage.slice(0, OVERVIEW_CONFIG.maxToolTracks).map(function(item) {
+    var pct = maxCount ? Math.max(6, Math.round(((item.call_count || 0) / maxCount) * 100)) : 0;
+    return '<div class="ov-tool-track">' +
+      '<div class="ov-tool-track-head">' +
+        '<span class="ov-tool-name">' + escapeHtml(item.tool_name || 'unknown') + '</span>' +
+        '<span class="ov-tool-count">' + escapeHtml(fmt(item.call_count || 0)) + ' 次</span>' +
+      '</div>' +
+      '<div class="ov-tool-bar"><div class="ov-tool-bar-fill" style="width:' + pct + '%"></div></div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderWorkspacePerformance(performance, focusSession) {
+  var el = document.getElementById('workspace-performance');
+  if (!el) return;
+
+  if (!focusSession) {
+    el.innerHTML = '<div class="ov-empty">暂无性能上下文</div>';
+    return;
+  }
+
+  var items = [
+    { label: '平均 TTFT', value: fmtMs(performance.avg_ttft) },
+    { label: '平均 TPS', value: performance.avg_tps ? performance.avg_tps.toFixed(1) + ' tok/s' : '--' },
+    { label: '平均会话耗时', value: fmtDuration(performance.avg_duration) },
+    { label: '错误率', value: ((performance.error_rate || 0) * 100).toFixed(1) + '%' }
+  ];
+
+  el.innerHTML = items.map(function(item) {
+    return '<div class="ov-performance-item">' +
+      '<div><span class="ov-performance-label">' + escapeHtml(item.label) + '</span></div>' +
+      '<div class="ov-performance-value">' + escapeHtml(item.value) + '</div>' +
+    '</div>';
+  }).join('');
 }
 
 function renderErrors(errors) {
-  var list = document.getElementById('recent-errors-list');
-  var limited = (errors || []).slice(0, OVERVIEW_CONFIG.maxErrors);
+  var el = document.getElementById('workspace-errors');
+  if (!el) return;
 
-  if (limited.length === 0) {
-    list.innerHTML = '<div class="ov-empty"><div class="ov-empty-icon">&#9989;</div><p>暂无错误记录</p></div>';
+  var limited = (errors || []).slice(0, OVERVIEW_CONFIG.maxErrors);
+  if (!limited.length) {
+    el.innerHTML = '<div class="ov-empty">暂无错误记录</div>';
     return;
   }
 
-  list.innerHTML = limited.map(function(e) {
+  el.innerHTML = limited.map(function(error) {
     return '<div class="ov-error-item">' +
-      '<div class="ov-error-icon">&#9888;</div>' +
-      '<div class="ov-error-content">' +
-        '<p class="ov-error-title">' + (e.error_message || '未知错误') + '</p>' +
-        '<p class="ov-error-detail" title="' + (e.session_id || '') + '">' + (e.session_id || '') + ' — ' + (e.tool_name || '') + '</p>' +
+      '<div>' +
+        '<p class="ov-error-title">' + escapeHtml(error.error_message || '未知错误') + '</p>' +
+        '<p class="ov-error-meta">' + escapeHtml(error.session_id || '') + (error.tool_name ? ' · ' + escapeHtml(error.tool_name) : '') + '</p>' +
       '</div>' +
-      '<span class="ov-error-time">' + relativeTime(e.timestamp) + '</span>' +
+      '<span class="ov-error-time">' + escapeHtml(relativeTime(error.timestamp)) + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function renderSupportSignals(stats, collab, data) {
+  var el = document.getElementById('support-signals-list');
+  if (!el) return;
+
+  var cards = [
+    {
+      label: '运营面',
+      value: fmt(stats.skills || 0),
+      desc: '技能数量，仅作为对象操作背景信号'
+    },
+    {
+      label: '治理面',
+      value: fmt(data.metrics.error_count || 0),
+      desc: '异常对象数，替代大块治理摘要'
+    },
+    {
+      label: '协作面',
+      value: fmt(collab.handoffs || 0),
+      desc: 'Open handoff 数，提示对象交接压力'
+    },
+    {
+      label: '定时任务',
+      value: fmt(stats.cron || 0),
+      desc: '系统调度规模，降级为支持信号'
+    }
+  ];
+
+  el.innerHTML = cards.map(function(card) {
+    return '<div class="ov-support-card">' +
+      '<div>' +
+        '<span class="ov-support-label">' + escapeHtml(card.label) + '</span>' +
+        '<div class="ov-support-value">' + escapeHtml(card.value) + '</div>' +
+      '</div>' +
+      '<div class="ov-support-desc">' + escapeHtml(card.desc) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderFacts(focusSession, data, stats, collab) {
+  var el = document.getElementById('detail-facts-list');
+  if (!el) return;
+
+  if (!focusSession) {
+    el.innerHTML = '<div class="ov-empty">暂无对象事实</div>';
+    return;
+  }
+
+  var facts = [
+    { key: '对象 ID', value: focusSession.id || '--' },
+    { key: '来源 / 模型', value: (focusSession.source || '—') + ' / ' + (focusSession.model || '—') },
+    { key: '对象耗时', value: fmtDuration(sessionDuration(focusSession)) },
+    { key: '对象工具调用', value: fmt(focusSession.tool_call_count || 0) },
+    { key: '总会话规模', value: fmt((data.metrics || {}).total_sessions || 0) },
+    { key: 'Open Handoffs', value: fmt(collab.handoffs || 0) },
+    { key: '记忆文件', value: fmt(stats.memory_files || 0) }
+  ];
+
+  el.innerHTML = facts.map(function(fact) {
+    return '<div class="ov-fact-row">' +
+      '<span class="ov-fact-key">' + escapeHtml(fact.key) + '</span>' +
+      '<span class="ov-fact-value">' + escapeHtml(fact.value) + '</span>' +
     '</div>';
   }).join('');
 }
 
 function renderSources(sources) {
-  var container = document.getElementById('sources-container');
-  var icons = { cli: '&#128187;', cron: '&#9200;', feishu: '&#128197;', telegram: '&#9992;', api_server: '&#127760;', api: '&#127760;', discord: '&#128172;', slack: '&#128276;' };
+  var el = document.getElementById('detail-source-list');
+  if (!el) return;
 
-  if (!sources || sources.length === 0) {
-    container.innerHTML = '<div class="ov-empty"><p>暂无来源数据</p></div>';
+  if (!sources || !sources.length) {
+    el.innerHTML = '<div class="ov-empty">暂无来源分布</div>';
     return;
   }
 
-  container.innerHTML = sources.map(function(s) {
-    var src = (s.src || s.source || 'unknown').toLowerCase();
-    var icon = icons[src] || '&#128279;';
-    return '<div class="ov-source-card">' +
-      '<div class="ov-source-icon">' + icon + '</div>' +
-      '<div class="ov-source-name">' + s.src + '</div>' +
-      '<div class="ov-source-count">' + s.cnt + ' 会话</div>' +
+  el.innerHTML = sources.slice(0, OVERVIEW_CONFIG.maxSourceRows).map(function(source) {
+    return '<div class="ov-source-row">' +
+      '<div>' +
+        '<span class="ov-fact-key">' + escapeHtml(source.src || 'unknown') + '</span>' +
+        '<span class="ov-source-meta">会话 ' + escapeHtml(fmt(source.cnt || 0)) + '</span>' +
+      '</div>' +
+      '<span class="ov-source-value">' + escapeHtml(fmt(source.total_tokens || 0)) + ' tok</span>' +
     '</div>';
   }).join('');
 }
 
-/* ---- Subagent List ---- */
-function renderSubagents(agents) {
-  var list = document.getElementById('subagent-list');
-  if (!agents || agents.length === 0) {
-    list.innerHTML = '<div class="ov-block-sub-item">Expert</div>' +
-      '<div class="ov-block-sub-item">Research</div>' +
-      '<div class="ov-block-sub-item">Code</div>' +
-      '<div class="ov-block-sub-item">Ops</div>';
-    return;
-  }
-  list.innerHTML = agents.map(function(a) {
-    return '<div class="ov-block-sub-item">' + a.role + '</div>';
-  }).join('');
+function loadSupportData() {
+  return Promise.all([
+    fetchJSON('/api/overview/stats').catch(function() { return {}; }),
+    fetchJSON('/api/cron/list').catch(function() { return []; }),
+    fetchJSON('/api/runtime/handoffs').catch(function() { return []; }),
+    fetchJSON('/api/runtime/harness-summary').catch(function() { return {}; })
+  ]).then(function(results) {
+    return {
+      stats: {
+        skills: results[0].skills || 0,
+        memory_files: results[0].memory_files || 0,
+        cron: Array.isArray(results[1]) ? results[1].length : 0,
+      },
+      collab: {
+        handoffs: Array.isArray(results[2]) ? results[2].length : 0,
+        traces: (results[3].success_count || 0) + (results[3].failure_count || 0),
+        failures: results[3].failure_count || 0,
+      }
+    };
+  });
 }
 
-/* ---- Tool Registry ---- */
-function renderToolRegistry(tools) {
-  var container = document.getElementById('tool-registry');
-  if (!tools || tools.length === 0) {
-    container.innerHTML =
-      '<div class="ov-block-item">FileToolHandler</div>' +
-      '<div class="ov-block-item">WebToolHandler</div>' +
-      '<div class="ov-block-item">TerminalToolHandler</div>' +
-      '<div class="ov-block-item">McpToolHandler</div>';
-    return;
-  }
-  container.innerHTML = tools.slice(0, 6).map(function(t) {
-    return '<div class="ov-block-item">' + t.tool_name + '</div>';
-  }).join('');
-}
-
-/* ---- Data Fetching ---- */
 function loadOverview() {
-  fetchJSON('/api/overview').then(function(data) {
-    renderMetrics(data.metrics);
-    renderActiveSessions(data.active_sessions);
-    renderToolUsage(data.tool_usage);
-    renderPerformance(data.performance);
-    renderErrors(data.recent_errors);
-    renderSources(data.sources);
-    renderSubagents(data.subagents);
-    renderToolRegistry(data.tool_registry);
+  Promise.all([
+    fetchJSON('/api/overview'),
+    loadSupportData()
+  ]).then(function(results) {
+    var data = results[0] || {};
+    var support = results[1] || { stats: {}, collab: {} };
+    var metrics = data.metrics || {};
+    var sessions = data.active_sessions || [];
+    var focusSession = pickFocusSession(data);
+
+    renderGlobalStatus(metrics, focusSession);
+    renderObjectCluster(metrics, sessions);
+    renderObjectTree(sessions, focusSession);
+    renderWorkspaceHeader(focusSession);
+    renderWorkspaceMetrics(metrics, focusSession);
+    renderFocusCard(metrics, focusSession, data);
+    renderWorkspaceTools(data.tool_usage || [], focusSession);
+    renderWorkspacePerformance(data.performance || {}, focusSession);
+    renderErrors(data.recent_errors || []);
+    renderSupportSignals(support.stats, support.collab, data);
+    renderFacts(focusSession, data, support.stats, support.collab);
+    renderSources(data.sources || []);
   }).catch(function(err) {
     console.error('Failed to load overview:', err);
   });
 }
 
-/* ---- Init ---- */
 function init() {
   loadOverview();
   setInterval(loadOverview, OVERVIEW_CONFIG.refreshInterval);

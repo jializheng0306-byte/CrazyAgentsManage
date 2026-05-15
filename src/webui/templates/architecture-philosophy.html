@@ -3,30 +3,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>产品哲学展示 - CrazyAgentsManage</title>
+  <title>产品哲学 - FlowMind</title>
   <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
 </head>
 <body>
+  {% set active_nav = 'governance' %}
   {% set active_architecture = 'philosophy' %}
   {% include 'ia-nav.html' %}
 
-  <main class="container mt-lg">
-    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
-      <h1 class="page-title">产品哲学展示页</h1>
-      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
-        对应 `ProductPhilosophyPreviewPage.tsx`，用于直观说明 FlowMind 的定位、价值边界与运营原则。
-      </p>
-    </div>
+  <main id="overview-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+    <section class="console-page-header">
+      <div>
+        <div class="console-page-kicker">Governance architecture reference</div>
+        <h1 class="console-page-title">
+          <span class="console-page-title-icon">💡</span>
+          产品哲学
+        </h1>
+        <p class="console-page-subtitle">在治理语境下说明 FlowMind 为什么存在、它治理什么，以及它与 HermesAgent 的职责边界。</p>
+      </div>
+      <div class="console-surface-map" aria-label="architecture-reference-nav">
+        <a class="console-surface-chip active" href="{{ BASE }}/architecture/philosophy">产品哲学</a>
+        <a class="console-surface-chip" href="{{ BASE }}/architecture/product">产品架构</a>
+        <a class="console-surface-chip" href="{{ BASE }}/architecture/tech">技术架构</a>
+      </div>
+    </section>
 
-    <div class="card" style="padding: var(--spacing-lg);">
-      <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.9; margin: 0; padding-left: 18px;">
-        <li>该展示页已纳入总览与治理面的信息架构。</li>
-        <li>当前仓库只存在预览入口文件，未发现完整实现组件，因此此处先提供产品挂载位。</li>
-        <li>后续应接入真实的产品叙事、运营规则与外部交互可视化内容。</li>
-      </ul>
+    <section class="ov-section">
+      <div class="ov-section-header">
+        <div>
+          <div class="console-section-kicker">治理判断口径</div>
+          <h2 class="ov-section-title"><span class="ov-section-icon">🧭</span>哲学主张</h2>
+        </div>
+        <a class="link-more console-link-more" href="{{ BASE }}/governance">返回治理面 →</a>
+      </div>
+      <div class="ov-gov-grid">
+        <div class="ov-gov-card">
+          <div class="ov-gov-card-label">存在目的</div>
+          <div class="ov-gov-card-desc">FlowMind 负责承载工作流、对象状态与证据面，让运行、运营、治理、协作能在同一控制壳中闭环。</div>
+        </div>
+        <div class="ov-gov-card">
+          <div class="ov-gov-card-label">治理对象</div>
+          <div class="ov-gov-card-desc">它治理的是对象、关系、状态与证据的一致性，而不只是单个页面或孤立指标。</div>
+        </div>
+        <div class="ov-gov-card">
+          <div class="ov-gov-card-label">角色边界</div>
+          <div class="ov-gov-card-desc">HermesAgent 提供宿主与执行能力；FlowMind 提供工作台、结构组织、监控入口与治理判断口径。</div>
+        </div>
+        <div class="ov-gov-card">
+          <div class="ov-gov-card-label">产品原则</div>
+          <div class="ov-gov-card-desc">固定 IA、BASE-safe、对象优先、证据可回看，并在当前应用壳内完成跨域巡检与下钻。</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ov-dual-section">
+      <section class="ov-section ov-section-half">
+        <div class="ov-section-header ov-section-header-tight">
+          <div>
+            <div class="console-section-kicker">治理解释面</div>
+            <h2 class="ov-section-title"><span class="ov-section-icon">🎯</span>产品回答的问题</h2>
+          </div>
+        </div>
+        <div class="ov-errors-list">
+          <div class="ov-error-item">
+            <div>
+              <p class="ov-error-title">为什么需要 FlowMind</p>
+              <p class="ov-error-meta">把运行信号、运营资产、治理证据和协作链路纳入统一可巡检工作台。</p>
+            </div>
+          </div>
+          <div class="ov-error-item">
+            <div>
+              <p class="ov-error-title">治理面为何保留架构参照</p>
+              <p class="ov-error-meta">用于解释节点、关系和状态应该落在哪个产品层次，而不是脱离当前壳跳去外部预览页。</p>
+            </div>
+          </div>
+          <div class="ov-error-item">
+            <div>
+              <p class="ov-error-title">为什么要保持固定 IA</p>
+              <p class="ov-error-meta">保障用户始终知道自己位于治理上下文，并能从这里稳定进入哲学、产品、技术三个参照页。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ov-section ov-section-half">
+        <div class="ov-section-header ov-section-header-tight">
+          <div>
+            <div class="console-section-kicker">治理相关入口</div>
+            <h2 class="ov-section-title"><span class="ov-section-icon">🔗</span>继续查看</h2>
+          </div>
+        </div>
+        <div class="ov-sources-container">
+          <a class="ov-reference-link" href="{{ BASE }}/governance">
+            <span>治理面总览</span>
+            <small>回到 graph node / agent node 工作台。</small>
+          </a>
+          <a class="ov-reference-link" href="{{ BASE }}/architecture/product">
+            <span>产品架构</span>
+            <small>查看对象、层级与关系如何被组织。</small>
+          </a>
+          <a class="ov-reference-link" href="{{ BASE }}/architecture/tech">
+            <span>技术架构</span>
+            <small>查看技术链路、状态流与回写路径。</small>
+          </a>
+        </div>
+      </section>
     </div>
   </main>
 </body>

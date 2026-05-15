@@ -3,30 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>产品架构展示 - CrazyAgentsManage</title>
+  <title>产品架构 - FlowMind</title>
   <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
 </head>
 <body>
+  {% set active_nav = 'governance' %}
   {% set active_architecture = 'product' %}
   {% include 'ia-nav.html' %}
 
-  <main class="container mt-lg">
-    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
-      <h1 class="page-title">产品架构展示页</h1>
-      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
-        对应 `ProductArchitecturePreviewPage.tsx`，承接 FlowMind 的产品结构、运营结构与对外协同结构说明。
-      </p>
-    </div>
+  <main id="overview-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+    <section class="console-page-header">
+      <div>
+        <div class="console-page-kicker">Governance architecture reference</div>
+        <h1 class="console-page-title">
+          <span class="console-page-title-icon">🗺️</span>
+          产品架构
+        </h1>
+        <p class="console-page-subtitle">在治理语境下查看用户、Hermes、FlowMind、外部平台与桥接面的关系，不再依赖缺失的静态预览资源。</p>
+      </div>
+      <div class="console-surface-map" aria-label="architecture-reference-nav">
+        <a class="console-surface-chip" href="{{ BASE }}/architecture/philosophy">产品哲学</a>
+        <a class="console-surface-chip active" href="{{ BASE }}/architecture/product">产品架构</a>
+        <a class="console-surface-chip" href="{{ BASE }}/architecture/tech">技术架构</a>
+      </div>
+    </section>
 
-    <div class="card" style="padding: var(--spacing-lg);">
-      <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.9; margin: 0; padding-left: 18px;">
-        <li>该展示页已经映射到治理面与运营面。</li>
-        <li>这里作为 WebUI 的目标路由占位，便于后续把设计师页面正式接入。</li>
-        <li>当前以文档体系和 IA 结构作为真实产品约束来源，而不是假设现有 TSX 已完成落地。</li>
-      </ul>
+    <section class="ov-section">
+      <div class="ov-section-header">
+        <div>
+          <div class="console-section-kicker">结构蓝图</div>
+          <h2 class="ov-section-title"><span class="ov-section-icon">🏗️</span>产品层次</h2>
+        </div>
+        <a class="link-more console-link-more" href="{{ BASE }}/governance">返回治理面 →</a>
+      </div>
+      <div class="ov-arch-entry-grid">
+        <div class="ov-arch-entry-card">
+          <div class="ov-arch-entry-icon">👤</div>
+          <div class="ov-arch-entry-title">用户 / Operator</div>
+          <div class="ov-arch-entry-desc">从固定 IA 进入总览、运行态、运营面、治理面与协作面的统一控制入口。</div>
+        </div>
+        <div class="ov-arch-entry-card">
+          <div class="ov-arch-entry-icon">⚡</div>
+          <div class="ov-arch-entry-title">Hermes 宿主</div>
+          <div class="ov-arch-entry-desc">提供托管、执行、连接与会话承载能力，是 FlowMind 的运行宿主。</div>
+        </div>
+        <div class="ov-arch-entry-card">
+          <div class="ov-arch-entry-icon">🧠</div>
+          <div class="ov-arch-entry-title">FlowMind 控制壳</div>
+          <div class="ov-arch-entry-desc">组织对象池、主工作台与证据面，负责产品编排、可视巡检与上下文切换。</div>
+        </div>
+        <div class="ov-arch-entry-card">
+          <div class="ov-arch-entry-icon">🌉</div>
+          <div class="ov-arch-entry-title">桥接 / 外部平台</div>
+          <div class="ov-arch-entry-desc">承接外部数据源、工具链与平台状态，并通过治理与运行链路回流到当前壳内。</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ov-dual-section">
+      <section class="ov-section ov-section-half">
+        <div class="ov-section-header ov-section-header-tight">
+          <div>
+            <div class="console-section-kicker">核心关系</div>
+            <h2 class="ov-section-title"><span class="ov-section-icon">🔄</span>关系说明</h2>
+          </div>
+        </div>
+        <div class="ov-sessions-grid">
+          <div class="ov-gov-card">
+            <div class="ov-gov-card-label">用户 → FlowMind</div>
+            <div class="ov-gov-card-desc">用户通过控制壳查看对象、证据与状态，而不是直接面对底层原始结构。</div>
+          </div>
+          <div class="ov-gov-card">
+            <div class="ov-gov-card-label">FlowMind → Hermes</div>
+            <div class="ov-gov-card-desc">FlowMind 使用 Hermes 的执行与托管能力来支撑会话、Agent 与流程运行。</div>
+          </div>
+          <div class="ov-gov-card">
+            <div class="ov-gov-card-label">FlowMind ↔ 治理 / 协作 / 运营 / 运行态</div>
+            <div class="ov-gov-card-desc">五个工作台共享同一 IA 壳，分别承担对象巡检、事实治理、任务协作和资产运营。</div>
+          </div>
+          <div class="ov-gov-card">
+            <div class="ov-gov-card-label">宿主 ↔ 外部平台</div>
+            <div class="ov-gov-card-desc">外部信号通过宿主进入系统，再被 FlowMind 组织为可消费的工作台和参照面。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ov-section ov-section-half">
+        <div class="ov-section-header ov-section-header-tight">
+          <div>
+            <div class="console-section-kicker">关联入口</div>
+            <h2 class="ov-section-title"><span class="ov-section-icon">🧩</span>结构相关页面</h2>
+          </div>
+        </div>
+        <div class="ov-sources-container">
+          <a class="ov-reference-link" href="{{ BASE }}/governance/graph">
+            <span>治理图谱</span>
+            <small>查看节点和关系在治理工作台中的实际投影。</small>
+          </a>
+          <a class="ov-reference-link" href="{{ BASE }}/architecture/philosophy">
+            <span>产品哲学</span>
+            <small>回到结构背后的判断原则与边界定义。</small>
+          </a>
+          <a class="ov-reference-link" href="{{ BASE }}/architecture/tech">
+            <span>技术架构</span>
+            <small>继续查看这些产品层次如何落到技术链路与状态流。</small>
+          </a>
+        </div>
+      </section>
     </div>
   </main>
 </body>

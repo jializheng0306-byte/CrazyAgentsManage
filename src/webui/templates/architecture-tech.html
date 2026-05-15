@@ -3,30 +3,126 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>技术架构展示 - CrazyAgentsManage</title>
+  <title>技术架构 - FlowMind</title>
   <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
 </head>
 <body>
+  {% set active_nav = 'governance' %}
   {% set active_architecture = 'tech' %}
   {% include 'ia-nav.html' %}
 
-  <main class="container mt-lg">
-    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
-      <h1 class="page-title">技术架构展示页</h1>
-      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
-        对应 `TechArchitecturePreviewPage.tsx`，用于展示 FlowMind 与外部系统交互、内部运行链路与实施动态。
-      </p>
-    </div>
+  <main id="overview-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+    <section class="console-page-header">
+      <div>
+        <div class="console-page-kicker">Governance architecture reference</div>
+        <h1 class="console-page-title">
+          <span class="console-page-title-icon">⚙️</span>
+          技术架构
+        </h1>
+        <p class="console-page-subtitle">在治理语境下查看内部技术链路、状态流、协作工件与回写路径，保持当前应用壳内的稳定巡检体验。</p>
+      </div>
+      <div class="console-surface-map" aria-label="architecture-reference-nav">
+        <a class="console-surface-chip" href="{{ BASE }}/architecture/philosophy">产品哲学</a>
+        <a class="console-surface-chip" href="{{ BASE }}/architecture/product">产品架构</a>
+        <a class="console-surface-chip active" href="{{ BASE }}/architecture/tech">技术架构</a>
+      </div>
+    </section>
 
-    <div class="card" style="padding: var(--spacing-lg);">
-      <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.9; margin: 0; padding-left: 18px;">
-        <li>该展示页已经映射到运行态与协作面。</li>
-        <li>它是“用户直观看到 FlowMind 与外界交互、内部操作实施动态”的核心展示挂载位。</li>
-        <li>当前先以 WebUI 路由和模板占位完成接入，为后续真实前端实现保留稳定入口。</li>
-      </ul>
+    <section class="ov-section">
+      <div class="ov-section-header">
+        <div>
+          <div class="console-section-kicker">技术链路</div>
+          <h2 class="ov-section-title"><span class="ov-section-icon">🛠️</span>实现路径</h2>
+        </div>
+        <a class="link-more console-link-more" href="{{ BASE }}/governance">返回治理面 →</a>
+      </div>
+      <div class="ov-ops-grid">
+        <div class="ov-ops-card">
+          <div class="ov-ops-card-icon">📥</div>
+          <div class="ov-ops-card-body">
+            <div class="ov-ops-card-label">输入层</div>
+            <div class="ov-ops-card-value">Signals</div>
+          </div>
+        </div>
+        <div class="ov-ops-card">
+          <div class="ov-ops-card-icon">🧮</div>
+          <div class="ov-ops-card-body">
+            <div class="ov-ops-card-label">处理层</div>
+            <div class="ov-ops-card-value">Sessions / Agents</div>
+          </div>
+        </div>
+        <div class="ov-ops-card">
+          <div class="ov-ops-card-icon">🗂️</div>
+          <div class="ov-ops-card-body">
+            <div class="ov-ops-card-label">工件层</div>
+            <div class="ov-ops-card-value">Trace / Facts / Handoffs</div>
+          </div>
+        </div>
+        <div class="ov-ops-card">
+          <div class="ov-ops-card-icon">↩️</div>
+          <div class="ov-ops-card-body">
+            <div class="ov-ops-card-label">回写层</div>
+            <div class="ov-ops-card-value">Governance / Collaboration</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ov-dual-section">
+      <section class="ov-section ov-section-half">
+        <div class="ov-section-header ov-section-header-tight">
+          <div>
+            <div class="console-section-kicker">状态流</div>
+            <h2 class="ov-section-title"><span class="ov-section-icon">📈</span>链路分段</h2>
+          </div>
+        </div>
+        <div class="ov-errors-list">
+          <div class="ov-error-item">
+            <div>
+              <p class="ov-error-title">采集与接入</p>
+              <p class="ov-error-meta">外部平台、CLI 与宿主信号被采集进入统一数据面。</p>
+            </div>
+          </div>
+          <div class="ov-error-item">
+            <div>
+              <p class="ov-error-title">运行与编排</p>
+              <p class="ov-error-meta">会话、Agent、任务与工具调用在 Hermes 宿主中执行，并把状态回传到工作台。</p>
+            </div>
+          </div>
+          <div class="ov-error-item">
+            <div>
+              <p class="ov-error-title">证据沉淀与回写</p>
+              <p class="ov-error-meta">trace、事实、handoff、closeout 等工件被沉淀后，继续服务治理与协作巡检。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ov-section ov-section-half">
+        <div class="ov-section-header ov-section-header-tight">
+          <div>
+            <div class="console-section-kicker">继续下钻</div>
+            <h2 class="ov-section-title"><span class="ov-section-icon">🧷</span>技术相关入口</h2>
+          </div>
+        </div>
+        <div class="ov-sources-container">
+          <a class="ov-reference-link" href="{{ BASE }}/runtime">
+            <span>运行态</span>
+            <small>查看技术链路在实际运行中的状态投影。</small>
+          </a>
+          <a class="ov-reference-link" href="{{ BASE }}/collaboration">
+            <span>协作面</span>
+            <small>查看工件、handoff 与 closeout 如何消费这些链路结果。</small>
+          </a>
+          <a class="ov-reference-link" href="{{ BASE }}/architecture/product">
+            <span>产品架构</span>
+            <small>返回上一层，查看技术链路服务于哪些产品结构。</small>
+          </a>
+        </div>
+      </section>
     </div>
   </main>
 </body>

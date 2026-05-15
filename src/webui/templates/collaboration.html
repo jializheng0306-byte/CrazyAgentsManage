@@ -6,41 +6,141 @@
   <title>协作面 - CrazyAgentsManage</title>
   <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/collaboration.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
 </head>
 <body>
   {% set active_nav = 'collaboration' %}
   {% include 'ia-nav.html' %}
 
-  <main class="container mt-lg">
-    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
-      <h1 class="page-title">协作面</h1>
-      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
-        用于呈现 Codex 与 HermesAgent、FlowMind 与外部系统之间的协作链路与执行动态。
-      </p>
+  <main id="cl-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+
+    <section class="console-page-header">
+      <div>
+        <div class="console-page-kicker">Hermes-hosted FlowMind Console</div>
+        <h1 class="console-page-title">
+          <span class="console-page-title-icon">🤝</span>
+          协作工作台
+        </h1>
+        <p class="console-page-subtitle">围绕交接对象池、中央协作工作台与右侧追踪证据，统一跨面协作控制台体验。</p>
+      </div>
+      <div class="console-surface-map" aria-label="console-zones">
+        <span class="console-surface-chip active">左侧对象池</span>
+        <span class="console-surface-chip">中央主工作台</span>
+        <span class="console-surface-chip">右侧细节 / 证据</span>
+      </div>
+    </section>
+
+    <div class="cl-metrics-strip">
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="cl-handoff-count">--</div>
+        <div class="cl-metric-label">交接包</div>
+      </div>
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="cl-trace-count">--</div>
+        <div class="cl-metric-label">追踪记录</div>
+      </div>
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="cl-closeout-count">--</div>
+        <div class="cl-metric-label">失败记录</div>
+      </div>
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="cl-snapshot-count">--</div>
+        <div class="cl-metric-label">运行态快照</div>
+      </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-lg);">
-      <div class="card" style="padding: var(--spacing-lg);">
-        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">当前协作入口</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
-          <a class="btn btn-primary btn-sm" href="{{ BASE }}/collaboration/tasks">任务编排</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/runtime/sessions">会话链路</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/governance/graph">关系图谱</a>
+    <div class="cl-subpages console-subpage-grid">
+      <a class="cl-subpage-card console-subpage-card primary" href="{{ BASE }}/collaboration/tasks">
+        <span class="console-subpage-kicker">中央主工作台</span>
+        <span class="cl-subpage-icon">📋</span>
+        <span class="cl-subpage-title">任务协作工作台</span>
+        <span class="cl-subpage-desc">任务仍是协作执行面，负责接收交接包、展开依赖并推进闭环。</span>
+      </a>
+      <div class="cl-subpage-card console-subpage-card support" aria-label="supporting-links">
+        <span class="console-subpage-kicker">支持链接 / 证据</span>
+        <span class="cl-subpage-icon">🧭</span>
+        <span class="cl-subpage-title">协作支持链接</span>
+        <span class="cl-subpage-desc">会话链路与治理图谱作为交接核验和追踪证据，不再与主协作对象并列。</span>
+        <div class="cl-support-links">
+          <a class="cl-support-link" href="{{ BASE }}/runtime/sessions">
+            <strong>会话链路</strong>
+            <span>查看运行时会话与跨智能体追踪证据</span>
+          </a>
+          <a class="cl-support-link" href="{{ BASE }}/governance/graph">
+            <strong>治理图谱</strong>
+            <span>查看关系拓扑与交接上下游参照</span>
+          </a>
         </div>
-        <p style="color: #94a3b8; font-size: 13px;">现阶段协作面以任务、会话和关系视角组合呈现，后续再引入 handoff、acceptance、follow-up 等专门表面。</p>
-      </div>
-
-      <div class="card" style="padding: var(--spacing-lg);">
-        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">外部交互可视化</h3>
-        <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.8; margin: 0; padding-left: 18px;">
-          <li>展示 FlowMind 与外部系统的数据进入、处理、回流路径。</li>
-          <li>承接 Codex 开发实现与 HermesAgent 运营验收之间的交接证据。</li>
-          <li>与技术架构展示页共同说明系统实施动态。</li>
-        </ul>
       </div>
     </div>
+
+    <section class="cl-section console-section-emphasis">
+      <div class="cl-section-header">
+        <div>
+          <div class="console-section-kicker">左侧对象池</div>
+          <h2 class="cl-section-title">
+            <span class="cl-section-icon">📤</span>
+            交接对象池
+          </h2>
+          <p class="cl-section-subtitle">主协作对象仍然是 handoff package，列表直连当前交接包接口。</p>
+        </div>
+      </div>
+      <div class="cl-handoff-list" id="cl-handoff-list">
+        <div class="cl-empty"><div class="cl-empty-icon">⏳</div><p>加载中...</p></div>
+      </div>
+    </section>
+
+    <section class="cl-section">
+      <div class="cl-section-header">
+        <div>
+          <div class="console-section-kicker">中央主工作台</div>
+          <h2 class="cl-section-title">
+            <span class="cl-section-icon">🧰</span>
+            协作执行语义
+          </h2>
+          <p class="cl-section-subtitle">页面主体明确区分主工作面与支持证据：任务负责执行，支持链接负责核验与追踪。</p>
+        </div>
+      </div>
+      <div class="cl-body-grid">
+        <div class="cl-body-card primary">
+          <span class="cl-body-kicker">Primary object family</span>
+          <h3>交接包 → 任务推进</h3>
+          <p>协作面围绕交接包展开：先查看 handoff package，再进入任务编排工作台完成拆解、执行与收口。</p>
+          <a class="cl-body-link" href="{{ BASE }}/collaboration/tasks">进入任务协作工作台 →</a>
+        </div>
+        <div class="cl-body-card support">
+          <span class="cl-body-kicker">Supporting evidence</span>
+          <h3>会话链路 / 治理图谱</h3>
+          <p>运行时会话和治理关系仅作为上下文证据，用于解释交接来源、依赖关系与协作追踪，不作为并列主对象池。</p>
+          <div class="cl-inline-support-links">
+            <a class="cl-inline-support-link" href="{{ BASE }}/runtime/sessions">查看会话证据</a>
+            <a class="cl-inline-support-link" href="{{ BASE }}/governance/graph">查看关系证据</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cl-section">
+      <div class="cl-section-header">
+        <div>
+          <div class="console-section-kicker">右侧细节 / 证据</div>
+          <h2 class="cl-section-title">
+            <span class="cl-section-icon">📋</span>
+            Harness 证据面板
+          </h2>
+          <p class="cl-section-subtitle">保留最近执行结果与失败证据，作为交接执行后的辅助验证面。</p>
+        </div>
+      </div>
+      <div class="cl-trace-grid" id="cl-trace-grid">
+        <div class="cl-empty"><div class="cl-empty-icon">⏳</div><p>加载中...</p></div>
+      </div>
+    </section>
+
   </main>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/collaboration.js"></script>
 </body>
 </html>

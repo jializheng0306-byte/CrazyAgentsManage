@@ -6,40 +6,172 @@
   <title>治理面 - CrazyAgentsManage</title>
   <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/governance.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
 </head>
 <body>
   {% set active_nav = 'governance' %}
   {% include 'ia-nav.html' %}
 
-  <main class="container mt-lg">
-    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
-      <h1 class="page-title">治理面</h1>
-      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
-        面向规则、结构与判断口径，承接 FlowMind 的产品哲学、产品架构与治理图谱。
-      </p>
-    </div>
-
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-lg);">
-      <div class="card" style="padding: var(--spacing-lg);">
-        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">治理入口</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
-          <a class="btn btn-primary btn-sm" href="{{ BASE }}/governance/graph">治理图谱</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/overview">总览</a>
-        </div>
-        <p style="color: #94a3b8; font-size: 13px;">当前先由图谱和总览承接治理视图，后续再引入更细的 truth / review / feedback 表面。</p>
+  <main id="gv-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+    <header class="gv-page-head">
+      <div>
+        <p class="gv-kicker">Hermes-hosted FlowMind</p>
+        <h1 class="gv-page-title">治理对象控制台</h1>
+        <p class="gv-page-subtitle">以 graph node / agent node 为主监控对象，将架构材料降级为辅助参考而非页面主体。</p>
       </div>
+      <a class="gv-primary-link" href="{{ BASE }}/governance/graph">进入图谱</a>
+    </header>
 
-      <div class="card" style="padding: var(--spacing-lg);">
-        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">架构展示入口</h3>
-        <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/architecture/philosophy">产品哲学展示页</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/architecture/product">产品架构展示页</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/architecture/tech">技术架构展示页</a>
-        </div>
+    <section class="gv-metrics-strip">
+      <div class="gv-metric-card gv-metric-card-primary">
+        <div class="gv-metric-value" id="gv-node-count">--</div>
+        <div class="gv-metric-label">治理节点</div>
+        <div class="gv-metric-desc">图谱与 Agent 节点总量</div>
       </div>
-    </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-agent-count">--</div>
+        <div class="gv-metric-label">Agent 节点</div>
+        <div class="gv-metric-desc">执行主体节点</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-edge-count">--</div>
+        <div class="gv-metric-label">关系边</div>
+        <div class="gv-metric-desc">治理连接密度</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-connected-count">--</div>
+        <div class="gv-metric-label">在线节点</div>
+        <div class="gv-metric-desc">当前活跃对象</div>
+      </div>
+    </section>
+
+    <section class="gv-workbench">
+      <aside class="gv-column gv-column-left">
+        <div class="gv-panel gv-panel-main">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">对象池</p>
+              <h2 class="gv-panel-title">治理节点清单</h2>
+            </div>
+            <span class="gv-panel-badge">primary monitored objects</span>
+          </div>
+          <p class="gv-panel-copy">左侧固定为 graph node / agent node 对象集合，用于决定当前应下钻的治理对象。</p>
+          <div class="gv-node-list" id="gv-node-list">
+            <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+          </div>
+        </div>
+
+        <div class="gv-panel">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">对象分流</p>
+              <h2 class="gv-panel-title">治理对象家族</h2>
+            </div>
+          </div>
+          <div class="gv-object-links">
+            <a class="gv-object-link" href="{{ BASE }}/governance/graph">
+              <span class="gv-object-link-title">Graph 节点索引</span>
+              <span class="gv-object-link-desc">进入完整关系图与节点视图</span>
+            </a>
+            <a class="gv-object-link" href="{{ BASE }}/agent">
+              <span class="gv-object-link-title">Agent 节点视角</span>
+              <span class="gv-object-link-desc">查看执行主体节点的连接状态与能力面</span>
+            </a>
+            <a class="gv-object-link" href="{{ BASE }}/architecture/product">
+              <span class="gv-object-link-title">产品结构参照</span>
+              <span class="gv-object-link-desc">核对节点位于哪一层产品结构</span>
+            </a>
+            <a class="gv-object-link" href="{{ BASE }}/architecture/tech">
+              <span class="gv-object-link-title">技术路径参照</span>
+              <span class="gv-object-link-desc">对照信号流与技术依赖的解释面</span>
+            </a>
+          </div>
+        </div>
+      </aside>
+
+      <section class="gv-column gv-column-center">
+        <div class="gv-panel gv-panel-main">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">主工作面</p>
+              <h2 class="gv-panel-title">治理关系工作区</h2>
+            </div>
+            <span class="gv-panel-badge">center workspace</span>
+          </div>
+          <div class="gv-main-grid">
+            <section class="gv-main-card">
+              <div class="gv-main-card-head">
+                <h3>节点拓扑预览</h3>
+                <span>围绕当前 graph node / agent node 集合观察结构关系</span>
+              </div>
+              <div class="gv-graph-preview" id="gv-graph-preview">
+                <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+              </div>
+            </section>
+
+            <section class="gv-main-card">
+              <div class="gv-main-card-head">
+                <h3>治理结构摘要</h3>
+                <span>帮助判断应该进入哪一类节点做巡检与证据核对</span>
+              </div>
+              <div class="gv-graph-meta">
+                <div class="gv-graph-meta-block">
+                  <p class="gv-graph-meta-label">节点类型</p>
+                  <div class="gv-legend-list" id="gv-node-legend"></div>
+                </div>
+                <div class="gv-graph-meta-block">
+                  <p class="gv-graph-meta-label">关系类型</p>
+                  <div class="gv-legend-list" id="gv-edge-legend"></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <aside class="gv-column gv-column-right">
+        <div class="gv-panel">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">节点证据</p>
+              <h2 class="gv-panel-title">Agent 节点快照</h2>
+            </div>
+            <a class="gv-panel-link" href="{{ BASE }}/agent">Agent 面</a>
+          </div>
+          <div class="gv-agent-list" id="gv-agent-list">
+            <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+          </div>
+        </div>
+
+        <div class="gv-panel">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">辅助参考</p>
+              <h2 class="gv-panel-title">架构参照</h2>
+            </div>
+          </div>
+          <div class="gv-reference-list">
+            <a class="gv-reference-card" href="{{ BASE }}/architecture/philosophy">
+              <span class="gv-reference-title">产品哲学</span>
+              <span class="gv-reference-desc">治理判断口径与原则来源</span>
+            </a>
+            <a class="gv-reference-card" href="{{ BASE }}/architecture/product">
+              <span class="gv-reference-title">产品架构</span>
+              <span class="gv-reference-desc">节点所属层次与结构对照</span>
+            </a>
+            <a class="gv-reference-card" href="{{ BASE }}/architecture/tech">
+              <span class="gv-reference-title">技术架构</span>
+              <span class="gv-reference-desc">技术路径与信号流入参照</span>
+            </a>
+          </div>
+        </div>
+      </aside>
+    </section>
   </main>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/governance.js"></script>
 </body>
 </html>

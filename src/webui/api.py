@@ -2805,3 +2805,135 @@ def overview_data():
     _overview_dashboard_cache['data'] = result
     _overview_dashboard_cache['timestamp'] = now
     return jsonify(result)
+
+
+# ═══════════════════════════════════════════
+# Operations Integrations APIs (executor façade)
+# ═══════════════════════════════════════════
+
+from executor_bridge import get_executor_provider, get_provider_mode
+
+
+@api.route('/operations/integrations/sources')
+def ops_integrations_sources():
+    data = get_executor_provider().get_sources()
+    return jsonify(data)
+
+
+@api.route('/operations/integrations/tools')
+def ops_integrations_tools():
+    source_id = request.args.get('sourceId', '')
+    data = get_executor_provider().get_tools(source_id=source_id)
+    return jsonify(data)
+
+
+@api.route('/operations/integrations/credentials')
+def ops_integrations_credentials():
+    data = get_executor_provider().get_credentials()
+    return jsonify(data)
+
+
+@api.route('/operations/integrations/providers')
+def ops_integrations_providers():
+    data = get_executor_provider().get_providers()
+    return jsonify(data)
+
+
+@api.route('/operations/integrations/summary')
+def ops_integrations_summary():
+    data = get_executor_provider().get_summary()
+    return jsonify(data)
+
+
+@api.route('/operations/integrations/provider-mode')
+def ops_integrations_provider_mode():
+    provider = get_executor_provider()
+    mode = get_provider_mode()
+    return jsonify({
+        'mode': mode,
+        'executor_url': os.environ.get('EXECUTOR_API_BASE_URL', ''),
+        'capabilities': provider.get_capabilities(),
+    })
+
+
+# ═══════════════════════════════════════════
+# Phase 2 — Write operations
+# ═══════════════════════════════════════════
+
+
+@api.route('/operations/integrations/sources', methods=['POST'])
+def ops_integrations_create_source():
+    data = request.get_json()
+    if not data or not data.get('type'):
+        return jsonify({'error': 'type is required'}), 400
+    source_type = data.get('type')
+    if source_type == 'openapi' and not data.get('spec'):
+        return jsonify({'error': 'spec is required for openapi source creation'}), 400
+    if source_type == 'graphql' and not data.get('endpoint'):
+        return jsonify({'error': 'endpoint is required for graphql source creation'}), 400
+    if source_type == 'mcp':
+        transport = data.get('transport', 'remote')
+        if transport == 'remote' and not data.get('endpoint'):
+            return jsonify({'error': 'endpoint is required for remote mcp source creation'}), 400
+        if transport == 'stdio' and not data.get('command'):
+            return jsonify({'error': 'command is required for stdio mcp source creation'}), 400
+    if source_type == 'discovery' and not data.get('discoveryUrl'):
+        return jsonify({'error': 'discoveryUrl is required for discovery source creation'}), 400
+    provider = get_executor_provider()
+    try:
+        source = provider.create_source(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 409
+    return jsonify(source), 201
+
+
+@api.route('/operations/integrations/sources/<source_id>', methods=['PATCH'])
+def ops_integrations_update_source(source_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'request body is required'}), 400
+    provider = get_executor_provider()
+    try:
+        result = provider.update_source(source_id, data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 409
+    if result is None:
+        return jsonify({'error': 'Source not found'}), 404
+    return jsonify(result)
+
+
+@api.route('/operations/integrations/sources/<source_id>', methods=['DELETE'])
+def ops_integrations_delete_source(source_id):
+    provider = get_executor_provider()
+    ok = provider.delete_source(source_id)
+    if not ok:
+        return jsonify({'error': 'Source not found'}), 404
+    return jsonify({'success': True})
+
+
+@api.route('/operations/integrations/credentials', methods=['POST'])
+def ops_integrations_bind_credential():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'request body is required'}), 400
+    source_type = data.get('sourceType')
+    slot = data.get('slot')
+    if source_type and slot and not data.get('targetId'):
+        return jsonify({'error': 'targetId is required for source binding'}), 400
+    if (not source_type or not slot) and (not data.get('provider') or not data.get('targetId')):
+        return jsonify({'error': 'provider and targetId are required'}), 400
+    provider = get_executor_provider()
+    try:
+        credential = provider.bind_credential(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 409
+    return jsonify(credential), 201
+
+
+@api.route('/operations/integrations/credentials/<credential_id>', methods=['DELETE'])
+def ops_integrations_unbind_credential(credential_id):
+    provider = get_executor_provider()
+    ok = provider.unbind_credential(credential_id)
+    if not ok:
+        return jsonify({'error': 'Credential not found'}), 404
+    return jsonify({'success': True})

@@ -6,49 +6,192 @@
   <title>运行态 - CrazyAgentsManage</title>
   <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
-  <link rel="stylesheet" href="{{ BASE }}/static/css/pages.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/runtime.css">
   <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
 </head>
 <body>
   {% set active_nav = 'runtime' %}
   {% include 'ia-nav.html' %}
 
-  <main class="container mt-lg">
-    <div class="page-header" style="margin-bottom: var(--spacing-lg);">
-      <h1 class="page-title">运行态</h1>
-      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">
-        汇总 HermesAgent 宿主下的会话、追踪、Token 与智能体运行健康。
-      </p>
+  <main id="runtime-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+
+    <section class="console-page-header">
+      <div>
+        <div class="console-page-kicker">Hermes-hosted FlowMind Console</div>
+        <h1 class="console-page-title">
+          <span class="console-page-title-icon">🟢</span>
+          运行态工作台
+        </h1>
+        <p class="console-page-subtitle">围绕会话对象池、中央运行工作台与右侧证据面板统一呈现运行信号。</p>
+      </div>
+      <div class="console-surface-map" aria-label="console-zones">
+        <span class="console-surface-chip">左侧对象池</span>
+        <span class="console-surface-chip active">中央主工作台</span>
+        <span class="console-surface-chip">右侧细节 / 证据</span>
+      </div>
+    </section>
+
+    <div class="rt-status-bar">
+      <div class="rt-status-indicator">
+        <span class="rt-status-dot idle" id="rt-health-dot"></span>
+        <span class="rt-status-text" id="rt-health-text">检测中...</span>
+      </div>
+      <div class="rt-status-meta" id="rt-last-updated">--</div>
     </div>
 
-    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--spacing-xl);">
-      <div class="stat-card"><div class="stat-value">会话</div><div class="stat-label">根会话、子会话、来源分布</div></div>
-      <div class="stat-card"><div class="stat-value">追踪</div><div class="stat-label">执行链路、时延、状态切换</div></div>
-      <div class="stat-card"><div class="stat-value">成本</div><div class="stat-label">Token、费用、预算视角</div></div>
-      <div class="stat-card"><div class="stat-value">Agent</div><div class="stat-label">运行状态、负载与异常</div></div>
+    <div class="rt-metrics-strip">
+      <div class="rt-metric-card">
+        <div class="rt-metric-value" id="rt-total-sessions">--</div>
+        <div class="rt-metric-label">总会话数</div>
+      </div>
+      <div class="rt-metric-card">
+        <div class="rt-metric-value" id="rt-active-count">--</div>
+        <div class="rt-metric-label">活跃会话</div>
+        <div class="rt-metric-indicator inactive" id="rt-active-indicator"></div>
+      </div>
+      <div class="rt-metric-card">
+        <div class="rt-metric-value" id="rt-total-tokens">--</div>
+        <div class="rt-metric-label">总Token消耗</div>
+      </div>
+      <div class="rt-metric-card">
+        <div class="rt-metric-value" id="rt-tool-calls">--</div>
+        <div class="rt-metric-label">工具调用总数</div>
+      </div>
+      <div class="rt-metric-card">
+        <div class="rt-metric-value" id="rt-error-count">--</div>
+        <div class="rt-metric-label">错误会话数</div>
+      </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-lg);">
-      <div class="card" style="padding: var(--spacing-lg);">
-        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">运行态主入口</h3>
-        <p style="color: #94a3b8; font-size: 13px; margin-bottom: var(--spacing-md);">沿用现有功能页作为新 IA 子表面。</p>
-        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm);">
-          <a class="btn btn-primary btn-sm" href="{{ BASE }}/runtime/sessions">会话流水线</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/runtime/dashboard">监控追踪</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/runtime/tokens">Token 监控</a>
-          <a class="btn btn-secondary btn-sm" href="{{ BASE }}/runtime/agents">Agent 状态</a>
+    <div class="rt-subpages console-subpage-grid">
+      <a class="rt-subpage-card console-subpage-card" href="{{ BASE }}/runtime/sessions">
+        <span class="console-subpage-kicker">左侧对象池</span>
+        <span class="rt-subpage-icon">🔴</span>
+        <span class="rt-subpage-title">会话对象池</span>
+        <span class="rt-subpage-desc">根会话索引、子会话追踪与来源分布</span>
+      </a>
+      <a class="rt-subpage-card console-subpage-card" href="{{ BASE }}/runtime/dashboard">
+        <span class="console-subpage-kicker">中央主工作台</span>
+        <span class="rt-subpage-icon">📊</span>
+        <span class="rt-subpage-title">运行监控工作台</span>
+        <span class="rt-subpage-desc">执行链路、时延分析与状态切换</span>
+      </a>
+      <a class="rt-subpage-card console-subpage-card" href="{{ BASE }}/runtime/tokens">
+        <span class="console-subpage-kicker">右侧细节 / 证据</span>
+        <span class="rt-subpage-icon">💰</span>
+        <span class="rt-subpage-title">Token 证据面板</span>
+        <span class="rt-subpage-desc">消耗追踪、成本分析与预算信号</span>
+      </a>
+      <a class="rt-subpage-card console-subpage-card" href="{{ BASE }}/runtime/agents">
+        <span class="console-subpage-kicker">右侧细节 / 证据</span>
+        <span class="rt-subpage-icon">🟣</span>
+        <span class="rt-subpage-title">Agent 细节面板</span>
+        <span class="rt-subpage-desc">运行状态、负载变化与异常提示</span>
+      </a>
+    </div>
+
+    <section class="rt-section">
+      <div class="rt-section-header">
+        <div>
+          <div class="console-section-kicker">中央主工作台</div>
+          <h2 class="rt-section-title">
+            <span class="rt-section-icon">⚡</span>
+            活跃对象
+          </h2>
+        </div>
+        <a class="rt-link-more console-link-more" href="{{ BASE }}/runtime/sessions">查看对象池 →</a>
+      </div>
+      <div class="rt-sessions-grid" id="rt-active-sessions-grid">
+        <div class="rt-empty"><div class="rt-empty-icon">⏳</div><p>加载中...</p></div>
+      </div>
+    </section>
+
+    <div class="rt-dual-section">
+      <section class="rt-section console-section-emphasis">
+        <div class="rt-section-header">
+          <div>
+            <div class="console-section-kicker">中央主工作台</div>
+            <h2 class="rt-section-title">
+              <span class="rt-section-icon">🔧</span>
+              工具面板
+            </h2>
+          </div>
+        </div>
+        <div class="rt-tool-chart" id="rt-tools-chart">
+          <div class="rt-empty"><div class="rt-empty-icon">⏳</div><p>加载中...</p></div>
+        </div>
+      </section>
+
+      <section class="rt-section">
+        <div class="rt-section-header">
+          <div>
+            <div class="console-section-kicker">右侧细节 / 证据</div>
+            <h2 class="rt-section-title">
+              <span class="rt-section-icon">📈</span>
+              性能证据面板
+            </h2>
+          </div>
+        </div>
+        <div class="rt-perf-grid">
+          <div class="rt-perf-card">
+            <p class="rt-perf-card-title">平均首Token延迟</p>
+            <div class="rt-perf-value" id="rt-perf-ttft">--</div>
+            <div class="rt-perf-bar"><div class="rt-perf-bar-fill" id="rt-perf-ttft-bar" style="width:0"></div></div>
+          </div>
+          <div class="rt-perf-card">
+            <p class="rt-perf-card-title">平均吞吐量</p>
+            <div class="rt-perf-value" id="rt-perf-tps">--</div>
+            <div class="rt-perf-bar"><div class="rt-perf-bar-fill" id="rt-perf-tps-bar" style="width:0"></div></div>
+          </div>
+          <div class="rt-perf-card">
+            <p class="rt-perf-card-title">平均会话时长</p>
+            <div class="rt-perf-value" id="rt-perf-duration">--</div>
+            <div class="rt-perf-bar"><div class="rt-perf-bar-fill" id="rt-perf-duration-bar" style="width:0"></div></div>
+          </div>
+          <div class="rt-perf-card">
+            <p class="rt-perf-card-title">错误率</p>
+            <div class="rt-perf-value" id="rt-perf-error-rate">--</div>
+            <div class="rt-perf-bar"><div class="rt-perf-bar-fill" id="rt-perf-error-rate-bar" style="width:0"></div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="rt-section">
+      <div class="rt-section-header">
+        <div>
+          <div class="console-section-kicker">右侧细节 / 证据</div>
+          <h2 class="rt-section-title">
+            <span class="rt-section-icon">🤖</span>
+            Agent 细节面板
+          </h2>
+        </div>
+        <a class="rt-link-more console-link-more" href="{{ BASE }}/runtime/agents">查看证据 →</a>
+      </div>
+      <div class="rt-agents-grid" id="rt-agents-grid">
+        <div class="rt-empty"><div class="rt-empty-icon">⏳</div><p>加载中...</p></div>
+      </div>
+    </section>
+
+    <section class="rt-section">
+      <div class="rt-section-header">
+        <div>
+          <div class="console-section-kicker">右侧细节 / 证据</div>
+          <h2 class="rt-section-title">
+            <span class="rt-section-icon">⚠️</span>
+            异常证据面板
+          </h2>
         </div>
       </div>
-
-      <div class="card" style="padding: var(--spacing-lg);">
-        <h3 style="font-size: 16px; font-weight: 600; color: white; margin-bottom: var(--spacing-sm);">实施动态</h3>
-        <ul style="color: #cbd5e1; font-size: 13px; line-height: 1.8; margin: 0; padding-left: 18px;">
-          <li>FlowMind 与外部交互链路应先从运行态信号进入总览与监控面。</li>
-          <li>技术架构展示页承担“运行信号如何进入产品”的解释职责。</li>
-          <li>旧路由继续保留，避免破坏已有调试与分享路径。</li>
-        </ul>
+      <div class="rt-errors-list" id="rt-errors-list">
+        <div class="rt-empty"><div class="rt-empty-icon">⏳</div><p>加载中...</p></div>
       </div>
-    </div>
+    </section>
+
   </main>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/runtime.js"></script>
 </body>
 </html>

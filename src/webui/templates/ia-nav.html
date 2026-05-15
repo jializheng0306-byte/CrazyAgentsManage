@@ -1,25 +1,284 @@
-<nav class="global-nav">
-  <div class="container">
-    <div class="global-nav-inner">
-      <div class="nav-left">
-        <a href="{{ BASE }}/overview" class="nav-logo">
-          <div class="nav-logo-icon">⚡</div>
-          FlowMind
-          <span class="nav-version">Hermes</span>
-        </a>
-        <div class="nav-menu">
-          <a href="{{ BASE }}/overview" class="nav-item{% if active_nav == 'overview' %} active{% endif %}">总览</a>
-          <a href="{{ BASE }}/runtime" class="nav-item{% if active_nav == 'runtime' %} active{% endif %}">运行态</a>
-          <a href="{{ BASE }}/operations" class="nav-item{% if active_nav == 'operations' %} active{% endif %}">运营面</a>
-          <a href="{{ BASE }}/governance" class="nav-item{% if active_nav == 'governance' %} active{% endif %}">治理面</a>
-          <a href="{{ BASE }}/collaboration" class="nav-item{% if active_nav == 'collaboration' %} active{% endif %}">协作面</a>
-        </div>
+{% set section_label = '总览' %}
+{% set section_kicker = 'Hermes-hosted FlowMind' %}
+{% set section_hint = '系统入口与跨域摘要' %}
+{% set search_placeholder = '搜索总览对象 / 入口' %}
+{% set chip_labels = ['全局', '摘要', '入口'] %}
+
+{% if active_nav == 'runtime' %}
+  {% set section_label = '运行态' %}
+  {% set section_hint = '监控对象 / 执行链路' %}
+  {% set search_placeholder = '搜索会话 / Agent / Trace' %}
+  {% set chip_labels = ['全部', '活跃', '异常'] %}
+{% elif active_nav == 'operations' %}
+  {% set section_label = '运营面' %}
+  {% set section_hint = '运营对象 / 可执行能力' %}
+  {% set search_placeholder = '搜索技能 / 定时任务 / 告警' %}
+  {% set chip_labels = ['全部', '自动化', '记忆'] %}
+{% elif active_nav == 'governance' %}
+  {% set section_label = '治理面' %}
+  {% set section_hint = '规则对象 / 架构资产' %}
+  {% set search_placeholder = '搜索原则 / 架构 / 图谱' %}
+  {% set chip_labels = ['全部', '架构', '事实'] %}
+{% elif active_nav == 'collaboration' %}
+  {% set section_label = '协作面' %}
+  {% set section_hint = '交接对象 / 协作链路' %}
+  {% set search_placeholder = '搜索任务 / Handoff / Trace' %}
+  {% set chip_labels = ['全部', '交接', '追踪'] %}
+{% endif %}
+
+<div class="fm-shell-nav" aria-label="FlowMind shell navigation">
+  <aside class="fm-primary-rail">
+    <a href="{{ BASE }}/overview" class="fm-brandmark">
+      <div class="fm-brandmark-icon">⚡</div>
+      <div class="fm-brandmark-copy">
+        <span class="fm-brandmark-title">FlowMind</span>
+        <span class="fm-brandmark-subtitle">Hermes-hosted control shell</span>
       </div>
-      <div class="nav-right">
-        <a href="{{ BASE }}/architecture/philosophy" class="nav-item{% if active_architecture == 'philosophy' %} active{% endif %}">产品哲学</a>
-        <a href="{{ BASE }}/architecture/product" class="nav-item{% if active_architecture == 'product' %} active{% endif %}">产品架构</a>
-        <a href="{{ BASE }}/architecture/tech" class="nav-item{% if active_architecture == 'tech' %} active{% endif %}">技术架构</a>
-      </div>
+    </a>
+
+    <nav class="fm-primary-menu" aria-label="Primary sections">
+      <a href="{{ BASE }}/overview" class="fm-primary-link{% if active_nav == 'overview' %} active{% endif %}">
+        <span class="fm-primary-link-icon">◉</span>
+        <span class="fm-primary-link-copy">
+          <span class="fm-primary-link-title">总览</span>
+          <span class="fm-primary-link-desc">Overview hub</span>
+        </span>
+      </a>
+      <a href="{{ BASE }}/runtime" class="fm-primary-link{% if active_nav == 'runtime' %} active{% endif %}">
+        <span class="fm-primary-link-icon">◎</span>
+        <span class="fm-primary-link-copy">
+          <span class="fm-primary-link-title">运行态</span>
+          <span class="fm-primary-link-desc">Runtime objects</span>
+        </span>
+      </a>
+      <a href="{{ BASE }}/operations" class="fm-primary-link{% if active_nav == 'operations' %} active{% endif %}">
+        <span class="fm-primary-link-icon">◌</span>
+        <span class="fm-primary-link-copy">
+          <span class="fm-primary-link-title">运营面</span>
+          <span class="fm-primary-link-desc">Operational assets</span>
+        </span>
+      </a>
+      <a href="{{ BASE }}/governance" class="fm-primary-link{% if active_nav == 'governance' %} active{% endif %}">
+        <span class="fm-primary-link-icon">◇</span>
+        <span class="fm-primary-link-copy">
+          <span class="fm-primary-link-title">治理面</span>
+          <span class="fm-primary-link-desc">Governed truth</span>
+        </span>
+      </a>
+      <a href="{{ BASE }}/collaboration" class="fm-primary-link{% if active_nav == 'collaboration' %} active{% endif %}">
+        <span class="fm-primary-link-icon">⋈</span>
+        <span class="fm-primary-link-copy">
+          <span class="fm-primary-link-title">协作面</span>
+          <span class="fm-primary-link-desc">Handoffs & traces</span>
+        </span>
+      </a>
+    </nav>
+  </aside>
+
+  <aside class="fm-context-panel">
+    <div class="fm-context-topline">
+      <span class="fm-context-kicker">{{ section_kicker }}</span>
+      <span class="fm-context-pill">Shell IA Stage 1</span>
     </div>
-  </div>
-</nav>
+
+    <div class="fm-context-heading">
+      <h2>{{ section_label }}</h2>
+      <p>{{ section_hint }}</p>
+    </div>
+
+    <label class="fm-context-search" aria-label="Section search">
+      <span class="fm-context-search-icon">⌕</span>
+      <input type="text" placeholder="{{ search_placeholder }}" />
+    </label>
+
+    <div class="fm-context-chips" aria-label="Section filters">
+      {% for chip in chip_labels %}
+      <button type="button" class="fm-context-chip{% if loop.first %} active{% endif %}">{{ chip }}</button>
+      {% endfor %}
+    </div>
+
+    <div class="fm-tree-shell">
+      <div class="fm-tree-header">
+        <span>对象树</span>
+        <span class="fm-tree-header-meta">Monitored objects</span>
+      </div>
+
+      <nav class="fm-tree" aria-label="Context tree navigation">
+        {% if active_nav == 'overview' %}
+          <a href="{{ BASE }}/overview" class="fm-tree-item level-0 active">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">总览中枢</span>
+              <span class="fm-tree-desc">系统健康、跨域摘要与入口集合</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/runtime" class="fm-tree-item level-1">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">运行态监控对象</span>
+              <span class="fm-tree-desc">会话、追踪、Token、Agent</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/operations" class="fm-tree-item level-1">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">运营对象集合</span>
+              <span class="fm-tree-desc">技能、定时任务、团队记忆、告警</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/governance" class="fm-tree-item level-1">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">治理资产</span>
+              <span class="fm-tree-desc">原则、架构、图谱、确认事实</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/collaboration" class="fm-tree-item level-1">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">协作链路</span>
+              <span class="fm-tree-desc">任务编排、交接与 Harness 追踪</span>
+            </span>
+          </a>
+        {% elif active_nav == 'runtime' %}
+          <a href="{{ BASE }}/runtime" class="fm-tree-item level-0{% if request.path.endswith('/runtime') or request.path.endswith('/runtime/') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">运行态总览</span>
+              <span class="fm-tree-desc">运行健康、活跃会话与性能趋势</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/runtime/sessions" class="fm-tree-item level-1{% if request.path.endswith('/runtime/sessions') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">会话流水线</span>
+              <span class="fm-tree-desc">Session roots / children / sources</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/runtime/dashboard" class="fm-tree-item level-1{% if request.path.endswith('/runtime/dashboard') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">监控追踪</span>
+              <span class="fm-tree-desc">Trace、延迟、状态切换</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/runtime/tokens" class="fm-tree-item level-1{% if request.path.endswith('/runtime/tokens') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">Token 监控</span>
+              <span class="fm-tree-desc">消耗、预算、来源分布</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/runtime/agents" class="fm-tree-item level-1{% if request.path.endswith('/runtime/agents') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">Agent 状态</span>
+              <span class="fm-tree-desc">运行状态、负载与异常</span>
+            </span>
+          </a>
+        {% elif active_nav == 'operations' %}
+          <a href="{{ BASE }}/operations" class="fm-tree-item level-0{% if request.path.endswith('/operations') or request.path.endswith('/operations/') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">运营面总览</span>
+              <span class="fm-tree-desc">运营工作台与关键可执行资产</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/operations/skills" class="fm-tree-item level-1{% if request.path.endswith('/operations/skills') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">技能中心</span>
+              <span class="fm-tree-desc">已安装技能、分类与详情</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/operations/cron" class="fm-tree-item level-1{% if request.path.endswith('/operations/cron') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">定时任务</span>
+              <span class="fm-tree-desc">调度编排、状态与控制</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/operations/team-memory" class="fm-tree-item level-1{% if request.path.endswith('/operations/team-memory') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">团队记忆</span>
+              <span class="fm-tree-desc">团队级知识与记忆回写</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/operations/alerts" class="fm-tree-item level-1{% if request.path.endswith('/operations/alerts') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">告警中心</span>
+              <span class="fm-tree-desc">异常、平台状态与告警队列</span>
+            </span>
+          </a>
+        {% elif active_nav == 'governance' %}
+          <a href="{{ BASE }}/governance" class="fm-tree-item level-0{% if request.path.endswith('/governance') or request.path.endswith('/governance/') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">治理面总览</span>
+              <span class="fm-tree-desc">规则、结构与产品判断口径</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/architecture/philosophy" class="fm-tree-item level-1{% if active_architecture == 'philosophy' %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">产品哲学</span>
+              <span class="fm-tree-desc">边界、原则与价值主张</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/architecture/product" class="fm-tree-item level-1{% if active_architecture == 'product' %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">产品架构</span>
+              <span class="fm-tree-desc">对象、层级与关系蓝图</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/architecture/tech" class="fm-tree-item level-1{% if active_architecture == 'tech' %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">技术架构</span>
+              <span class="fm-tree-desc">技术链路、状态流与回写</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/governance/graph" class="fm-tree-item level-1{% if request.path.endswith('/governance/graph') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">治理图谱</span>
+              <span class="fm-tree-desc">关系拓扑与治理连接</span>
+            </span>
+          </a>
+        {% elif active_nav == 'collaboration' %}
+          <a href="{{ BASE }}/collaboration" class="fm-tree-item level-0{% if request.path.endswith('/collaboration') or request.path.endswith('/collaboration/') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">协作面总览</span>
+              <span class="fm-tree-desc">交接对象池、任务协作与支持证据</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/collaboration/tasks" class="fm-tree-item level-1{% if request.path.endswith('/collaboration/tasks') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">任务编排</span>
+              <span class="fm-tree-desc">主协作工作面：任务依赖、执行与闭环</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/runtime/sessions" class="fm-tree-item level-1">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">会话链路（支持）</span>
+              <span class="fm-tree-desc">交接追踪、运行证据与溯源</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/governance/graph" class="fm-tree-item level-1">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">关系图谱（支持）</span>
+              <span class="fm-tree-desc">关系拓扑与上下游治理参照</span>
+            </span>
+          </a>
+        {% endif %}
+      </nav>
+    </div>
+  </aside>
+</div>
