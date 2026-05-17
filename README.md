@@ -22,33 +22,23 @@
 2. [联合产品镜像基线](docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md)
 3. [执行路线图](docs/roadmap/prd-execution-roadmap.md)
 
-### 当前大版本主线
+### 当前版本说明
 
-这个分支当前的大版本不是单点功能修补，而是三段连续演进：
+本分支当前主线可以概括为：
 
-1. **UI 重构**
-   - 把 Crazy 从零散页面升级为统一 shell
-   - 固定一级 IA：Overview / Runtime / Operations / Governance / Collaboration
+- **UI 重构**：把 Crazy 收敛为统一 shell，并固定一级 IA：Overview / Runtime / Operations / Governance / Collaboration
+- **Executor 融合**：把 executor 作为外部 capability plane 接入 Operations，承接 integrations / sources / tools / credentials / provider health
+- **运行端规划**：保持 Hermes 作为 runtime host、FlowMind 作为治理真相层，并为后续 external orchestration delegation 留出结构位
 
-2. **Executor 融合**
-   - 把 executor 作为外部 capability plane 接入
-   - 在 `Operations` 中承接 integrations / sources / tools / credentials / provider health
-   - 支持 sample mode 与 real HTTP mode
+### 这一版的关键判断
 
-3. **运行端部署规划**
-   - Hermes 继续作为 runtime host
-   - Executor 承接外部能力编排与受控代码执行
-   - FlowMind 继续作为治理真相层
+- 不把 executor 吞成 Crazy 的产品底座
+- 先完成产品壳重构，再接 capability plane
+- 让 Crazy 负责 operator-facing façade，让 Hermes / FlowMind 保持各自主真相边界
 
-### 这一版为什么重要
+### 本次版本阅读入口
 
-- 不是把 executor 吞成 Crazy 的底座
-- 而是先完成 Crazy 产品壳重构，再把 executor 作为能力平面融入
-- 为后续 Hermes 运行端委派与 FlowMind 治理接入打通结构基础
-
-### 推荐阅读入口（本次大版本）
-
-如果你要理解这次从 UI 重构到 executor 融合、再到后续运行端规划的完整链路，建议继续阅读：
+如果你是总控方 / 评审方，建议按以下顺序阅读本次版本文档：
 
 1. [Executor 融合总览](docs/design/executor-integration/README.md)
 2. [Crazy / Hermes / FlowMind / Executor 嵌入分析](docs/design/executor-integration/crazy-hermes-flowmind-executor-embedding-analysis.md)
