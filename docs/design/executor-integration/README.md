@@ -119,6 +119,7 @@
 - [operations-integration-plan.md](operations-integration-plan.md)
 - [operations-integrations-api-boundary-spec.md](operations-integrations-api-boundary-spec.md)
 - [operations-integrations-ui-ia-spec.md](operations-integrations-ui-ia-spec.md)
+- [aliyun-deployment-assessment-2026-05-18.md](aliyun-deployment-assessment-2026-05-18.md)
 
 ## 四系统联动分析
 - [crazy-hermes-flowmind-executor-embedding-analysis.md](crazy-hermes-flowmind-executor-embedding-analysis.md)
