@@ -1,0 +1,45 @@
+{
+  "manifestVersion": "crazy-live-deploy-sync-v1",
+  "profiles": [
+    {
+      "id": "crazy-webui-live",
+      "description": "CrazyAgentsManage live WebUI deployment copy on ALI-HERMES",
+      "sourceRepoRoot": ".",
+      "host": "47.99.217.1",
+      "user": "root",
+      "passwordEnv": "CRAZY_LIVE_WEBUI_PASSWORD",
+      "deployRoot": "/opt/crazyagentsmanage",
+      "compareFiles": [
+        "src/webui/app.py",
+        "src/webui/api.py",
+        "src/webui/executor_bridge.py",
+        "src/webui/static/css/operations.css",
+        "src/webui/static/css/timeline.css",
+        "src/webui/static/js/operations.js",
+        "src/webui/static/js/timeline.js",
+        "src/webui/templates/architecture-philosophy.html",
+        "src/webui/templates/architecture-product.html",
+        "src/webui/templates/architecture-tech.html",
+        "src/webui/templates/ia-nav.html",
+        "src/webui/templates/operations.html",
+        "src/webui/templates/overview.html",
+        "src/webui/templates/timeline.html"
+      ]
+    },
+    {
+      "id": "crazy-runtime-live",
+      "description": "CrazyAgentsManage live runtime helper copy on ALI-HERMES",
+      "sourceRepoRoot": ".",
+      "host": "47.99.217.1",
+      "user": "root",
+      "passwordEnv": "CRAZY_LIVE_WEBUI_PASSWORD",
+      "deployRoot": "/root/CrazyAgentsManage",
+      "compareFiles": [
+        "scripts/runtime/enable_crazy_executor_http_mode_on_ali_hermes.sh",
+        "scripts/runtime/install_executor_sidecar_on_ali_hermes.sh",
+        "scripts/runtime/run_on_ali_hermes.py",
+        "scripts/runtime/smoke_executor_live_mode.py"
+      ]
+    }
+  ]
+}
