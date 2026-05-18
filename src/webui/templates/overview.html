@@ -17,7 +17,7 @@
   {% set active_nav = 'overview' %}
   {% include 'ia-nav.html' %}
 
-  <main id="overview-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+  <main id="overview-app" class="container" data-base="{{ BASE }}" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
     <section class="ov-global-status" id="global-status-bar">
       <div class="ov-status-indicator" id="system-health">
         <span class="ov-status-dot" id="health-dot"></span>
