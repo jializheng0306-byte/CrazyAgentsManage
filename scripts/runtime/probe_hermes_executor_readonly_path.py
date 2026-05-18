@@ -66,7 +66,9 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="http://47.99.217.1/manage")
     parser.add_argument("--namespace", default="petstore-readonly-validation")
-    parser.add_argument("--status", default="available")
+    parser.add_argument("--tool-group", default="pet")
+    parser.add_argument("--tool-name", default="getPetById")
+    parser.add_argument("--tool-args", default='{"petId":1}')
     parser.add_argument("--skip-invoke", action="store_true")
     args = parser.parse_args()
 
@@ -75,6 +77,7 @@ def main() -> int:
         "baseUrl": args.base_url,
         "namespace": args.namespace,
         "host": "ALI-HERMES",
+        "toolPath": f"{args.namespace}.{args.tool_group}.{args.tool_name}",
         "checks": [],
     }
 
@@ -109,19 +112,22 @@ def main() -> int:
         bool(source_help.get("ok")) and "Subcommands:" in (source_help.get("stdout") or ""),
     )
 
-    tool_help = parse_json_output(run_remote(f"executor call {args.namespace} pet findPetsByStatus --help"))
+    tool_help = parse_json_output(
+        run_remote(f"executor call {args.namespace} {args.tool_group} {args.tool_name} --help")
+    )
     add_check(
         "executor-tool-help",
         tool_help,
         bool(tool_help.get("ok")) and "Input:" in (tool_help.get("stdout") or ""),
     )
 
-    describe = parse_json_output(run_remote(f"executor tools describe {args.namespace}.pet.findPetsByStatus"))
+    tool_path = f"{args.namespace}.{args.tool_group}.{args.tool_name}"
+    describe = parse_json_output(run_remote(f"executor tools describe {tool_path}"))
     describe_ok = bool(describe.get("ok"))
     if describe_ok:
         try:
             body = json.loads(describe.get("stdout") or "{}")
-            describe_ok = body.get("path") == f"{args.namespace}.pet.findPetsByStatus"
+            describe_ok = body.get("path") == tool_path
             describe["parsed"] = body
         except json.JSONDecodeError:
             describe_ok = False
@@ -131,8 +137,8 @@ def main() -> int:
     if not args.skip_invoke:
         invoke = parse_json_output(
             run_remote(
-                f"executor call {args.namespace} pet findPetsByStatus "
-                f"'{{\"status\":\"{args.status}\"}}' --log-level debug"
+                f"executor call {args.namespace} {args.tool_group} {args.tool_name} "
+                f"'{args.tool_args}' --log-level debug"
             )
         )
         invoke_ok = bool(invoke.get("ok"))
@@ -152,16 +158,19 @@ def main() -> int:
             "executor-tools-describe",
         )
     )
-    invocation_ready = True
+    invocation_ready = None
+    invocation_checked = False
     if invoke_payload is not None:
+        invocation_checked = True
         invocation_ready = next(
             item["ok"] for item in checks if item["name"] == "executor-readonly-call"
         )
 
     report["summary"] = {
         "discoveryReady": discovery_ready,
+        "invocationChecked": invocation_checked,
         "invocationReady": invocation_ready,
-        "phaseBReady": discovery_ready and invocation_ready,
+        "phaseBReady": discovery_ready and (invocation_ready is True),
     }
     report["ok"] = bool(report["summary"]["phaseBReady"])
     print(json.dumps(report, ensure_ascii=False, indent=2))

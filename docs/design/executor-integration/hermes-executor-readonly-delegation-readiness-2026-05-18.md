@@ -77,15 +77,17 @@
 
 - `executor tools sources`
 - `executor call petstore-readonly-validation --help`
-- `executor call petstore-readonly-validation pet findPetsByStatus --help`
-- `executor tools describe petstore-readonly-validation.pet.findPetsByStatus`
+- `executor call petstore-readonly-validation pet getPetById --help`
+- `executor tools describe petstore-readonly-validation.pet.getPetById`
+- `executor call petstore-readonly-validation pet getPetById '{"petId":1}'`
 
 均能正确返回：
 
 - `petstore-readonly-validation` 已出现在 executor CLI source list
 - source 下的 group 结构
-- `pet.findPetsByStatus` 的输入 schema
-- `outputTypeScript = Pet[]`
+- `pet.getPetById` 的输入 schema
+- `outputTypeScript = Pet`
+- 真实只读调用已成功返回数据
 
 这说明：
 
@@ -95,7 +97,7 @@
 
 ## 4. 当前阻塞点
 
-### 4.1 真实只读调用仍未通过
+### 4.1 第一版样本工具曾误判为 blocker
 
 尝试执行：
 
@@ -103,29 +105,26 @@
 executor call petstore-readonly-validation pet findPetsByStatus '{"status":"available"}'
 ```
 
-当前返回：
+以及：
 
-- CLI 侧报错：`There was an error processing your request`
-- debug stack 指向：`executor-quickjs-runtime.js`
-- sidecar 日志显示 `/executions` 请求已成功进入 executor，但执行结果未正常返回给 CLI
+- `executor call petstore-readonly-validation store getInventory`
 
-这说明问题不在：
+这两条路径最初都失败，看起来像 executor invocation blocker。
+但进一步直连上游 Petstore API 后确认：
 
-- sidecar 服务不存在
-- source 不可见
-- tool schema 无法解析
-- CLI path 错误
+- `GET /api/v3/pet/findByStatus?status=available` → 上游返回 `500`
+- `GET /api/v3/store/inventory` → 上游返回 `500`
 
 当前更合理的宿主侧只读判断链路是：
 
 - `executor tools sources`
 - `executor call <source> --help`
 - `executor tools describe <tool>`
+- 选择一个上游稳定的只读 GET tool 做真实 invocation
 
-更像是：
+因此第一版 blocker 已被修正为：
 
-- 当前 executor runtime / OpenAPI invocation 路径的执行层问题
-- 或 upstream 在该工具调用上的宿主兼容问题
+> **不是 executor runtime 整体失效，而是最初选中的 Petstore 验证端点本身不稳定。**
 
 ---
 
@@ -138,36 +137,33 @@ executor call petstore-readonly-validation pet findPetsByStatus '{"status":"avai
 - `Phase B discovery readiness`: `是`
 - `Hermes-host read-only source bootstrap`: `是`
 - `Hermes-host schema-first delegation path`: `是`
+- `Phase B invocation readiness`: `是`
 
-### 未完成
+所以当前最准确的结论是：
 
-- `Phase B invocation readiness`: `否`
-
-所以当前最准确的结论不是“Phase B 已完成”，而是：
-
-> **Hermes -> executor 的受控只读 delegation 已经完成宿主准备、source 准备和 schema/discovery 准备，但真实只读调用仍卡在 executor runtime 执行层。**
+> **Hermes -> executor 的受控只读 delegation readiness 已经完成：宿主准备、source 准备、schema/discovery 准备，以及至少一条真实只读 tool invocation 都已经在 `ALI-HERMES` 上通过。**
 
 ---
 
 ## 6. 建议的后续顺序
 
-1. 优先把当前 read-only call 失败缩到具体层：
-   - executor CLI 适配问题
-   - upstream runtime bug
-   - 某类 OpenAPI source invocation bug
+1. 下一步不再需要优先修“只读调用是否可用”，而是应该开始定义：
+   - Hermes 什么时候允许自动调用 executor
+   - 哪些 task 类型先开放只读 delegation
+   - 结果如何进入 Crazy / FlowMind 的后续链路
 
-2. 在 read-only call 路径稳定之前，不要推进：
+2. 在明确 delegation spec 前，仍不要推进：
    - Hermes 受控外部写操作
    - pause/resume/elicitation 回流
    - FlowMind evidence writeback through executor
 
 3. 保持当前边界不变：
    - Crazy 仍负责 source onboarding
-   - Hermes 仍只验证 host-side delegation readiness
+   - Hermes 先只开放只读 delegation
    - FlowMind 仍不吃 executor 回流结果
 
 ---
 
 ## 7. 一句话结论
 
-> `Hermes -> executor` 的下一阶段已经不再是“从零设计怎么接”，而是“在已具备 discovery/help/describe 能力和长期只读验证 source 的前提下，修通 read-only invocation 的最后一段 runtime 执行链路”。  
+> `Hermes -> executor` 的下一阶段已经不再是“修只读调用能不能通”，而是“在只读 invocation 已通过的前提下，冻结第一版 delegation spec，并决定哪类 Hermes task 先开放只读 capability 调用”。

@@ -33,8 +33,9 @@
 
 - `executor tools sources`
 - `executor call petstore-readonly-validation --help`
-- `executor call petstore-readonly-validation pet findPetsByStatus --help`
-- `executor tools describe petstore-readonly-validation.pet.findPetsByStatus`
+- `executor call petstore-readonly-validation pet getPetById --help`
+- `executor tools describe petstore-readonly-validation.pet.getPetById`
+- `executor call petstore-readonly-validation pet getPetById '{"petId":1}'`
 
 这说明宿主侧已经能做到：
 
@@ -42,20 +43,23 @@
 2. 先看 group/path
 3. 再看 input/output schema
 4. 按 schema 组织调用参数
+5. 至少完成一条真实只读 tool invocation
 
-### 2.3 真实只读调用仍失败
+### 2.3 第一版 blocker 已被修正
 
-尝试执行：
+最初失败的样本是：
 
 ```bash
 executor call petstore-readonly-validation pet findPetsByStatus '{"status":"available"}'
+executor call petstore-readonly-validation store getInventory
 ```
 
-当前结果：
+继续核对后确认：
 
-- CLI 返回 runtime error
-- debug stack 指向 `executor-quickjs-runtime.js`
-- sidecar 日志显示 `/executions` 已成功进入 executor，但执行结果没有正常回到 CLI
+- `GET https://petstore3.swagger.io/api/v3/pet/findByStatus?status=available` 本身返回 `500`
+- `GET https://petstore3.swagger.io/api/v3/store/inventory` 本身返回 `500`
+
+因此原来的“runtime invocation blocker”不是 executor 总体故障，而是验证样本选择问题。
 
 ## 3. 结构化结论
 
@@ -64,18 +68,15 @@ executor call petstore-readonly-validation pet findPetsByStatus '{"status":"avai
 - `discoveryReady = true`
 - `schemaHelpReady = true`
 - `hostReadiness = true`
-
-### 未完成
-
-- `invocationReady = false`
+- `invocationReady = true`
 
 因此本轮收口应定义为：
 
-> `Hermes -> executor` 的只读 delegation 已经完成宿主准备与 schema-first 准备，但真实 read-only invocation 仍卡在 executor runtime 执行层。
+> `Hermes -> executor` 的只读 delegation readiness 已经完成，且至少一条真实 read-only invocation 已在 `ALI-HERMES` 上通过。
 
 ## 4. 对下一轮的约束
 
-在修通 `read-only invocation` 前，不应继续推进：
+在 delegation spec 冻结前，不应继续推进：
 
 - Hermes 受控外部写操作
 - pause/resume/elicitation 回流
@@ -83,6 +84,6 @@ executor call petstore-readonly-validation pet findPetsByStatus '{"status":"avai
 
 下一轮最优先事项应是：
 
-1. 缩小 `executor-quickjs-runtime.js` 调用失败范围
-2. 判断是 upstream invocation bug 还是当前 OpenAPI source runtime 兼容问题
-3. 修通至少一条真正的 read-only tool invocation
+1. 定义第一版只读 delegation spec
+2. 决定 Hermes 哪类 task 先开放只读 capability 调用
+3. 决定结果如何向 Crazy / FlowMind 继续传递
