@@ -19,6 +19,7 @@ Thumbs.db
 *~
 check_*.py
 !scripts/check_harness_governance_consistency.py
+!scripts/governance/check_live_deploy_sync.py
 collect_*.py
 write_templates.py
 verify_all.py
