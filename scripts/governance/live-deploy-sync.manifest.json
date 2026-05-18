@@ -36,7 +36,9 @@
       "deployRoot": "/root/CrazyAgentsManage",
       "compareFiles": [
         "scripts/runtime/enable_crazy_executor_http_mode_on_ali_hermes.sh",
+        "scripts/runtime/ensure_executor_validation_source.py",
         "scripts/runtime/install_executor_sidecar_on_ali_hermes.sh",
+        "scripts/runtime/probe_hermes_executor_readonly_path.py",
         "scripts/runtime/run_on_ali_hermes.py",
         "scripts/runtime/smoke_executor_live_mode.py"
       ]
