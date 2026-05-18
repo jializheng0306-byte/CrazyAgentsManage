@@ -112,8 +112,8 @@ CrazyAgentsManage项目的每日工作流，覆盖07:00-23:45全天运营节奏�
 # 晨间情报 (08:30)
 30 8 * * * /root/.hermes/scripts/morning-intel.sh
 
-# 承诺审查 (09:00)
-0 9 * * * /root/.hermes/scripts/daily-promise-review.sh
+# 承诺审查统一刷新链（operator hours, only-if-changed）
+*/30 8-21 * * * cd /root/CrazyAgentsManage && PROMISE_BITABLE_CONFIG_PATH=/root/CrazyAgentsManage/shared-context/promise-bitable-config.json PROMISE_LARK_AS=bot PROMISE_REVIEW_ONLY_IF_CHANGED=1 /usr/bin/python3 /root/.hermes/scripts/daily-promise-review.py >> /root/.hermes/logs/daily-promise-review.log 2>&1
 
 # 午间论文解读 (12:00)
 0 12 * * * /root/.hermes/scripts/noon-paper-review.sh
@@ -124,6 +124,44 @@ CrazyAgentsManage项目的每日工作流，覆盖07:00-23:45全天运营节奏�
 # 每日反思 (23:00)
 0 23 * * * /root/.hermes/scripts/daily-reflection.sh
 ```
+
+### Hermes AI Cron Guard
+
+除上述 `system crontab` 外，Hermes 还可能在：
+
+- `~/.hermes/cron/jobs.json`
+
+中维护 runtime-local AI cron job。
+
+从 2026-05-16 起，涉及本地脚本路径的 AI cron 创建必须满足：
+
+1. 脚本真实存在
+2. 脚本是 git-tracked 文件
+3. 若 prompt 用相对路径，必须同时提供 `workdir`
+4. 候选方案 / 设计稿中的脚本名，不能直接进入 live runtime
+
+对于承诺审查统一链，2026-05-16 起还增加：
+
+5. 虽然 `system crontab` 每 30 分钟触发一次，但 `daily-promise-review.py` 会先计算承诺 + truth/trace/feedback 状态摘要
+6. 只有摘要变化时，才执行 Bitable 写回、报告落盘和飞书群发送
+7. 摘要不变时，脚本静默退出，不产生运营噪音
+
+治理细则见：
+
+- [hermes-runtime-ai-cron-guard-governance-2026-05-16.md](/home/flowmind/CrazyAgentsManage/docs/06-agent-ops/hermes-runtime-ai-cron-guard-governance-2026-05-16.md)
+
+### 当前 AI Cron 保留原则
+
+2026-05-16 起，`ALI-HERMES` 上的 AI cron 只保留：
+
+1. 不与 `system crontab` 重复的任务
+2. 有明确 repo source-of-truth 或已被治理批准的任务
+3. provider 已验证可运行的任务
+
+当前保留的启用中 AI cron 为：
+
+- `Cron健康检查-每日两次`
+- `Tech Radar周审查-每周日`
 
 ## 工作流工具
 

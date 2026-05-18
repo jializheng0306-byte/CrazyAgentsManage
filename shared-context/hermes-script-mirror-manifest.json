@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "managed_at": "2026-05-16T08:00:00+08:00",
+  "scripts": {
+    "auto-reflection.sh": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/auto-reflection.sh",
+      "purpose": "Daily reflection runtime mirror"
+    },
+    "cron-health-check.sh": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/cron-health-check.sh",
+      "purpose": "Cron health inspection runtime mirror"
+    },
+    "daily-promise-review.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/daily-promise-review.py",
+      "purpose": "Unified promise-governance refresh chain for truth/trace/feedback writeback"
+    },
+    "evening-intel-collector.sh": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/evening-intel-collector.sh",
+      "purpose": "Evening intel collector runtime mirror"
+    },
+    "memory-maintenance.sh": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/memory-maintenance.sh",
+      "purpose": "Memory maintenance runtime mirror"
+    },
+    "morning-intel-collector.sh": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/morning-intel-collector.sh",
+      "purpose": "Morning intel collector runtime mirror"
+    },
+    "noon-paper-collector.sh": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/noon-paper-collector.sh",
+      "purpose": "Noon paper collector runtime mirror"
+    },
+    "tech-radar-review.sh": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/tech-radar-review.sh",
+      "purpose": "Tech Radar review runtime mirror"
+    }
+  }
+}

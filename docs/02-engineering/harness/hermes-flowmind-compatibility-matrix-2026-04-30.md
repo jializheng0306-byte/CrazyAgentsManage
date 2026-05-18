@@ -15,6 +15,7 @@
 | Candidate ingress | `scripts/flowmind_capture.py` | `POST /api/integrations/candidate-ingress` | `partially_compatible` | 接口可达（2026-05-03 冒烟 201 created），但 capture 脚本的 baseURL/body 对齐未在真实 Bitable→FlowMind 链路上闭合验证 |
 | Truth / Review read | `scripts/runtime/generate_hermes_handoff.py` + HUD/webui | `review-queue` + `bridge/truth` | `compatible` ✅ | **已真实跑通**：2026-05-03 通过 `bridge/truth` 成功读取 `semanticContext` + `latestEvidence`，直接注入 Hermes handoff packet |
 | Hermes handoff packet | `scripts/runtime/generate_hermes_handoff.py` | `bridge/truth` | `compatible` ✅ | **真实 round 已验证**：packet 包含 semantic refs、field mappings、consumer hints、latestEvidence，HermesAgent 无需人工补充即可完成运营 review |
+| Operational follow-up | Crazy timeline / handoff / Hermes prompt context | `moduleDetails.handoff` + Slice 1 projection | `compatible` ✅ | Crazy / Hermes now consume the same follow-up projection model；默认直接继承 `needsFollowUp / followUpKind / nextActor`，不再本地重解释 |
 | Handshake smoke | `docs/02-engineering/harness/handshake-smoke-status-2026-05-03.md` | (全覆盖) | `partial_pass_with_evidence` | 仓库证据已补；当前 5/8 通过、3/8 仅接口可达，尚未形成全链路 `handshake-passed` |
 | Feedback | **未消费** | `bridge/feedback/:instanceId` | `endpoint_only` | FlowMind 端点存在（HTTP 401 → endpoint 可达，需 x-instance-token），Crazy 侧无消费入口 |
 | Context Pack | **未消费** | `bridge/context-pack` | `endpoint_only` | FlowMind 端点存在（HTTP 401 → endpoint 可达，需 x-instance-token），Crazy 侧无消费入口 |
@@ -42,6 +43,10 @@
 5. **feedback/context-pack 消费证据仍不足**  
    - 两个端点均存在且可达（HTTP 401 证明端点存活），但 Crazy 侧无消费脚本/流程
    - 仓库证据已补到 `feedback-context-consumption-status-2026-05-03.md`，但结论仍是“仅接口存在，未消费”
+
+6. **Operational follow-up mirror 已补齐，但仍依赖 FlowMind canonical docs 控制词表**
+   - 当前 Crazy / Hermes 已同步采用同一 follow-up projection
+   - 后续若扩 `followUpKind` / `nextActor`，必须先改 FlowMind canonical，再跑 mirror / sync check
 
 ---
 

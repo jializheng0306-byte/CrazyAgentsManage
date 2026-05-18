@@ -409,6 +409,81 @@ def _handoff_field_map(sections):
     return field_map
 
 
+def _string_to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered == 'true':
+            return True
+        if lowered == 'false':
+            return False
+    return value
+
+
+def _normalize_operational_follow_up(replay, field_map):
+    projection = replay.get('operationalFollowUp')
+    if isinstance(projection, dict):
+        return {
+            'projectionState': projection.get('projectionState'),
+            'flowmindStatus': projection.get('flowmindStatus'),
+            'lastGovernanceStatus': projection.get('lastGovernanceStatus'),
+            'lastGovernanceFeedback': projection.get('lastGovernanceFeedback'),
+            'localStatus': projection.get('localStatus'),
+            'needsFollowUp': projection.get('needsFollowUp'),
+            'followUpKind': projection.get('followUpKind'),
+            'nextActor': projection.get('nextActor'),
+            'isTerminalLocal': projection.get('isTerminalLocal'),
+            'reason': projection.get('reason'),
+            'note': projection.get('note'),
+            'evidenceRefs': list(projection.get('evidenceRefs') or []),
+            'updatedAt': projection.get('updatedAt'),
+            'missingFields': list(projection.get('missingFields') or []),
+        }
+
+    if not isinstance(field_map, dict):
+        return None
+
+    fallback_projection = {
+        'projectionState': field_map.get('Projection State'),
+        'flowmindStatus': field_map.get('FlowMind Status'),
+        'lastGovernanceStatus': field_map.get('Last Governance Status'),
+        'lastGovernanceFeedback': field_map.get('Last Governance Feedback'),
+        'localStatus': field_map.get('Local Status'),
+        'needsFollowUp': _string_to_bool(field_map.get('Needs Follow-Up')),
+        'followUpKind': field_map.get('Follow-Up Kind'),
+        'nextActor': field_map.get('Next Actor'),
+        'isTerminalLocal': _string_to_bool(field_map.get('Is Terminal Local')),
+        'reason': field_map.get('Reason'),
+        'note': field_map.get('Note'),
+        'evidenceRefs': [
+            ref.strip()
+            for ref in str(field_map.get('Follow-Up Evidence Refs') or '').split(',')
+            if ref.strip()
+        ],
+        'updatedAt': None,
+        'missingFields': [],
+    }
+    if not any(
+        fallback_projection.get(key) not in (None, '', [])
+        for key in (
+            'projectionState',
+            'flowmindStatus',
+            'lastGovernanceStatus',
+            'lastGovernanceFeedback',
+            'localStatus',
+            'needsFollowUp',
+            'followUpKind',
+            'nextActor',
+            'isTerminalLocal',
+            'reason',
+            'note',
+        )
+    ):
+        return None
+    return fallback_projection
+
+
 def _execution_boundary_from_handoff_sections(sections):
     for section in sections or []:
         if section.get('title') != 'Execution Boundary':
@@ -581,6 +656,7 @@ def _normalize_runtime_handoff_summary(record_id, replay):
             'missingFields': missing_fields,
             'gaps': gaps,
             'handoffContract': handoff_contract,
+            'operationalFollowUp': _normalize_operational_follow_up(replay, field_map),
         }
 
     semantic_boundary = _execution_boundary_from_semantic_context(semantic_context)
@@ -615,6 +691,7 @@ def _normalize_runtime_handoff_summary(record_id, replay):
             _HANDOFF_REQUIRED_FIELDS,
             gaps,
         ),
+        'operationalFollowUp': _normalize_operational_follow_up(replay, {}),
     }
 
 
@@ -648,7 +725,10 @@ def _runtime_handoff_unavailable_payload(record_id, gap_message):
         'missingFields': list(_HANDOFF_REQUIRED_FIELDS),
         'gaps': gaps,
         'handoffContract': handoff_contract,
+        'operationalFollowUp': None,
     }
+
+
 def _flowmind_records(limit=80, source_agent=None):
     agent_filter = source_agent if source_agent is not None else _get_flowmind_source_agent()
     sessions_resp = _safe_flowmind_request(

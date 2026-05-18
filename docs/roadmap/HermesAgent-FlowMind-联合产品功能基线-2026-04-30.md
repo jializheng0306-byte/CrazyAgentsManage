@@ -167,6 +167,12 @@ Phase 6 当前默认口径还必须与 FlowMind canonical docs 保持一致：
 - `FlowMindDeploy/docs/01-product/handoff-packet-contract-v1-2026-05-04.md`
 - `FlowMindDeploy/docs/01-product/Phase6-默认SOP与提示词同步-2026-05-04.md`
 - `FlowMindDeploy/docs/01-product/外部执行面-读写边界-v1-2026-05-04.md`
+- `FlowMindDeploy/docs/01-product/治理动作分层口径-v1-2026-05-07.md`
+- `FlowMindDeploy/docs/01-product/执行包字段对照与消费顺序-v1-2026-05-07.md`
+- `FlowMindDeploy/docs/05-version-control/治理证据资产索引-v1-2026-05-07.md`
+- `FlowMindDeploy/docs/01-product/运营Follow-Up最小默认解释-v0-2026-05-14.md`
+- `FlowMindDeploy/docs/01-product/Slice1-read-model-projection-任务分解-v0-2026-05-14.md`
+- `FlowMindDeploy/docs/01-product/Slice1-read-model-projection-验收证据骨架-v0-2026-05-14.md`
 
 Crazy 侧不得自行改写以下默认规则：
 
@@ -174,6 +180,13 @@ Crazy 侧不得自行改写以下默认规则：
 - `feedback.eventType` 只进入运营动作层
 - `timeline` 默认消费 `traceEvents[]`
 - `handoff` 默认消费 `moduleDetails.handoff + semanticContext + latestEvidence`
+- `operational follow-up` 默认消费同一 Slice 1 projection，不在 Crazy / Hermes 侧本地改写 `needsFollowUp / followUpKind / nextActor`
+
+当前 cross-repo mirror 补记：
+
+1. `operational follow-up` 已同步到 Crazy mirror 与 Hermes 协同入口
+2. Crazy 页面、handoff 摘要与 Hermes prompt context 默认直接消费同一 projection
+3. 若后续要继续扩 `nextActor` 或 follow-up kind，必须先改 FlowMind canonical docs，再跑 mirror / sync check
 
 ---
 
