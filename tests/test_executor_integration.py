@@ -6,7 +6,8 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'webui'))
 
 from app import app
-from executor_bridge import HttpExecutorProvider
+import api as webui_api
+from executor_bridge import HttpExecutorProvider, SampleExecutorProvider
 
 
 @pytest.fixture
@@ -156,6 +157,106 @@ class TestExecutorHttpProvider:
         assert summary['providerCount'] == 2
         assert summary['failedProviderCount'] == 1
         assert summary['missingCredentialCount'] == 1
+
+
+class TestExecutorSampleProvider:
+    def test_sample_provider_source_crud_round_trip(self):
+        provider = SampleExecutorProvider()
+        created = provider.create_source({
+            'name': 'Local Demo Source',
+            'type': 'openapi',
+            'scope': 'user',
+        })
+
+        assert created['name'] == 'Local Demo Source'
+        updated = provider.update_source(created['id'], {'status': 'disabled', 'provider': 'openapi'})
+        assert updated is not None
+        assert updated['status'] == 'disabled'
+        assert provider.delete_source(created['id']) is True
+
+    def test_sample_provider_credential_bind_unbind_round_trip(self):
+        provider = SampleExecutorProvider()
+        credential = provider.bind_credential({
+            'provider': 'openapi',
+            'targetType': 'source',
+            'targetId': 'src-demo',
+            'impactCount': 3,
+        })
+
+        assert credential['targetId'] == 'src-demo'
+        assert credential['impactCount'] == 3
+        assert provider.unbind_credential(credential['id']) is True
+
+
+class TestExecutorIntegrationApi:
+    def test_create_source_requires_type_specific_fields(self, client):
+        resp = client.post('/api/operations/integrations/sources', json={'type': 'openapi'})
+        assert resp.status_code == 400
+        assert resp.get_json()['error'] == 'spec is required for openapi source creation'
+
+    def test_create_source_returns_provider_result(self, client, monkeypatch):
+        class FakeProvider:
+            def create_source(self, data):
+                return {'id': 'src-created', 'name': data['name'], 'type': data['type']}
+
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: FakeProvider())
+        resp = client.post(
+            '/api/operations/integrations/sources',
+            json={'type': 'graphql', 'name': 'Graph Source', 'endpoint': 'https://example.com/graphql'},
+        )
+        assert resp.status_code == 201
+        assert resp.get_json()['id'] == 'src-created'
+
+    def test_update_source_404_when_provider_returns_none(self, client, monkeypatch):
+        class FakeProvider:
+            def update_source(self, source_id, data):
+                return None
+
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: FakeProvider())
+        resp = client.patch('/api/operations/integrations/sources/src-missing', json={'refresh': True})
+        assert resp.status_code == 404
+
+    def test_delete_source_returns_success(self, client, monkeypatch):
+        class FakeProvider:
+            def delete_source(self, source_id):
+                return source_id == 'src-ok'
+
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: FakeProvider())
+        resp = client.delete('/api/operations/integrations/sources/src-ok')
+        assert resp.status_code == 200
+        assert resp.get_json()['success'] is True
+
+    def test_bind_credential_requires_target_or_provider(self, client):
+        resp = client.post('/api/operations/integrations/credentials', json={'slot': 'header:authorization'})
+        assert resp.status_code == 400
+        assert 'required' in resp.get_json()['error']
+
+    def test_bind_credential_returns_provider_payload(self, client, monkeypatch):
+        class FakeProvider:
+            def bind_credential(self, data):
+                return {'id': 'cred-1', 'provider': data.get('provider') or data.get('sourceType')}
+
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: FakeProvider())
+        resp = client.post(
+            '/api/operations/integrations/credentials',
+            json={
+                'sourceType': 'openapi',
+                'targetId': 'src-openapi',
+                'slot': 'header:authorization',
+                'provider': 'file',
+            },
+        )
+        assert resp.status_code == 201
+        assert resp.get_json()['id'] == 'cred-1'
+
+    def test_unbind_credential_404_when_missing(self, client, monkeypatch):
+        class FakeProvider:
+            def unbind_credential(self, credential_id):
+                return False
+
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: FakeProvider())
+        resp = client.delete('/api/operations/integrations/credentials/cred-missing')
+        assert resp.status_code == 404
 
 
 class TestExecutorOperationsUiAssets:
