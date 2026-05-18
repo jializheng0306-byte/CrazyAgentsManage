@@ -650,7 +650,7 @@ function renderFilterableTools(container, tools) {
       return '<div class="ops-tool-item" data-idx="' + pair.origIdx + '" onclick="selectTool(' + pair.origIdx + ')">' +
         '<div class="ops-tool-info">' +
           '<div class="ops-tool-name">' + t.name + '</div>' +
-          '<div class="ops-tool-summary">' + (t.summary || '') + '</div>' +
+          '<div class="ops-tool-summary">' + (t.summary || t.schemaSummary || '') + '</div>' +
         '</div>' +
         '<span class="ops-chip ' + (t.status || 'unknown') + '">' + statusLabel(t.status) + '</span>' +
       '</div>';
@@ -668,12 +668,13 @@ function selectTool(idx) {
       '<h3 class="ops-detail-name">' + t.name + '</h3>' +
       '<div class="ops-detail-sub">' + (t.sourceId || '') + '</div>' +
     '</div>' +
-    '<div class="ops-detail-section">' +
-      '<div class="ops-detail-section-title">工具信息</div>' +
-      '<div class="ops-detail-row"><span class="ops-detail-row-label">状态</span><span class="ops-detail-row-value"><span class="ops-chip ' + (t.status || 'unknown') + '">' + statusLabel(t.status) + '</span></span></div>' +
-      '<div class="ops-detail-row"><span class="ops-detail-row-label">需认证</span><span class="ops-detail-row-value">' + (t.requiresAuth ? '是' : '否') + '</span></div>' +
-    '</div>' +
-    (t.summary ? '<div class="ops-detail-section"><div class="ops-detail-section-title">描述</div><div style="font-size:13px;color:var(--ops-text-secondary);">' + t.summary + '</div></div>' : '')
+      '<div class="ops-detail-section">' +
+        '<div class="ops-detail-section-title">工具信息</div>' +
+        '<div class="ops-detail-row"><span class="ops-detail-row-label">状态</span><span class="ops-detail-row-value"><span class="ops-chip ' + (t.status || 'unknown') + '">' + statusLabel(t.status) + '</span></span></div>' +
+        '<div class="ops-detail-row"><span class="ops-detail-row-label">需认证</span><span class="ops-detail-row-value">' + (t.requiresAuth ? '是' : '否') + '</span></div>' +
+        '<div class="ops-detail-row"><span class="ops-detail-row-label">Schema 摘要</span><span class="ops-detail-row-value">' + (t.schemaSummary || '—') + '</span></div>' +
+      '</div>' +
+        (t.summary ? '<div class="ops-detail-section"><div class="ops-detail-section-title">描述</div><div style="font-size:13px;color:var(--ops-text-secondary);">' + t.summary + '</div></div>' : '')
   );
 }
 

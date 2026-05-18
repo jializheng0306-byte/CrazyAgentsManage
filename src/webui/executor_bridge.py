@@ -29,6 +29,84 @@ def _now_iso():
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
+def _schema_summary_from_schema(schema):
+    if not isinstance(schema, dict):
+        return ''
+
+    schema_type = schema.get('type')
+    properties = schema.get('properties')
+    if schema_type == 'object' and isinstance(properties, dict):
+        names = list(properties.keys())
+        preview = ', '.join(names[:4])
+        if len(names) > 4:
+            preview += '…'
+        return f"object · {len(names)} fields" + (f" ({preview})" if preview else '')
+
+    if schema_type == 'array':
+        items = schema.get('items')
+        item_type = items.get('type') if isinstance(items, dict) else 'unknown'
+        return f'array · items:{item_type}'
+
+    if schema_type:
+        return str(schema_type)
+
+    return ''
+
+
+def _tool_schema_summary(tool):
+    if not isinstance(tool, dict):
+        return ''
+    existing = tool.get('schemaSummary') or tool.get('schema_summary')
+    if isinstance(existing, str) and existing.strip():
+        return existing.strip()
+    for key in ('inputSchema', 'schema', 'parameters', 'jsonSchema'):
+        summary = _schema_summary_from_schema(tool.get(key))
+        if summary:
+            return summary
+    return ''
+
+
+def _tool_status(tool):
+    if not isinstance(tool, dict):
+        return 'unknown'
+    raw_status = tool.get('status')
+    if raw_status in ('available', 'auth-required', 'disabled', 'invalid-schema', 'unknown'):
+        return raw_status
+    if tool.get('schemaValid') is False or tool.get('schemaError'):
+        return 'invalid-schema'
+    if tool.get('authMissing') or tool.get('requiresAuth') and tool.get('credentialStatus') in ('missing', 'expired', 'invalid'):
+        return 'auth-required'
+    if tool.get('disabled') is True:
+        return 'disabled'
+    return 'available'
+
+
+def _provider_rollup_status(sources):
+    if not sources:
+        return 'unknown'
+    failed = sum(1 for item in sources if item.get('status') == 'failed')
+    degraded = sum(1 for item in sources if item.get('status') in ('degraded', 'missing-auth', 'disabled', 'unknown'))
+    healthy = sum(1 for item in sources if item.get('status') == 'healthy')
+    if failed == len(sources):
+        return 'failed'
+    if failed > 0 and healthy == 0 and degraded == 0:
+        return 'failed'
+    if failed > 0 or degraded > 0:
+        return 'degraded'
+    return 'reachable'
+
+
+def _provider_issue_summary(status, sources):
+    if status == 'failed':
+        return '所有 source 当前都处于失败态'
+    if status == 'degraded':
+        failing = [item.get('name') or item.get('id') for item in sources if item.get('status') in ('failed', 'degraded', 'missing-auth', 'disabled', 'unknown')]
+        if failing:
+            return '异常 source: ' + ' / '.join(failing[:3]) + ('…' if len(failing) > 3 else '')
+        return '部分 source 状态异常'
+    return None
+
+
 # ============================================================
 # Abstract provider
 # ============================================================
@@ -207,6 +285,7 @@ class SampleExecutorProvider(ExecutorProvider):
             for t in tools:
                 entry = dict(t)
                 entry['sourceId'] = sid
+                entry['schemaSummary'] = _tool_schema_summary(entry)
                 all_tools.append(entry)
         if source_id:
             all_tools = [t for t in all_tools if t.get('sourceId') == source_id]
@@ -469,7 +548,8 @@ class HttpExecutorProvider(ExecutorProvider):
                 'name': t.get('name', ''),
                 'summary': t.get('description', ''),
                 'requiresAuth': t.get('requiresApproval', False),
-                'status': 'available',
+                'status': _tool_status(t),
+                'schemaSummary': _tool_schema_summary(t),
             })
         return tools
 
@@ -493,24 +573,6 @@ class HttpExecutorProvider(ExecutorProvider):
         if not scope_id:
             return None
         creds = []
-
-        secrets = self._get(f'/api/scopes/{scope_id}/secrets')
-        if isinstance(secrets, list):
-            for sec in secrets:
-                status = 'healthy'
-                sec_status = self._get(f'/api/scopes/{scope_id}/secrets/{sec["id"]}/status')
-                if isinstance(sec_status, dict) and sec_status.get('status') == 'missing':
-                    status = 'missing'
-                creds.append({
-                    'id': sec.get('id', ''),
-                    'provider': sec.get('provider', ''),
-                    'targetType': 'secret',
-                    'targetId': sec.get('id', ''),
-                    'status': status,
-                    'lastCheckedAt': _now_iso(),
-                    'impactCount': 0,
-                    'isBinding': False,
-                })
 
         sources = self.get_sources() or []
         for source in sources:
@@ -549,22 +611,20 @@ class HttpExecutorProvider(ExecutorProvider):
             return None
         by_provider = {}
         for s in sources:
-            p = s.get('provider', 'unknown')
-            if p not in by_provider:
-                by_provider[p] = {'sources': 0, 'tools': 0, 'healthy': True}
-            by_provider[p]['sources'] += 1
-            by_provider[p]['tools'] += s.get('toolCount', 0)
-            if s['status'] != 'healthy':
-                by_provider[p]['healthy'] = False
+            provider = s.get('provider', 'unknown')
+            bucket = by_provider.setdefault(provider, {'sources': []})
+            bucket['sources'].append(s)
         provs = []
         for key, info in by_provider.items():
+            bucket_sources = info['sources']
+            status = _provider_rollup_status(bucket_sources)
             provs.append({
                 'id': f'prov-{key}',
                 'provider': key,
-                'status': 'reachable' if info['healthy'] else 'degraded',
-                'sourceCount': info['sources'],
-                'toolCount': info['tools'],
-                'issueSummary': None if info['healthy'] else '部分 source 状态异常',
+                'status': status,
+                'sourceCount': len(bucket_sources),
+                'toolCount': sum(item.get('toolCount', 0) for item in bucket_sources),
+                'issueSummary': _provider_issue_summary(status, bucket_sources),
             })
         return provs
 
@@ -574,6 +634,7 @@ class HttpExecutorProvider(ExecutorProvider):
             return None
         tools = self.get_tools() or []
         creds = self.get_credentials() or []
+        providers = self.get_providers() or []
         healthy = sum(1 for s in sources if s['status'] == 'healthy')
         degraded = sum(1 for s in sources if s['status'] != 'healthy')
         missing_cred = sum(1 for c in creds if c.get('status') in ('missing', 'expired', 'invalid'))
@@ -583,8 +644,8 @@ class HttpExecutorProvider(ExecutorProvider):
             'degradedSourceCount': degraded,
             'toolCount': len(tools),
             'missingCredentialCount': missing_cred,
-            'providerCount': len(set(s.get('provider', '') for s in sources)),
-            'failedProviderCount': 0,
+            'providerCount': len(providers),
+            'failedProviderCount': sum(1 for provider in providers if provider.get('status') == 'failed'),
         }
 
     def create_source(self, data):
