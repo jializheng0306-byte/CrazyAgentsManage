@@ -205,6 +205,27 @@ def format_truth_section(snapshot: dict[str, Any]) -> str:
     lines.append("- Consumer hints:")
     lines.extend(hint_lines or ["  - (none)"])
 
+    operational_follow_up = payload.get("operationalFollowUp", {}) if isinstance(payload, dict) else {}
+    if isinstance(operational_follow_up, dict) and operational_follow_up:
+        lines.extend(
+            [
+                "- Operational follow-up:",
+                f"  - Projection state: {operational_follow_up.get('projectionState', '(none)')}",
+                f"  - FlowMind status: {operational_follow_up.get('flowmindStatus', '(none)')}",
+                f"  - Last governance status: {operational_follow_up.get('lastGovernanceStatus', '(none)')}",
+                f"  - Last governance feedback: {operational_follow_up.get('lastGovernanceFeedback', '(none)')}",
+                f"  - Local status: {operational_follow_up.get('localStatus', '(none)')}",
+                f"  - Needs follow-up: {operational_follow_up.get('needsFollowUp', '(none)')}",
+                f"  - Follow-up kind: {operational_follow_up.get('followUpKind', '(none)')}",
+                f"  - Next actor: {operational_follow_up.get('nextActor', '(none)')}",
+                f"  - Is terminal local: {operational_follow_up.get('isTerminalLocal', '(none)')}",
+                f"  - Reason: {operational_follow_up.get('reason', '(none)')}",
+                f"  - Note: {operational_follow_up.get('note', '(none)')}",
+                f"  - Evidence refs: {', '.join(operational_follow_up.get('evidenceRefs', [])) or '(none)'}",
+                f"  - Missing fields: {', '.join(operational_follow_up.get('missingFields', [])) or '(none)'}",
+            ]
+        )
+
     return "\n".join(lines) + "\n"
 
 

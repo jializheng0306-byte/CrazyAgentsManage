@@ -18,6 +18,11 @@
 | Action-family interpretation | Crazy PRD/roadmap/semantic-first 入口 | `治理动作分层口径-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到 Crazy 入口层**：现在明确区分 `review decision actions / truth promotion actions / operational feedback events`，不再把三类动作混写成同一种状态推进 |
 | Execution packet field layering | Crazy PRD/roadmap/semantic-first 入口 | `执行包字段对照与消费顺序-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到 Crazy 入口层**：现在明确区分 `moduleDetails.handoff / semanticContext / latestEvidence / executionBoundary / handoffContract` 五层职责 |
 | Governance evidence reading order | Crazy PRD/roadmap/semantic-first 入口 | `治理证据资产索引-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到入口层**：Crazy 侧已承认 `change record -> deploy fact -> acceptance/eval -> closeout seed -> governance report` 的 shared 读取顺序；更深对等 shared 入口仍可后续增强 |
+| Operational follow-up | Crazy timeline / handoff / Hermes prompt context | `moduleDetails.handoff` + Slice 1 projection | `compatible` ✅ | Crazy / Hermes now consume the same follow-up projection model；默认直接继承 `needsFollowUp / followUpKind / nextActor`，不再本地重解释 |
+| Action-family interpretation | Crazy PRD/roadmap/semantic-first 入口 | `治理动作分层口径-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到 Crazy 入口层**：现在明确区分 `review decision actions / truth promotion actions / operational feedback events`，不再把三类动作混写成同一种状态推进 |
+| Execution packet field layering | Crazy PRD/roadmap/semantic-first 入口 | `执行包字段对照与消费顺序-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到 Crazy 入口层**：现在明确区分 `moduleDetails.handoff / semanticContext / latestEvidence / executionBoundary / handoffContract` 五层职责 |
+| Governance evidence reading order | Crazy PRD/roadmap/semantic-first 入口 | `治理证据资产索引-v1-2026-05-07.md` | `compatible` ✅ | **已镜像到入口层**：Crazy 侧已承认 `change record -> deploy fact -> acceptance/eval -> closeout seed -> governance report` 的 shared 读取顺序；更深对等 shared 入口仍可后续增强 |
+| Operational follow-up | Crazy timeline / handoff / Hermes prompt context | `moduleDetails.handoff` + Slice 1 projection | `compatible` ✅ | Crazy / Hermes now consume the same follow-up projection model；默认直接继承 `needsFollowUp / followUpKind / nextActor`，不再本地重解释 |
 | Handshake smoke | `docs/02-engineering/harness/handshake-smoke-status-2026-05-03.md` | (全覆盖) | `partial_pass_with_evidence` | 仓库证据已补；当前 5/8 通过、3/8 仅接口可达，尚未形成全链路 `handshake-passed` |
 | Feedback | **脚本级部分消费** | `bridge/feedback/:instanceId` | `partially_consumed` | `scripts/daily-promise-review.py` 已读取、归一化并把 feedback 投影到承诺审查主表/Trace 子表；但还没有统一页面/产品化消费面。`GET /bridge/feedback/:instanceId` 当前代码口径允许 `ui_bearer` 或 `x-instance-token` |
 | Context Pack | **仅 probe 调用** | `bridge/context-pack` | `probe_only` | 当前只在 `scripts/flowmind_handshake_smoke.py` 中做 handshake 级探测；没有 durable 主线消费入口，`POST /bridge/context-pack` 仍要求 `x-instance-token`。**下一优先补强 lane 已冻结为 Crazy `/api/runtime/handoffs` 的 page-facing `contextSummary`，而不是直连 `context-pack` 或先开新 instance surface。** |
@@ -51,6 +56,10 @@
 6. **shared 治理证据资产目前只是入口层镜像，不是 Crazy 的对等 shared 证据系统**  
    - 这不阻塞当前 mirror / sync gate 基线
    - 但后续若 Crazy 侧需要自己的 governance-report 汇总面，应单独扩设计
+
+6. **Operational follow-up mirror 已补齐，但仍依赖 FlowMind canonical docs 控制词表**
+   - 当前 Crazy / Hermes 已同步采用同一 follow-up projection
+   - 后续若扩 `followUpKind` / `nextActor`，必须先改 FlowMind canonical，再跑 mirror / sync check
 
 ---
 

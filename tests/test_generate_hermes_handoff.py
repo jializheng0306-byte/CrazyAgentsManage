@@ -105,6 +105,24 @@ class GenerateHermesHandoffTests(unittest.TestCase):
                         "Treat approved and committed as readable truth on the current public read surface.",
                     ],
                 },
+                "operationalFollowUp": {
+                    "projectionState": "resolved",
+                    "flowmindStatus": "approved",
+                    "lastGovernanceStatus": "approved",
+                    "lastGovernanceFeedback": "blocked",
+                    "localStatus": "blocked",
+                    "needsFollowUp": True,
+                    "followUpKind": "blocked",
+                    "nextActor": "local_operator",
+                    "isTerminalLocal": False,
+                    "reason": "Ready replay sample with complete blocked follow-up context.",
+                    "note": "Use the upstream projection directly.",
+                    "evidenceRefs": [
+                        "review:blocked-strong-001",
+                        "candidate:blocked-strong-001",
+                    ],
+                    "missingFields": [],
+                },
             },
         }
 
@@ -118,6 +136,11 @@ class GenerateHermesHandoffTests(unittest.TestCase):
             "Treat approved and committed as readable truth on the current public read surface.",
             packet,
         )
+        self.assertIn("- Operational follow-up:", packet)
+        self.assertIn("  - Follow-up kind: blocked", packet)
+        self.assertIn("  - Next actor: local_operator", packet)
+        self.assertIn("  - Note: Use the upstream projection directly.", packet)
+        self.assertIn("  - Missing fields: (none)", packet)
 
 
 if __name__ == "__main__":

@@ -31,6 +31,15 @@
 - [handoff-packet-contract-v1-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/handoff-packet-contract-v1-2026-05-04.md)
 - [Phase6-默认SOP与提示词同步-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/Phase6-%E9%BB%98%E8%AE%A4SOP%E4%B8%8E%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%90%8C%E6%AD%A5-2026-05-04.md)
 - [外部执行面-读写边界-v1-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E5%A4%96%E9%83%A8%E6%89%A7%E8%A1%8C%E9%9D%A2-%E8%AF%BB%E5%86%99%E8%BE%B9%E7%95%8C-v1-2026-05-04.md)
+- [治理动作分层口径-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E6%B2%BB%E7%90%86%E5%8A%A8%E4%BD%9C%E5%88%86%E5%B1%82%E5%8F%A3%E5%BE%84-v1-2026-05-07.md)
+- [执行包字段对照与消费顺序-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E6%89%A7%E8%A1%8C%E5%8C%85%E5%AD%97%E6%AE%B5%E5%AF%B9%E7%85%A7%E4%B8%8E%E6%B6%88%E8%B4%B9%E9%A1%BA%E5%BA%8F-v1-2026-05-07.md)
+- [治理证据资产索引-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/05-version-control/%E6%B2%BB%E7%90%86%E8%AF%81%E6%8D%AE%E8%B5%84%E4%BA%A7%E7%B4%A2%E5%BC%95-v1-2026-05-07.md)
+
+当前 `operational follow-up` mirror 入口还必须参考：
+
+- [运营Follow-Up最小默认解释-v0-2026-05-14.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E8%BF%90%E8%90%A5Follow-Up%E6%9C%80%E5%B0%8F%E9%BB%98%E8%AE%A4%E8%A7%A3%E9%87%8A-v0-2026-05-14.md)
+- [Slice1-read-model-projection-任务分解-v0-2026-05-14.md](/home/flowmind/FlowMindDeploy/docs/01-product/Slice1-read-model-projection-%E4%BB%BB%E5%8A%A1%E5%88%86%E8%A7%A3-v0-2026-05-14.md)
+- [Slice1-read-model-projection-验收证据骨架-v0-2026-05-14.md](/home/flowmind/FlowMindDeploy/docs/01-product/Slice1-read-model-projection-%E9%AA%8C%E6%94%B6%E8%AF%81%E6%8D%AE%E9%AA%A8%E6%9E%B6-v0-2026-05-14.md)
 
 当前 FlowMind canonical 的 Phase 6+ 试点升级口径还应同时参考：
 
@@ -46,6 +55,7 @@
 1. 先确认是技术范围变化、运营范围变化，还是联合产品镜像变化
 2. 按 PRD 分层更新对应文档
 3. 如果触发 FlowMind canonical 变化，再同步更新 roadmap 和镜像入口并跑双仓检查
+4. 如果变化影响 `operational follow-up`，继续采用 FlowMind 的同一 Slice 1 消费模型，不在 Crazy / Hermes 侧另起词表
 
 ### 常见误区
 

@@ -117,6 +117,64 @@
     );
   }
 
+  function renderFollowUpRow(label, value) {
+    return (
+      '<div class="tl-follow-up-row">' +
+        '<span class="tl-follow-up-label">' + escapeHtml(label) + '</span>' +
+        '<span class="tl-follow-up-value">' + escapeHtml(value == null || value === '' ? '--' : value) + '</span>' +
+      '</div>'
+    );
+  }
+
+  function normalizeDisplayValue(value) {
+    if (Array.isArray(value)) {
+      return value.join(' | ');
+    }
+    if (value && typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return value;
+  }
+
+  function renderOperationalFollowUp(followUp) {
+    if (!followUp) {
+      return (
+        '<div class="tl-gap-box">' +
+          '<strong>Operational Follow-Up 缺失</strong>' +
+          '<p>当前 replay 没有返回 follow-up projection，页面不会本地推断 follow-up judgment。</p>' +
+        '</div>'
+      );
+    }
+
+    var evidenceRefs = normalizeDisplayValue(followUp.evidenceRefs);
+    var missingFields = normalizeDisplayValue(followUp.missingFields);
+    var rows = [
+      renderFollowUpRow('Projection State', normalizeDisplayValue(followUp.projectionState)),
+      renderFollowUpRow('FlowMind Status', normalizeDisplayValue(followUp.flowmindStatus)),
+      renderFollowUpRow('Last Governance Status', normalizeDisplayValue(followUp.lastGovernanceStatus)),
+      renderFollowUpRow('Last Governance Feedback', normalizeDisplayValue(followUp.lastGovernanceFeedback)),
+      renderFollowUpRow('Local Status', normalizeDisplayValue(followUp.localStatus)),
+      renderFollowUpRow('Needs Follow-Up', normalizeDisplayValue(followUp.needsFollowUp)),
+      renderFollowUpRow('Follow-Up Kind', normalizeDisplayValue(followUp.followUpKind)),
+      renderFollowUpRow('Next Actor', normalizeDisplayValue(followUp.nextActor)),
+      renderFollowUpRow('Is Terminal Local', normalizeDisplayValue(followUp.isTerminalLocal)),
+      renderFollowUpRow('Reason', normalizeDisplayValue(followUp.reason)),
+      renderFollowUpRow('Note', normalizeDisplayValue(followUp.note)),
+      renderFollowUpRow('Evidence Refs', evidenceRefs),
+      renderFollowUpRow('Missing Fields', missingFields)
+    ].join('');
+
+    return (
+      '<div class="tl-follow-up-card">' +
+        '<div class="tl-follow-up-head">' +
+          '<h4 class="tl-follow-up-title">Operational Follow-Up</h4>' +
+          '<span class="tl-follow-up-copy">Directly rendered from FlowMind Slice 1 projection.</span>' +
+        '</div>' +
+        '<div class="tl-follow-up-grid">' + rows + '</div>' +
+      '</div>'
+    );
+  }
+
   function renderHandoff(data) {
     handoffRecordEl.textContent = data.recordId || '--';
     handoffSourceEl.textContent = data.source || '--';
@@ -164,6 +222,7 @@
     }
 
     var boundary = data.executionBoundary || null;
+    var followUp = data.operationalFollowUp || null;
     var boundaryMarkup = '';
     if (boundary) {
       boundaryMarkup =
@@ -187,6 +246,8 @@
         '</div>';
     }
 
+    var followUpMarkup = renderOperationalFollowUp(followUp);
+
     handoffSummaryEl.className = 'tl-handoff-card';
     handoffSummaryEl.innerHTML =
       '<div class="tl-handoff-title-wrap">' +
@@ -200,6 +261,7 @@
         renderFieldRow('Execution Boundary Source', contract.executionBoundarySource || '--') +
       '</div>' +
       '<div class="tl-handoff-grid">' + rows + '</div>' +
+      followUpMarkup +
       boundaryMarkup +
       gaps;
   }

@@ -12,6 +12,7 @@
 import json
 import os
 import shlex
+import hashlib
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -20,13 +21,18 @@ from urllib import parse as urlparse
 from urllib import request as urlrequest
 
 LARK_CLI = os.environ.get("LARK_CLI", "lark-cli")
+# Keep Feishu/Bitable calls on the app bot lane; auto/user auth can fall back
+# to token types that some OpenAPI endpoints reject.
+LARK_IDENTITY = os.environ.get("PROMISE_LARK_AS", "bot")
 PROMISE_ACTIVE_DIR = Path(os.path.expanduser("~/.hermes/promises/active"))
 PROMISE_ROOT_DIR = Path(os.path.expanduser("~/.hermes/promises"))
 REPORT_DIR = Path(os.path.expanduser("~/.hermes/promises/reviews"))
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG_PATH = REPO_ROOT / "shared-context" / "promise-bitable-config.json"
+DEFAULT_STATE_PATH = REPORT_DIR / "daily-promise-review-state.json"
 
 DRY_RUN = os.environ.get("HERMES_CRON_DRY_RUN", "0") == "1"
+ONLY_IF_CHANGED = os.environ.get("PROMISE_REVIEW_ONLY_IF_CHANGED", "1") != "0"
 
 STATUS_MAP = {
     "pending": "待处理",
@@ -71,6 +77,11 @@ def load_json(path):
             return json.load(handle)
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
+
+
+def save_json(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def load_config():
@@ -236,19 +247,12 @@ def _bitable_api(path, method="GET", payload=None, params=None, timeout=20):
     if DRY_RUN:
         return {}
 
-    parts = [f'lark-cli api {method} "{path}"']
+    args = [LARK_CLI, "api", method, path, "--as", LARK_IDENTITY]
     if params is not None:
-        parts.append(f"--params {shlex.quote(json.dumps(params, ensure_ascii=False))}")
+        args.extend(["--params", json.dumps(params, ensure_ascii=False)])
     if payload is not None:
-        parts.append(f"--data {shlex.quote(json.dumps(payload, ensure_ascii=False))}")
-    cmd = " ".join(parts)
-    output, code = run_cmd(cmd, timeout=timeout)
-    if code != 0 or not output:
-        return {}
-    try:
-        return json.loads(output)
-    except json.JSONDecodeError:
-        return {}
+        args.extend(["--data", json.dumps(payload, ensure_ascii=False)])
+    return run_json_cmd(args, timeout=timeout)
 
 
 def extract_bitable_text(value):
@@ -500,6 +504,162 @@ def build_trace_summary(truth_payload, trace_events):
     }
 
 
+def normalize_operational_follow_up(truth_payload):
+    truth_payload = unwrap_flowmind_payload(truth_payload)
+    follow_up = truth_payload.get("operationalFollowUp")
+    if not isinstance(follow_up, dict):
+        return {
+            "projection_state": "",
+            "flowmind_status": "",
+            "last_governance_status": "",
+            "last_governance_feedback": "",
+            "local_status": "",
+            "needs_follow_up": "",
+            "follow_up_kind": "",
+            "next_actor": "",
+            "is_terminal_local": "",
+            "reason": "",
+            "note": "",
+            "evidence_refs_text": "",
+            "missing_fields_text": "",
+        }
+
+    return {
+        "projection_state": str(follow_up.get("projectionState") or ""),
+        "flowmind_status": str(follow_up.get("flowmindStatus") or ""),
+        "last_governance_status": str(follow_up.get("lastGovernanceStatus") or ""),
+        "last_governance_feedback": str(follow_up.get("lastGovernanceFeedback") or ""),
+        "local_status": str(follow_up.get("localStatus") or ""),
+        "needs_follow_up": "" if follow_up.get("needsFollowUp") is None else str(bool(follow_up.get("needsFollowUp"))).lower(),
+        "follow_up_kind": str(follow_up.get("followUpKind") or ""),
+        "next_actor": str(follow_up.get("nextActor") or ""),
+        "is_terminal_local": "" if follow_up.get("isTerminalLocal") is None else str(bool(follow_up.get("isTerminalLocal"))).lower(),
+        "reason": str(follow_up.get("reason") or ""),
+        "note": str(follow_up.get("note") or ""),
+        "evidence_refs_text": " | ".join(str(item) for item in (follow_up.get("evidenceRefs") or []) if str(item).strip())[:1000],
+        "missing_fields_text": " | ".join(str(item) for item in (follow_up.get("missingFields") or []) if str(item).strip())[:500],
+    }
+
+
+def collect_promise_runtime_state(promises, config):
+    state_by_promise = {}
+
+    for promise in promises:
+        promise_id = str(promise.get("id", "")).strip()
+        if not promise_id:
+            continue
+
+        truth_payload = {}
+        trace_events = []
+        feedback_events = []
+        feedback_summary = build_feedback_summary([])
+        trace_summary = build_trace_summary({}, [])
+        operational_follow_up = normalize_operational_follow_up({})
+        flowmind_id = str(promise.get("flowmind_candidate_id", "")).strip()
+        instance_id = str(
+            promise.get("instance_id")
+            or promise.get("flowmind_instance_id")
+            or promise.get("source_instance_id")
+            or ""
+        ).strip()
+
+        if flowmind_id:
+            truth_payload = flowmind_truth_request(config, flowmind_id)
+            trace_response = flowmind_trace_request(config, flowmind_id)
+            trace_events = normalize_trace_events(flowmind_id, trace_response)
+            truth_core = unwrap_flowmind_payload(truth_payload)
+            instance_id = instance_id or str(truth_core.get("instanceId") or "").strip()
+            feedback_response = flowmind_feedback_request(config, instance_id)
+            feedback_events = normalize_feedback_events(flowmind_id, feedback_response)
+            feedback_summary = build_feedback_summary(feedback_events)
+            trace_summary = build_trace_summary(truth_payload, trace_events)
+            operational_follow_up = normalize_operational_follow_up(truth_payload)
+
+        state_by_promise[promise_id] = {
+            "truth_payload": truth_payload,
+            "trace_events": trace_events,
+            "feedback_events": feedback_events,
+            "feedback_summary": feedback_summary,
+            "trace_summary": trace_summary,
+            "operational_follow_up": operational_follow_up,
+            "flowmind_candidate_id": flowmind_id,
+            "instance_id": instance_id,
+        }
+
+    return state_by_promise
+
+
+def build_review_state(promises, classified, promise_runtime_state):
+    normalized_promises = []
+    for promise in sorted(promises, key=lambda item: str(item.get("id", ""))):
+        promise_id = str(promise.get("id", "")).strip()
+        runtime_state = promise_runtime_state.get(promise_id, {})
+        trace_summary = runtime_state.get("trace_summary", {})
+        feedback_summary = runtime_state.get("feedback_summary", {})
+        operational_follow_up = runtime_state.get("operational_follow_up", {})
+        normalized_promises.append(
+            {
+                "promise_id": promise_id,
+                "title": str(promise.get("title", ""))[:200],
+                "status": str(promise.get("status", "")),
+                "priority": str(promise.get("priority", "")),
+                "due_date": str(promise.get("due_date", promise.get("deadline", ""))),
+                "flowmind_candidate_id": runtime_state.get("flowmind_candidate_id", ""),
+                "instance_id": runtime_state.get("instance_id", ""),
+                "flowmind_status": trace_summary.get("flowmind_status", ""),
+                "trace_event_count": trace_summary.get("trace_event_count", 0),
+                "last_trace_at": trace_summary.get("last_trace_at"),
+                "last_trace_summary": trace_summary.get("last_trace_summary", ""),
+                "latest_feedback_type": feedback_summary.get("latest_feedback_type", ""),
+                "latest_feedback_summary": feedback_summary.get("latest_feedback_summary", ""),
+                "follow_up_kind": operational_follow_up.get("follow_up_kind", ""),
+                "next_actor": operational_follow_up.get("next_actor", ""),
+                "needs_follow_up": operational_follow_up.get("needs_follow_up", ""),
+                "last_governance_feedback": operational_follow_up.get("last_governance_feedback", ""),
+            }
+        )
+
+    snapshot = {
+        "promise_count": len(normalized_promises),
+        "classified_counts": {
+            "total": classified["total"],
+            "overdue": len(classified["overdue"]),
+            "due_today": len(classified["due_today"]),
+            "due_soon": len(classified["due_soon"]),
+            "in_progress": len(classified["in_progress"]),
+            "completed": len(classified["completed"]),
+            "blocked": len(classified["blocked"]),
+            "pending_count": classified.get("pending_count", 0),
+        },
+        "promises": normalized_promises,
+    }
+    digest = hashlib.sha256(
+        json.dumps(snapshot, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    return {
+        "digest": digest,
+        "snapshot": snapshot,
+    }
+
+
+def should_skip_review(state_path, current_digest):
+    previous = load_json(state_path)
+    if not previous:
+        return False
+    return previous.get("digest") == current_digest
+
+
+def persist_review_state(state_path, review_state):
+    save_json(
+        state_path,
+        {
+            "digest": review_state["digest"],
+            "checked_at": datetime.now().astimezone().isoformat(),
+            "snapshot": review_state["snapshot"],
+        },
+    )
+
+
 def list_fields(app_token, table_id):
     result = run_json_cmd(
         [
@@ -507,7 +667,7 @@ def list_fields(app_token, table_id):
             "base",
             "+field-list",
             "--as",
-            "bot",
+            LARK_IDENTITY,
             "--base-token",
             app_token,
             "--table-id",
@@ -529,6 +689,10 @@ def ensure_main_table_fields(app_token, table_id):
         {"name": "flowmind_status", "type": "text"},
         {"name": "last_trace_at", "type": "datetime", "style": {"format": "yyyy/MM/dd HH:mm"}},
         {"name": "trace_summary", "type": "text"},
+        {"name": "follow_up_kind", "type": "text"},
+        {"name": "next_actor", "type": "text"},
+        {"name": "needs_follow_up", "type": "text"},
+        {"name": "last_governance_feedback", "type": "text"},
     ]
 
     for spec in required_specs:
@@ -540,7 +704,7 @@ def ensure_main_table_fields(app_token, table_id):
                 "base",
                 "+field-create",
                 "--as",
-                "bot",
+                LARK_IDENTITY,
                 "--base-token",
                 app_token,
                 "--table-id",
@@ -555,7 +719,7 @@ def ensure_main_table_fields(app_token, table_id):
     return existing_fields
 
 
-def sync_to_bitable(promises, config):
+def sync_to_bitable(promises, config, promise_runtime_state=None):
     app_token = config["bitable_app_token"]
     main_table_id = config["bitable_main_table_id"]
     trace_table_id = config["bitable_trace_table_id"]
@@ -582,28 +746,19 @@ def sync_to_bitable(promises, config):
         if not promise_id:
             continue
 
-        truth_payload = {}
-        trace_events = []
-        feedback_events = []
-        feedback_summary = build_feedback_summary([])
-        trace_summary = build_trace_summary({}, [])
-        flowmind_id = str(promise.get("flowmind_candidate_id", "")).strip()
-        instance_id = str(
-            promise.get("instance_id")
-            or promise.get("flowmind_instance_id")
-            or promise.get("source_instance_id")
-            or ""
-        ).strip()
+        runtime_state = (promise_runtime_state or {}).get(promise_id, {})
+        truth_payload = runtime_state.get("truth_payload", {})
+        trace_events = runtime_state.get("trace_events", [])
+        feedback_events = runtime_state.get("feedback_events", [])
+        feedback_summary = runtime_state.get("feedback_summary", build_feedback_summary([]))
+        trace_summary = runtime_state.get("trace_summary", build_trace_summary({}, []))
+        operational_follow_up = runtime_state.get("operational_follow_up", normalize_operational_follow_up({}))
+        flowmind_id = runtime_state.get(
+            "flowmind_candidate_id",
+            str(promise.get("flowmind_candidate_id", "")).strip(),
+        )
+
         if flowmind_id:
-            truth_payload = flowmind_truth_request(config, flowmind_id)
-            trace_response = flowmind_trace_request(config, flowmind_id)
-            trace_events = normalize_trace_events(flowmind_id, trace_response)
-            truth_core = unwrap_flowmind_payload(truth_payload)
-            instance_id = instance_id or str(truth_core.get("instanceId") or "").strip()
-            feedback_response = flowmind_feedback_request(config, instance_id)
-            feedback_events = normalize_feedback_events(flowmind_id, feedback_response)
-            feedback_summary = build_feedback_summary(feedback_events)
-            trace_summary = build_trace_summary(truth_payload, trace_events)
             trace_summary_by_promise[promise_id] = trace_summary
 
             if trace_table_id:
@@ -669,6 +824,21 @@ def sync_to_bitable(promises, config):
             note_parts.append("trace empty")
         if feedback_summary["notes_text"]:
             note_parts.append(f"FlowMind feedback: {feedback_summary['notes_text']}")
+        if operational_follow_up.get("follow_up_kind"):
+            note_parts.append(
+                "Operational follow-up: "
+                f"{operational_follow_up['follow_up_kind']}"
+                + (
+                    f" -> {operational_follow_up.get('next_actor')}"
+                    if operational_follow_up.get("next_actor")
+                    else ""
+                )
+            )
+        elif operational_follow_up.get("missing_fields_text"):
+            note_parts.append(
+                "Operational follow-up missing: "
+                f"{operational_follow_up['missing_fields_text']}"
+            )
         fields = {
             "promise_id": promise_id,
             "title": str(promise.get("title", ""))[:200],
@@ -680,6 +850,10 @@ def sync_to_bitable(promises, config):
             "trace_summary": trace_summary["trace_summary"],
             "trace_event_count": trace_summary["trace_event_count"],
             "last_trace_summary": trace_summary["last_trace_summary"],
+            "follow_up_kind": operational_follow_up["follow_up_kind"],
+            "next_actor": operational_follow_up["next_actor"],
+            "needs_follow_up": operational_follow_up["needs_follow_up"],
+            "last_governance_feedback": operational_follow_up["last_governance_feedback"],
             "备注": " | ".join(note_parts)[:1000],
         }
 
@@ -773,7 +947,8 @@ def send_to_feishu(classified, sync_result, config):
         return True
 
     cmd = (
-        f"lark-cli im +messages-send --chat-id {shlex.quote(config['chat_id'])} "
+        f"{shlex.quote(LARK_CLI)} im +messages-send --as {shlex.quote(LARK_IDENTITY)} "
+        f"--chat-id {shlex.quote(config['chat_id'])} "
         f"--text {shlex.quote(message)}"
     )
     _, code = run_cmd(cmd)
@@ -785,6 +960,7 @@ def main():
     print("📋 开始承诺审查 v3 (Bitable 主输出 + Trace 子表)...")
     config = load_config()
     print(f"  配置文件: {config['config_path']}")
+    state_path = Path(os.environ.get("PROMISE_REVIEW_STATE_PATH", str(DEFAULT_STATE_PATH)))
 
     print("\n1. 扫描承诺文件...")
     promises = scan_promises()
@@ -793,20 +969,30 @@ def main():
     print("2. 分类统计...")
     classified = classify_promises(promises)
 
-    print("3. 同步到 Bitable...")
-    sync_result = sync_to_bitable(promises, config)
+    print("3. 收集 FlowMind / 承诺投影状态...")
+    promise_runtime_state = collect_promise_runtime_state(promises, config)
+    review_state = build_review_state(promises, classified, promise_runtime_state)
+    print(f"  当前状态摘要: {review_state['digest'][:12]}")
+
+    if ONLY_IF_CHANGED and should_skip_review(state_path, review_state["digest"]):
+        print("  无变化，跳过 Bitable 同步、报告写入和飞书群发送")
+        return None
+
+    print("4. 同步到 Bitable...")
+    sync_result = sync_to_bitable(promises, config, promise_runtime_state=promise_runtime_state)
     print(
         f"  主表同步 {sync_result['main_sync_count']} 条，"
         f"Trace 子表同步 {sync_result['trace_sync_count']} 条"
     )
 
     report_path = REPORT_DIR / f"review-{datetime.now().strftime('%Y%m%d')}.md"
-    print("4. 写本地 MD 备份...")
+    print("5. 写本地 MD 备份...")
     write_backup_report(report_path, classified, sync_result, config)
     print(f"  备份报告: {report_path}")
 
-    print("5. 发送审查摘要到飞书群...")
+    print("6. 发送审查摘要到飞书群...")
     send_to_feishu(classified, sync_result, config)
+    persist_review_state(state_path, review_state)
 
     print("\n✅ 承诺审查完成！")
     return str(report_path)

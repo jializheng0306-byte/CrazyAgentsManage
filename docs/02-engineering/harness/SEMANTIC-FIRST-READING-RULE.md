@@ -33,6 +33,9 @@
 5. [Graphify-轻量本体方案借鉴评估-2026-05-02.md](/home/flowmind/FlowMindDeploy/docs/01-product/Graphify-轻量本体方案借鉴评估-2026-05-02.md)
 6. [hermes-flowmind-compatibility-matrix-2026-04-30.md](/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/hermes-flowmind-compatibility-matrix-2026-04-30.md)
 7. [hermes-flowmind-link-manifest-v1.json](/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/hermes-flowmind-link-manifest-v1.json)
+8. [治理证据资产索引-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/05-version-control/%E6%B2%BB%E7%90%86%E8%AF%81%E6%8D%AE%E8%B5%84%E4%BA%A7%E7%B4%A2%E5%BC%95-v1-2026-05-07.md)
+9. [运营Follow-Up最小默认解释-v0-2026-05-14.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E8%BF%90%E8%90%A5Follow-Up%E6%9C%80%E5%B0%8F%E9%BB%98%E8%AE%A4%E8%A7%A3%E9%87%8A-v0-2026-05-14.md)
+10. [Slice1-read-model-projection-任务分解-v0-2026-05-14.md](/home/flowmind/FlowMindDeploy/docs/01-product/Slice1-read-model-projection-%E4%BB%BB%E5%8A%A1%E5%88%86%E8%A7%A3-v0-2026-05-14.md)
 
 这一层回答：
 
@@ -40,6 +43,8 @@
 - 哪些状态只是 candidate，哪些已经进入 truth 可读面
 - 哪些通道是正式支持的，哪些仍是 partial/incompatible
 - 当前动作属于 review decision、truth promotion 还是 operational feedback
+- 当前执行包字段属于展示壳、解释层、证据锚点、边界层还是 readiness gate
+- 当前动作属于 `review decision`、`truth promotion` 还是 `operational feedback`
 - 当前执行包字段属于展示壳、解释层、证据锚点、边界层还是 readiness gate
 
 ### 第 2 层：双仓产品与协同层
@@ -54,12 +59,20 @@
 6. [handoff-packet-contract-v1-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/handoff-packet-contract-v1-2026-05-04.md)
 7. [Phase6-默认SOP与提示词同步-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/Phase6-默认SOP与提示词同步-2026-05-04.md)
 8. [外部执行面-读写边界-v1-2026-05-04.md](/home/flowmind/FlowMindDeploy/docs/01-product/外部执行面-读写边界-v1-2026-05-04.md)
+9. [治理动作分层口径-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E6%B2%BB%E7%90%86%E5%8A%A8%E4%BD%9C%E5%88%86%E5%B1%82%E5%8F%A3%E5%BE%84-v1-2026-05-07.md)
+10. [执行包字段对照与消费顺序-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E6%89%A7%E8%A1%8C%E5%8C%85%E5%AD%97%E6%AE%B5%E5%AF%B9%E7%85%A7%E4%B8%8E%E6%B6%88%E8%B4%B9%E9%A1%BA%E5%BA%8F-v1-2026-05-07.md)
+11. [治理证据资产索引-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/05-version-control/%E6%B2%BB%E7%90%86%E8%AF%81%E6%8D%AE%E8%B5%84%E4%BA%A7%E7%B4%A2%E5%BC%95-v1-2026-05-07.md)
+12. [运营Follow-Up最小默认解释-v0-2026-05-14.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E8%BF%90%E8%90%A5Follow-Up%E6%9C%80%E5%B0%8F%E9%BB%98%E8%AE%A4%E8%A7%A3%E9%87%8A-v0-2026-05-14.md)
+13. [Slice1-read-model-projection-任务分解-v0-2026-05-14.md](/home/flowmind/FlowMindDeploy/docs/01-product/Slice1-read-model-projection-%E4%BB%BB%E5%8A%A1%E5%88%86%E8%A7%A3-v0-2026-05-14.md)
 
 这一层回答：
 
 - 当前产品主线怎样解释这些对象
 - 双仓里哪一侧是语义、治理、展示或回写的权威方
 - 当前 UI/运营面到底在消费什么状态
+- 当前动作是否仍保持 `review decision`、`truth promotion`、`operational feedback` 三层分离
+- 当前 handoff 是否受 `handoffContract` 显式约束
+- 当前 `operational follow-up` 是否继续沿用同一 Slice 1 projection，而不是被 Crazy / Hermes 本地重解释
 
 ### 第 3 层：Hermes 宿主平台运行与运营层
 
@@ -112,11 +125,11 @@
 补充：
 
 > 如果任务还要产出 handoff / review / closeout 内容，则默认继续遵守：
-> `truth.status` 定主状态，`feedback.eventType` 只进运营层，`timeline` 读 `traceEvents[]`，`handoff` 读 `moduleDetails.handoff + semanticContext + latestEvidence`，不回退为人工自由文本主体。
+> `truth.status` 定主状态，`feedback.eventType` 只进运营层，`timeline` 读 `traceEvents[]`，`handoff` 读 `moduleDetails.handoff + semanticContext + latestEvidence`，`operational follow-up` 读同一 Slice 1 projection，不回退为人工自由文本主体。
 
 补充：
 
-> 如果任务还涉及 `confirm / reject / clarify / approve / commit / deferred / cancelled` 等动作或事件，必须先按 FlowMind canonical 判断它属于 review decision、truth promotion 还是 operational feedback，再继续分析入口、回写与消费面。
+> 如果任务还涉及 `confirm / reject / clarify / approve / commit / deferred / cancelled` 等动作或事件，必须先按 FlowMind canonical 判断它属于 `review decision`、`truth promotion` 还是 `operational feedback`，再继续分析入口、回写与消费面。
 
 补充：
 

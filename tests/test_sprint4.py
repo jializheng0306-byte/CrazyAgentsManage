@@ -432,6 +432,110 @@ class TestV04ContextManagementAPIs:
             'Truth status approved requires latestEvidence, but no evidence snapshot is present.'
         ]
 
+    def test_runtime_handoffs_exposes_operational_follow_up_projection(self, client, monkeypatch):
+        monkeypatch.setattr(
+            webui_api,
+            '_safe_flowmind_request',
+            lambda *args, **kwargs: {
+                'record': {'id': 'rec-follow-up-1'},
+                'mode': 'derived',
+                'gaps': [],
+                'steps': [],
+                'operationalFollowUp': {
+                    'projectionState': 'resolved',
+                    'flowmindStatus': 'approved',
+                    'lastGovernanceStatus': 'approved',
+                    'lastGovernanceFeedback': 'blocked',
+                    'localStatus': 'blocked',
+                    'needsFollowUp': True,
+                    'followUpKind': 'blocked',
+                    'nextActor': 'local_operator',
+                    'isTerminalLocal': False,
+                    'reason': 'Replay ready sample with complete blocked follow-up context.',
+                    'note': 'Use upstream projection as the only local interpretation input.',
+                    'evidenceRefs': ['review:blocked-strong-001', 'candidate:blocked-strong-001'],
+                    'updatedAt': '2026-05-16T00:39:20.148Z',
+                    'missingFields': [],
+                },
+                'moduleDetails': {
+                    'handoff': {
+                        'title': 'Unified Handoff Packet',
+                        'summary': 'Upstream semantic packet.',
+                        'sections': [],
+                    }
+                },
+            },
+        )
+        resp = client.get('/api/runtime/handoffs?recordId=rec-follow-up-1')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['operationalFollowUp'] == {
+            'projectionState': 'resolved',
+            'flowmindStatus': 'approved',
+            'lastGovernanceStatus': 'approved',
+            'lastGovernanceFeedback': 'blocked',
+            'localStatus': 'blocked',
+            'needsFollowUp': True,
+            'followUpKind': 'blocked',
+            'nextActor': 'local_operator',
+            'isTerminalLocal': False,
+            'reason': 'Replay ready sample with complete blocked follow-up context.',
+            'note': 'Use upstream projection as the only local interpretation input.',
+            'evidenceRefs': ['review:blocked-strong-001', 'candidate:blocked-strong-001'],
+            'updatedAt': '2026-05-16T00:39:20.148Z',
+            'missingFields': [],
+        }
+
+    def test_runtime_handoffs_falls_back_to_handoff_operational_follow_up_section(self, client, monkeypatch):
+        monkeypatch.setattr(
+            webui_api,
+            '_safe_flowmind_request',
+            lambda *args, **kwargs: {
+                'record': {'id': 'rec-follow-up-2'},
+                'mode': 'derived',
+                'gaps': [],
+                'steps': [],
+                'moduleDetails': {
+                    'handoff': {
+                        'title': 'Unified Handoff Packet',
+                        'summary': 'Upstream semantic packet.',
+                        'sections': [
+                            {
+                                'title': 'Operational Follow-Up',
+                                'items': [
+                                    {'label': 'Projection State', 'value': 'unknown'},
+                                    {'label': 'FlowMind Status', 'value': 'approved'},
+                                    {'label': 'Last Governance Status', 'value': 'approved'},
+                                    {'label': 'Reason', 'value': 'Missing follow-up feedback in replay.'},
+                                    {'label': 'Note', 'value': 'Follow-up judgment remains unknown.'},
+                                    {'label': 'Follow-Up Evidence Refs', 'value': 'review:blocked-strong-001, candidate:blocked-strong-001'},
+                                ],
+                            }
+                        ],
+                    }
+                },
+            },
+        )
+        resp = client.get('/api/runtime/handoffs?recordId=rec-follow-up-2')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['operationalFollowUp'] == {
+            'projectionState': 'unknown',
+            'flowmindStatus': 'approved',
+            'lastGovernanceStatus': 'approved',
+            'lastGovernanceFeedback': None,
+            'localStatus': None,
+            'needsFollowUp': None,
+            'followUpKind': None,
+            'nextActor': None,
+            'isTerminalLocal': None,
+            'reason': 'Missing follow-up feedback in replay.',
+            'note': 'Follow-up judgment remains unknown.',
+            'evidenceRefs': ['review:blocked-strong-001', 'candidate:blocked-strong-001'],
+            'updatedAt': None,
+            'missingFields': [],
+        }
+
     def test_runtime_handoffs_unavailable_keeps_contract_shape(self, client, monkeypatch):
         monkeypatch.setattr(webui_api, '_safe_flowmind_request', lambda *args, **kwargs: None)
         resp = client.get('/api/runtime/handoffs?recordId=rec-missing')
@@ -452,6 +556,7 @@ class TestV04ContextManagementAPIs:
         assert data['handoffContract']['blockingIssues'] == [
             'FlowMind replay upstream unavailable for the provided recordId.'
         ]
+        assert data['operationalFollowUp'] is None
         assert data['handoffContract']['missingFields'] == [
             'Truth Status',
             'Latest Evidence Summary',
@@ -503,6 +608,7 @@ class TestPromiseTimeline:
         body = resp.data.decode('utf-8', errors='replace')
         assert 'timeline.js' in body
         assert 'candidateIdInput' in body
+        assert 'operationalFollowUp' in body
 
     def test_timeline_css_reachable(self, client):
         resp = client.get('/static/css/timeline.css')
@@ -510,6 +616,7 @@ class TestPromiseTimeline:
         data = resp.data.decode()
         assert '.tl-hero' in data
         assert '.tl-event' in data
+        assert '.tl-follow-up-card' in data
 
     def test_timeline_js_reachable(self, client):
         resp = client.get('/static/js/timeline.js')
@@ -519,6 +626,8 @@ class TestPromiseTimeline:
         assert '/api/promise-review/trace/' in data
         assert 'contract.missingFields' in data
         assert 'contract.executionBoundaryMissingFields' in data
+        assert 'renderOperationalFollowUp' in data
+        assert 'Operational Follow-Up 缺失' in data
 
     def test_promise_review_trace_api_normalizes_upstream(self, client, monkeypatch):
         monkeypatch.setattr(

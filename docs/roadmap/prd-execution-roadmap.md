@@ -95,6 +95,11 @@ scripts/check_cross_repo_prd_sync.sh
 - `confirmed / blocked / clarified / deferred / cancelled` 属于 operational feedback events
 - `moduleDetails.handoff / semanticContext / latestEvidence / executionBoundary / handoffContract` 不得混写成同一种摘要
 - closeout / governance 结论应按 `change record -> deploy fact -> acceptance/eval -> closeout seed -> governance report` 组合读取，而不是分散挑读
+- `review decision actions` 继续只负责评审动作层
+- `truth promotion actions` 继续只负责真值提升层
+- `operational feedback events` 继续只负责运营反馈层
+- `operational follow-up` 默认消费同一 Slice 1 projection，不由 Crazy / Hermes 本地重解释 `needsFollowUp / followUpKind / nextActor`
+- `Slice 1` authoritative docs 继续是 `运营Follow-Up最小默认解释-v0-2026-05-14.md`、`Slice1-read-model-projection-任务分解-v0-2026-05-14.md` 与 `Slice1-read-model-projection-验收证据骨架-v0-2026-05-14.md`
 
 ## 当前产品共识
 

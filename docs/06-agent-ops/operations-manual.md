@@ -52,6 +52,7 @@
    - 午间论文(12:00): 检查论文采集
    - 晚间趋势(20:00): 检查趋势分析
    - 每日反思(23:00): 检查反思报告
+   - AI Cron: 检查 `~/.hermes/cron/jobs.json` 是否出现未受仓库追踪的新 job
 
 4. **承诺状态检查**
    - 待处理承诺数
@@ -90,6 +91,9 @@ systemctl status cron
 # 检查定时任务配置
 crontab -l
 
+# 检查 Hermes AI cron job
+cat ~/.hermes/cron/jobs.json
+
 # 检查执行日志
 tail -f /root/.hermes/logs/cron.log
 
@@ -99,9 +103,22 @@ bash /root/.hermes/scripts/morning-intel.sh
 
 **处理方法**:
 1. 确认cron服务运行中
-2. 检查脚本执行权限
-3. 检查脚本语法错误
-4. 查看错误日志定位问题
+2. 区分是 `system crontab` 还是 `~/.hermes/cron/jobs.json` 的 job 在失败
+3. 检查脚本执行权限
+4. 检查脚本语法错误
+5. 查看错误日志定位问题
+
+#### 1.1 AI Cron 创建治理
+
+当需要创建 Hermes 自己的 AI cron job 时，必须先遵守：
+
+- `~/.hermes/cron/jobs.json` 是 runtime-local state，不是 repo truth
+- prompt 中引用本地脚本前，先校验文件存在且为 git-tracked
+- backlog / 设计稿 / issue 评论中的候选脚本名，不能直接创建成 live job
+
+详细规则见：
+
+- [hermes-runtime-ai-cron-guard-governance-2026-05-16.md](/home/flowmind/CrazyAgentsManage/docs/06-agent-ops/hermes-runtime-ai-cron-guard-governance-2026-05-16.md)
 
 #### 2. 飞书消息发送失败
 **症状**: 消息无法发送到飞书群
