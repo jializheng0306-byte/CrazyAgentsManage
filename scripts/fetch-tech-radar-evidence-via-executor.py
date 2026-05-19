@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+from difflib import SequenceMatcher
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -16,12 +18,169 @@ from executor_readonly_helper import call_executor_tool, render_markdown_section
 
 
 SUPPORTED_SOURCES = {"arxiv", "hn", "github"}
+STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "as",
+    "at",
+    "by",
+    "for",
+    "from",
+    "in",
+    "into",
+    "of",
+    "on",
+    "or",
+    "the",
+    "to",
+    "via",
+    "with",
+}
 
 
 def priority_rank(priority: str) -> int:
     value = str(priority or "").upper()
     order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
     return order.get(value, 99)
+
+
+def normalize_title(value: str) -> str:
+    text = str(value or "").lower()
+    text = text.replace("≠", " not ")
+    text = text.replace("&", " and ")
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return " ".join(text.split())
+
+
+def title_tokens(value: str, *, drop_stopwords: bool = True) -> list[str]:
+    tokens = normalize_title(value).split()
+    if not drop_stopwords:
+        return tokens
+    return [token for token in tokens if token not in STOPWORDS]
+
+
+def anchor_tokens(title: str) -> set[str]:
+    full_tokens = title_tokens(title)
+    if not full_tokens:
+        return set()
+
+    prefix = str(title or "").split(":", 1)[0].strip()
+    prefix_tokens = title_tokens(prefix)
+    if len(prefix_tokens) == 1:
+        return set(prefix_tokens)
+    if len(prefix_tokens) >= 3:
+        return set(prefix_tokens)
+    return set(full_tokens)
+
+
+def unique_prefix_token(title: str) -> str:
+    prefix = str(title or "").split(":", 1)[0].strip()
+    prefix_tokens = title_tokens(prefix)
+    if len(prefix_tokens) == 1 and len(prefix_tokens[0]) >= 5:
+        return prefix_tokens[0]
+    return ""
+
+
+def build_arxiv_queries(title: str) -> list[str]:
+    candidates = []
+    seen = set()
+
+    def add(value: str) -> None:
+        cleaned = " ".join(str(value or "").split())
+        if not cleaned:
+            return
+        marker = cleaned.lower()
+        if marker in seen:
+            return
+        seen.add(marker)
+        candidates.append(cleaned)
+
+    raw_title = str(title or "").strip()
+    add(raw_title)
+
+    prefix = raw_title.split(":", 1)[0].strip()
+    if prefix and prefix != raw_title:
+        add(prefix)
+        add(re.sub(r"\s*\([^)]*\)", "", prefix).strip())
+
+    return candidates[:4]
+
+
+def score_crossref_candidate(target_title: str, candidate_title: str) -> float:
+    target_normalized = normalize_title(target_title)
+    candidate_normalized = normalize_title(candidate_title)
+    if not target_normalized or not candidate_normalized:
+        return 0.0
+    if target_normalized == candidate_normalized:
+        return 1.0
+
+    target_terms = set(title_tokens(target_title))
+    candidate_terms = set(title_tokens(candidate_title))
+    if not target_terms or not candidate_terms:
+        return 0.0
+
+    overlap = len(target_terms & candidate_terms) / len(target_terms)
+    sequence = SequenceMatcher(None, target_normalized, candidate_normalized).ratio()
+
+    anchors = anchor_tokens(target_title)
+    anchor_overlap = 0.0
+    if anchors:
+        anchor_overlap = len(anchors & candidate_terms) / len(anchors)
+
+    contains_bonus = 0.0
+    if candidate_normalized in target_normalized or target_normalized in candidate_normalized:
+        contains_bonus = 0.1
+
+    score = min(1.0, overlap * 0.45 + sequence * 0.35 + anchor_overlap * 0.2 + contains_bonus)
+
+    strict_prefix = unique_prefix_token(target_title)
+    if strict_prefix and strict_prefix not in candidate_terms:
+        score *= 0.35
+
+    return score
+
+
+def dedupe_crossref_candidates(candidates: list[dict]) -> list[dict]:
+    best_by_key: dict[str, dict] = {}
+    for candidate in candidates:
+        title = candidate.get("title") or "Untitled"
+        key = (
+            str(candidate.get("doi") or "").lower()
+            or str(candidate.get("url") or "").lower()
+            or normalize_title(title)
+        )
+        previous = best_by_key.get(key)
+        if previous is None or candidate.get("match_score", 0.0) > previous.get("match_score", 0.0):
+            best_by_key[key] = candidate
+    return list(best_by_key.values())
+
+
+def select_crossref_items(entry_title: str, payloads: list[dict], max_results: int) -> list[dict]:
+    scored = []
+    for payload in payloads:
+        for item in ((payload.get("message") or {}).get("items") or []):
+            title_values = item.get("title") or []
+            title = title_values[0] if title_values else "Untitled"
+            score = score_crossref_candidate(entry_title, title)
+            if score < 0.5:
+                continue
+            scored.append(
+                {
+                    "kind": "crossref",
+                    "title": title,
+                    "url": item.get("URL") or "",
+                    "container": (item.get("container-title") or [""])[0],
+                    "doi": item.get("DOI") or "",
+                    "match_score": round(score, 3),
+                }
+            )
+
+    ranked = sorted(
+        dedupe_crossref_candidates(scored),
+        key=lambda item: (-item.get("match_score", 0.0), item.get("title") or ""),
+    )
+    return ranked[:max_results]
 
 
 def load_entries(radar_file: Path) -> list[dict]:
@@ -79,29 +238,29 @@ def filter_entries(entries: list[dict], priorities: set[str], statuses: set[str]
 def fetch_entry_evidence(entry: dict, max_results: int) -> dict:
     source = str(entry.get("source", "")).lower()
     if source == "arxiv":
-        payload = call_executor_tool(
-            source="crossref-readonly",
-            group="works",
-            tool="searchWorks",
-            payload={
-                "query": entry.get("name", ""),
-                "rows": max_results,
-                "sort": "relevance",
-                "order": "desc",
-            },
-        )
-        items = []
-        for item in ((payload.get("message") or {}).get("items") or [])[:max_results]:
-            title_values = item.get("title") or []
-            items.append(
-                {
-                    "kind": "crossref",
-                    "title": title_values[0] if title_values else "Untitled",
-                    "url": item.get("URL") or "",
-                    "container": (item.get("container-title") or [""])[0],
-                }
-            )
-        return {"executorSource": "crossref-readonly", "items": items}
+        payloads = []
+        rows = min(max(max_results * 2, 4), 8)
+        for query in build_arxiv_queries(entry.get("name", "")):
+            try:
+                payloads.append(
+                    call_executor_tool(
+                        source="crossref-readonly",
+                        group="works",
+                        tool="searchWorks",
+                        payload={
+                            "query": query,
+                            "rows": rows,
+                            "sort": "relevance",
+                            "order": "desc",
+                        },
+                    )
+                )
+            except RuntimeError:
+                continue
+        return {
+            "executorSource": "crossref-readonly",
+            "items": select_crossref_items(entry.get("name", ""), payloads, max_results=max_results),
+        }
 
     if source == "hn":
         payload = call_executor_tool(
@@ -178,7 +337,7 @@ def render_entry(entry: dict, evidence: dict) -> list[str]:
 
     items = evidence.get("items") or []
     if not items:
-        lines.append("- 补证据结果: （无返回结果）")
+        lines.append("- 补证据结果: （未找到可采纳结果）")
         return lines
 
     lines.append("- 补证据结果:")

@@ -35,6 +35,7 @@
       "passwordEnv": "CRAZY_LIVE_WEBUI_PASSWORD",
       "deployRoot": "/root/CrazyAgentsManage",
       "compareFiles": [
+        "shared-context/tech-radar.json",
         "shared-context/executor-sources/crossref-works-openapi.v1.json",
         "shared-context/executor-sources/github-repo-readonly-openapi.v1.json",
         "shared-context/executor-sources/hn-algolia-search-openapi.v1.json",

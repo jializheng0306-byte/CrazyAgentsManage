@@ -48,6 +48,19 @@
 - 优先 `pending`
 - 若无结果，回退到 `adopt / trial / assess` 中的 `P0/P1` 条目
 
+### 2.4 宿主同步口径补齐
+
+后续验证又发现一个宿主事实层缺口：
+
+- `crazy-runtime-live` 同步清单此前未包含 `shared-context/tech-radar.json`
+- 这会导致 `ALI-HERMES` 上的 `tech-radar-review.sh` 继续读取旧版 radar truth
+
+因此同步清单已补齐：
+
+- `shared-context/tech-radar.json`
+
+这样宿主周审查与仓库当前 radar truth 才能保持同一口径。
+
 ## 3. 宿主实测结果
 
 在 `ALI-HERMES` 上运行：
