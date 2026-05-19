@@ -123,6 +123,7 @@
 - [real-capability-validation-runbook-2026-05-18.md](real-capability-validation-runbook-2026-05-18.md)
 - [hermes-executor-readonly-delegation-readiness-2026-05-18.md](hermes-executor-readonly-delegation-readiness-2026-05-18.md)
 - [hermes-executor-readonly-delegation-spec-v1-2026-05-19.md](hermes-executor-readonly-delegation-spec-v1-2026-05-19.md)
+- [tech-radar-review-wave2-evaluation-2026-05-19.md](tech-radar-review-wave2-evaluation-2026-05-19.md)
 
 ## 四系统联动分析
 - [crazy-hermes-flowmind-executor-embedding-analysis.md](crazy-hermes-flowmind-executor-embedding-analysis.md)

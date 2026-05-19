@@ -1,0 +1,30 @@
+{
+  "version": "v1",
+  "date": "2026-05-19",
+  "wave2": {
+    "primaryCandidate": {
+      "taskType": "tech-radar.review",
+      "entrypoint": "scripts/tech-radar-review.sh",
+      "decision": "recommended",
+      "executorFit": "evidence-enrichment-substep",
+      "notRecommendedFor": [
+        "weekly-summary-generation",
+        "tech-radar-json-authority-write"
+      ],
+      "reasons": [
+        "Current script is mostly local facts aggregation over repo/shared-context and recent intel markdowns.",
+        "The real missing value is entry-level external evidence refresh for high-priority pending items.",
+        "Existing validated sources crossref-readonly and hn-readonly can be reused immediately."
+      ],
+      "firstImplementationShape": {
+        "scope": "P0/P1 + pending radar entries only",
+        "mode": "readonly",
+        "delegationUnit": "entry-level evidence enrichment",
+        "preferredSources": [
+          "crossref-readonly",
+          "hn-readonly"
+        ]
+      }
+    }
+  }
+}
