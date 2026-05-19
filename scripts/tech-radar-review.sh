@@ -77,11 +77,12 @@ echo "3. 通过 executor 为 P0/P1 pending 条目补证据..." | tee -a "$LOG_FI
     python3 /root/CrazyAgentsManage/scripts/runtime/ensure_crossref_readonly_source.py >/dev/null 2>&1 || true
     python3 /root/CrazyAgentsManage/scripts/runtime/ensure_github_repo_readonly_source.py --required-tool listRepoCommits >/dev/null 2>&1 || true
     python3 /root/CrazyAgentsManage/scripts/runtime/ensure_hn_readonly_source.py >/dev/null 2>&1 || true
+    python3 /root/CrazyAgentsManage/scripts/runtime/ensure_x_publish_readonly_source.py --required-tool getTweetResult >/dev/null 2>&1 || true
     python3 "$SCRIPT_DIR/fetch-tech-radar-evidence-via-executor.py" \
         --radar-file "$RADAR_FILE" \
         --priorities "P0,P1" \
         --statuses "pending" \
-        --max-entries 5 \
+        --max-entries 6 \
         --max-results 3
 } >> "$REPORT_FILE" 2>&1 || {
     echo "" >> "$REPORT_FILE"

@@ -6,8 +6,10 @@ from __future__ import annotations
 import argparse
 from difflib import SequenceMatcher
 import json
+import os
 import re
 import sys
+import time
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -17,7 +19,10 @@ if str(SCRIPT_DIR) not in sys.path:
 from executor_readonly_helper import call_executor_tool, render_markdown_section
 
 
-SUPPORTED_SOURCES = {"arxiv", "hn", "github"}
+SUPPORTED_SOURCES = {"arxiv", "hn", "github", "x/twitter"}
+COMPACT_FULL_COVERAGE_SOURCES = {"github", "hn", "x/twitter"}
+COMPACT_FULL_COVERAGE_LIMIT = 2
+DEFAULT_GITHUB_CACHE_TTL_SECONDS = 3600
 STOPWORDS = {
     "a",
     "an",
@@ -37,6 +42,58 @@ STOPWORDS = {
     "via",
     "with",
 }
+
+
+def github_cache_ttl_seconds() -> int:
+    raw_value = os.environ.get("TECH_RADAR_GITHUB_CACHE_TTL_SECONDS", str(DEFAULT_GITHUB_CACHE_TTL_SECONDS))
+    try:
+        value = int(raw_value)
+    except ValueError:
+        return DEFAULT_GITHUB_CACHE_TTL_SECONDS
+    return max(0, value)
+
+
+def github_cache_path(owner: str, repo: str) -> Path:
+    root = os.environ.get("TECH_RADAR_EXECUTOR_CACHE_DIR")
+    if root:
+        base = Path(root)
+    else:
+        base = Path.home() / ".hermes" / "cache" / "tech-radar-evidence"
+    safe_name = re.sub(r"[^a-z0-9._-]+", "-", f"{owner.lower()}-{repo.lower()}")
+    return base / "github" / f"{safe_name}.json"
+
+
+def load_github_cache(owner: str, repo: str) -> tuple[dict | None, bool]:
+    path = github_cache_path(owner, repo)
+    if not path.exists():
+        return None, False
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None, False
+
+    item = payload.get("item")
+    fetched_at = payload.get("fetchedAtEpoch")
+    if not isinstance(item, dict) or not isinstance(fetched_at, (int, float)):
+        return None, False
+
+    is_fresh = (time.time() - float(fetched_at)) <= github_cache_ttl_seconds()
+    return item, is_fresh
+
+
+def save_github_cache(owner: str, repo: str, item: dict) -> None:
+    path = github_cache_path(owner, repo)
+    payload = {
+        "owner": owner,
+        "repo": repo,
+        "fetchedAtEpoch": time.time(),
+        "item": item,
+    }
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError:
+        return
 
 
 def priority_rank(priority: str) -> int:
@@ -203,36 +260,68 @@ def filter_entries(entries: list[dict], priorities: set[str], statuses: set[str]
     for entry in filtered:
         by_source.setdefault(entry["_source"], []).append(entry)
 
-    selected = []
-    selected_ids = set()
+    ranked_by_source = {
+        source: sorted(items, key=lambda entry: (priority_rank(entry.get("priority")), entry["_index"]))
+        for source, items in by_source.items()
+    }
 
-    for items in by_source.values():
-        ranked = sorted(items, key=lambda entry: (priority_rank(entry.get("priority")), entry["_index"]))
-        chosen = ranked[0]
-        selected.append(chosen)
-        selected_ids.add(id(chosen))
+    combined: list[dict] = []
+    selected_indexes: set[int] = set()
 
-    remainder = [
-        entry for entry in sorted(
-            filtered,
-            key=lambda entry: (priority_rank(entry.get("priority")), entry["_index"]),
-        )
-        if id(entry) not in selected_ids
-    ]
-
-    combined = sorted(selected, key=lambda entry: (priority_rank(entry.get("priority")), entry["_index"]))
-    for entry in remainder:
+    def add_entry(entry: dict) -> None:
         if len(combined) >= max_entries:
-            break
+            return
+        index = entry["_index"]
+        if index in selected_indexes:
+            return
         combined.append(entry)
+        selected_indexes.add(index)
+
+    # Step 1: ensure at least one high-priority entry per supported source.
+    leaders = [items[0] for items in ranked_by_source.values() if items]
+    for entry in sorted(leaders, key=lambda item: (priority_rank(item.get("priority")), item["_index"])):
+        add_entry(entry)
+
+    # Step 2: fully cover compact non-paper sources before spending the rest on dense sources like arXiv.
+    compact_remainder = []
+    for source, items in ranked_by_source.items():
+        if source not in COMPACT_FULL_COVERAGE_SOURCES or len(items) <= 1 or len(items) > COMPACT_FULL_COVERAGE_LIMIT:
+            continue
+        compact_remainder.extend(items[1:])
+    for entry in sorted(compact_remainder, key=lambda item: (priority_rank(item.get("priority")), item["_index"])):
+        add_entry(entry)
+
+    # Step 3: fill remaining slots globally by priority and source order.
+    for entry in sorted(filtered, key=lambda item: (priority_rank(item.get("priority")), item["_index"])):
+        add_entry(entry)
 
     cleaned = []
-    for entry in combined[:max_entries]:
+    for entry in sorted(combined[:max_entries], key=lambda item: (priority_rank(item.get("priority")), item["_index"])):
         copy = dict(entry)
         copy.pop("_source", None)
         copy.pop("_index", None)
         cleaned.append(copy)
     return cleaned
+
+
+def tweet_id_from_url(url: str) -> str:
+    value = (url or "").strip().rstrip("/")
+    match = re.search(r"/status/([0-9]+)", value)
+    return match.group(1) if match else ""
+
+
+def normalize_x_tweet(payload: dict, source_url: str) -> dict:
+    user = payload.get("user") or {}
+    return {
+        "kind": "x",
+        "author_name": str(user.get("name") or "").strip(),
+        "handle": str(user.get("screen_name") or "").strip(),
+        "posted_at": str(payload.get("created_at") or "")[:10],
+        "text": " ".join(str(payload.get("text") or "").split()),
+        "url": source_url,
+        "favorite_count": payload.get("favorite_count"),
+        "lang": str(payload.get("lang") or "").strip(),
+    }
 
 
 def fetch_entry_evidence(entry: dict, max_results: int) -> dict:
@@ -289,6 +378,13 @@ def fetch_entry_evidence(entry: dict, max_results: int) -> dict:
         owner, repo = parse_github_repo(entry.get("url", ""))
         if not owner or not repo:
             return {"executorSource": "github-repo-readonly", "items": []}
+        cached_item, cache_is_fresh = load_github_cache(owner, repo)
+        if cached_item is not None and cache_is_fresh:
+            return {
+                "executorSource": "github-repo-readonly",
+                "cacheStatus": "hit",
+                "items": [cached_item],
+            }
         try:
             payload = call_executor_tool(
                 source="github-repo-readonly",
@@ -300,6 +396,12 @@ def fetch_entry_evidence(entry: dict, max_results: int) -> dict:
                 },
             )
         except RuntimeError:
+            if cached_item is not None:
+                return {
+                    "executorSource": "github-repo-readonly",
+                    "cacheStatus": "fallback",
+                    "items": [cached_item],
+                }
             return {"executorSource": "github-repo-readonly", "items": []}
 
         recent_commits = []
@@ -328,25 +430,45 @@ def fetch_entry_evidence(entry: dict, max_results: int) -> dict:
                     "url": item.get("html_url") or "",
                 }
             )
+        if not recent_commits and cached_item is not None:
+            recent_commits = list(cached_item.get("recent_commits") or [])
 
-        items = [
-            {
-                "kind": "github",
-                "full_name": payload.get("full_name") or f"{owner}/{repo}",
-                "url": payload.get("html_url") or entry.get("url", ""),
-                "description": payload.get("description") or "",
-                "stars": payload.get("stargazers_count"),
-                "forks": payload.get("forks_count"),
-                "issues": payload.get("open_issues_count"),
-                "language": payload.get("language") or "",
-                "updated_at": str(payload.get("updated_at") or "")[:10],
-                "pushed_at": str(payload.get("pushed_at") or "")[:10],
-                "default_branch": payload.get("default_branch") or "",
-                "archived": bool(payload.get("archived")),
-                "recent_commits": recent_commits,
-            }
-        ]
-        return {"executorSource": "github-repo-readonly", "items": items}
+        item = {
+            "kind": "github",
+            "full_name": payload.get("full_name") or f"{owner}/{repo}",
+            "url": payload.get("html_url") or entry.get("url", ""),
+            "description": payload.get("description") or "",
+            "stars": payload.get("stargazers_count"),
+            "forks": payload.get("forks_count"),
+            "issues": payload.get("open_issues_count"),
+            "language": payload.get("language") or "",
+            "updated_at": str(payload.get("updated_at") or "")[:10],
+            "pushed_at": str(payload.get("pushed_at") or "")[:10],
+            "default_branch": payload.get("default_branch") or "",
+            "archived": bool(payload.get("archived")),
+            "recent_commits": recent_commits,
+        }
+        save_github_cache(owner, repo, item)
+        return {"executorSource": "github-repo-readonly", "cacheStatus": "miss", "items": [item]}
+
+    if source == "x/twitter":
+        tweet_url = str(entry.get("url") or "").strip()
+        tweet_id = tweet_id_from_url(tweet_url)
+        if not tweet_id:
+            return {"executorSource": "x-syndication-readonly", "items": []}
+        try:
+            payload = call_executor_tool(
+                source="x-syndication-readonly",
+                group="tweets",
+                tool="getTweetResult",
+                payload={
+                    "id": tweet_id,
+                    "token": 0,
+                },
+            )
+        except RuntimeError:
+            return {"executorSource": "x-syndication-readonly", "items": []}
+        return {"executorSource": "x-syndication-readonly", "items": [normalize_x_tweet(payload, tweet_url)]}
 
     return {"executorSource": "", "items": []}
 
@@ -369,6 +491,8 @@ def render_entry(entry: dict, evidence: dict) -> list[str]:
         f"- 当前建议行动: {entry.get('action_suggested', 'N/A')}",
         f"- Executor evidence source: {evidence.get('executorSource') or 'unsupported'}",
     ]
+    if evidence.get("cacheStatus"):
+        lines.append(f"- Executor evidence cache: {evidence['cacheStatus']}")
 
     items = evidence.get("items") or []
     if not items:
@@ -394,6 +518,18 @@ def render_entry(entry: dict, evidence: dict) -> list[str]:
                 message = commit.get("message") or "No commit message"
                 url = commit.get("url") or "N/A"
                 lines.append(f"    - recent commit {sha} | {date} | {message} | {url}")
+        elif item.get("kind") == "x":
+            author_bits = []
+            if item.get("author_name"):
+                author_bits.append(item["author_name"])
+            if item.get("handle"):
+                author_bits.append(f"@{item['handle']}")
+            author_label = " ".join(author_bits) or "N/A"
+            lines.append(
+                f"  - [X] {author_label} | {item.get('posted_at') or 'N/A'} | "
+                f"{(item.get('text') or '无可解析正文')[:180]} | likes={item.get('favorite_count') if item.get('favorite_count') is not None else 'N/A'} | "
+                f"lang={item.get('lang') or 'N/A'} | {item.get('url') or 'N/A'}"
+            )
         else:
             lines.append(f"  - [HN] {item['title'][:100]} | {item.get('author') or 'N/A'} | {item.get('url') or 'N/A'}")
     return lines
@@ -418,7 +554,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--priorities", default="P0,P1")
     parser.add_argument("--statuses", default="pending")
     parser.add_argument("--fallback-statuses", default="adopt,trial,assess")
-    parser.add_argument("--max-entries", type=int, default=5)
+    parser.add_argument("--max-entries", type=int, default=6)
     parser.add_argument("--max-results", type=int, default=3)
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()

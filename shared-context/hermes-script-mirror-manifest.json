@@ -62,6 +62,11 @@
       "source_relpath": "scripts/runtime/ensure_github_repo_readonly_source.py",
       "purpose": "Ensure GitHub repository readonly source exists before tech-radar enrichment"
     },
+    "ensure-x-publish-readonly-source.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/runtime/ensure_x_publish_readonly_source.py",
+      "purpose": "Ensure X syndication readonly source exists before tech-radar enrichment"
+    },
     "fetch-crossref-papers-via-executor.py": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/fetch-crossref-papers-via-executor.py",

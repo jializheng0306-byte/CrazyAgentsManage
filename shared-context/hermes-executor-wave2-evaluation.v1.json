@@ -6,7 +6,7 @@
       "taskType": "tech-radar.review",
       "entrypoint": "scripts/tech-radar-review.sh",
       "decision": "recommended",
-      "implementationStatus": "evidence-enrichment-landed",
+      "implementationStatus": "evidence-enrichment-hardened",
       "executorFit": "evidence-enrichment-substep",
       "notRecommendedFor": [
         "weekly-summary-generation",
@@ -15,7 +15,7 @@
       "reasons": [
         "Current script is mostly local facts aggregation over repo/shared-context and recent intel markdowns.",
         "The real missing value is entry-level external evidence refresh for high-priority pending items.",
-        "Existing validated sources crossref-readonly and hn-readonly can be reused immediately."
+        "The readonly capability plane now covers crossref, GitHub recent activity, and X publish oEmbed without handing repo truth to executor."
       ],
       "firstImplementationShape": {
         "scope": "P0/P1 + pending radar entries only",
@@ -23,8 +23,11 @@
         "delegationUnit": "entry-level evidence enrichment",
         "preferredSources": [
           "crossref-readonly",
-          "hn-readonly"
-        ]
+          "github-repo-readonly",
+          "x-syndication-readonly"
+        ],
+        "selectionPolicy": "per-source base coverage, compact non-paper full coverage, then priority fill",
+        "rateLimitMitigation": "runtime-local GitHub cache with stale fallback"
       }
     }
   }

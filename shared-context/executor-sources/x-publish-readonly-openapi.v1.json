@@ -1,0 +1,86 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "X Syndication Readonly API",
+    "version": "1.0.0",
+    "description": "Readonly X/Twitter syndication surface for executor-backed evidence enrichment."
+  },
+  "servers": [
+    {
+      "url": "https://cdn.syndication.twimg.com"
+    }
+  ],
+  "paths": {
+    "/tweet-result": {
+      "get": {
+        "tags": [
+          "tweets"
+        ],
+        "operationId": "getTweetResult",
+        "summary": "Get readonly syndication metadata for an X/Twitter post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweet syndication payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "__typename": {
+                      "type": "string"
+                    },
+                    "id_str": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "lang": {
+                      "type": "string"
+                    },
+                    "favorite_count": {
+                      "type": "integer"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "screen_name": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
