@@ -32,10 +32,20 @@
       "source_relpath": "scripts/morning-intel-collector.sh",
       "purpose": "Morning intel collector runtime mirror"
     },
+    "fetch-crossref-papers-via-executor.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/fetch-crossref-papers-via-executor.py",
+      "purpose": "Readonly Crossref literature fetch via executor for noon-paper workflows"
+    },
     "noon-paper-collector.sh": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/noon-paper-collector.sh",
       "purpose": "Noon paper collector runtime mirror"
+    },
+    "noon-paper-review.sh": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/noon-paper-review.sh",
+      "purpose": "Repo-tracked noon-paper wrapper that calls the executor-backed collector"
     },
     "tech-radar-review.sh": {
       "repo_root": "/root/CrazyAgentsManage",

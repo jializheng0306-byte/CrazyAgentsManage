@@ -1,0 +1,178 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Crossref Works Readonly API",
+    "version": "1.0.0",
+    "description": "Minimal readonly Crossref works search surface for Hermes/executor literature discovery."
+  },
+  "servers": [
+    {
+      "url": "https://api.crossref.org"
+    }
+  ],
+  "paths": {
+    "/works": {
+      "get": {
+        "tags": [
+          "works"
+        ],
+        "operationId": "searchWorks",
+        "summary": "Search Crossref works",
+        "description": "Read-only Crossref works search for literature discovery workflows.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rows",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 5
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "relevance",
+                "published",
+                "deposited",
+                "indexed",
+                "updated",
+                "is-referenced-by-count"
+              ],
+              "default": "published"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mailto",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "message-type": {
+                      "type": "string"
+                    },
+                    "message-version": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "object",
+                      "properties": {
+                        "total-results": {
+                          "type": "integer"
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "DOI": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "URL": {
+                                "type": "string"
+                              },
+                              "abstract": {
+                                "type": "string"
+                              },
+                              "container-title": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "author": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "given": {
+                                      "type": "string"
+                                    },
+                                    "family": {
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              },
+                              "published-print": {
+                                "type": "object"
+                              },
+                              "published-online": {
+                                "type": "object"
+                              },
+                              "issued": {
+                                "type": "object"
+                              },
+                              "created": {
+                                "type": "object"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

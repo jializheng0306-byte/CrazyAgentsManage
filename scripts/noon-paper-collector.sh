@@ -7,6 +7,7 @@ set -e
 TODAY=$(date +%Y-%m-%d)
 INTEL_DIR="$HOME/.hermes/intel"
 LOG_DIR="$HOME/.hermes/logs"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 mkdir -p "$INTEL_DIR" "$LOG_DIR"
 
 LOG_FILE="$LOG_DIR/noon-paper-$(date +%Y%m%d).log"
@@ -19,6 +20,22 @@ cat > "$REPORT_FILE" << EOF
 
 采集时间: $(date)
 EOF
+
+# 0. Crossref via executor
+echo "0. 通过 executor 读取 Crossref..." | tee -a "$LOG_FILE"
+{
+    python3 "$SCRIPT_DIR/fetch-crossref-papers-via-executor.py" \
+        --heading "Crossref 最新 AI Agent / Multi-Agent 论文（via executor）" \
+        --query "AI agent multi-agent LLM agent" \
+        --rows 5 \
+        --sort published \
+        --order desc
+} >> "$REPORT_FILE" 2>&1 || {
+    echo "" >> "$REPORT_FILE"
+    echo "## Crossref 最新 AI Agent / Multi-Agent 论文（via executor）" >> "$REPORT_FILE"
+    echo "（Crossref via executor 采集失败）" >> "$REPORT_FILE"
+    echo "" >> "$REPORT_FILE"
+}
 
 # 通用解析函数
 parse_arxiv() {

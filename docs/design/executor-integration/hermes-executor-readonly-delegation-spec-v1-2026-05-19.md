@@ -122,6 +122,12 @@ v1 冻结的 delegation 单元不是“整个任务”，而是：
 - `system crontab` `noon-paper-review.sh`
 - `scripts/noon-paper-collector.sh`
 
+当前落地状态：
+
+- **已作为 Wave 1 首条端到端链路实现**
+- capability source: `crossref-readonly`
+- host wrapper: repo-tracked `scripts/noon-paper-review.sh`
+
 允许 delegation 的步骤：
 
 - 学术论文元数据只读查询
