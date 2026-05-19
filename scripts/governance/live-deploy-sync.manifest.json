@@ -36,6 +36,7 @@
       "deployRoot": "/root/CrazyAgentsManage",
       "compareFiles": [
         "shared-context/executor-sources/crossref-works-openapi.v1.json",
+        "shared-context/executor-sources/github-repo-readonly-openapi.v1.json",
         "shared-context/executor-sources/hn-algolia-search-openapi.v1.json",
         "shared-context/hermes-script-mirror-manifest.json",
         "scripts/executor_readonly_helper.py",
@@ -51,6 +52,7 @@
         "scripts/tech-radar-review.sh",
         "scripts/runtime/enable_crazy_executor_http_mode_on_ali_hermes.sh",
         "scripts/runtime/ensure_crossref_readonly_source.py",
+        "scripts/runtime/ensure_github_repo_readonly_source.py",
         "scripts/runtime/ensure_hn_readonly_source.py",
         "scripts/runtime/ensure_executor_validation_source.py",
         "scripts/runtime/install_executor_sidecar_on_ali_hermes.sh",

@@ -15,7 +15,13 @@ if str(SCRIPT_DIR) not in sys.path:
 from executor_readonly_helper import call_executor_tool, render_markdown_section
 
 
-SUPPORTED_SOURCES = {"arxiv", "hn"}
+SUPPORTED_SOURCES = {"arxiv", "hn", "github"}
+
+
+def priority_rank(priority: str) -> int:
+    value = str(priority or "").upper()
+    order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
+    return order.get(value, 99)
 
 
 def load_entries(radar_file: Path) -> list[dict]:
@@ -25,12 +31,49 @@ def load_entries(radar_file: Path) -> list[dict]:
 
 def filter_entries(entries: list[dict], priorities: set[str], statuses: set[str], max_entries: int) -> list[dict]:
     filtered = [
-        entry for entry in entries
+        dict(entry, _source=str(entry.get("source", "")).lower(), _index=index)
+        for index, entry in enumerate(entries)
         if str(entry.get("priority", "")).upper() in priorities
         and str(entry.get("status", "")).lower() in statuses
         and str(entry.get("source", "")).lower() in SUPPORTED_SOURCES
     ]
-    return filtered[:max_entries]
+    if not filtered:
+        return []
+
+    by_source: dict[str, list[dict]] = {}
+    for entry in filtered:
+        by_source.setdefault(entry["_source"], []).append(entry)
+
+    selected = []
+    selected_ids = set()
+
+    for items in by_source.values():
+        ranked = sorted(items, key=lambda entry: (priority_rank(entry.get("priority")), entry["_index"]))
+        chosen = ranked[0]
+        selected.append(chosen)
+        selected_ids.add(id(chosen))
+
+    remainder = [
+        entry for entry in sorted(
+            filtered,
+            key=lambda entry: (priority_rank(entry.get("priority")), entry["_index"]),
+        )
+        if id(entry) not in selected_ids
+    ]
+
+    combined = sorted(selected, key=lambda entry: (priority_rank(entry.get("priority")), entry["_index"]))
+    for entry in remainder:
+        if len(combined) >= max_entries:
+            break
+        combined.append(entry)
+
+    cleaned = []
+    for entry in combined[:max_entries]:
+        copy = dict(entry)
+        copy.pop("_source", None)
+        copy.pop("_index", None)
+        cleaned.append(copy)
+    return cleaned
 
 
 def fetch_entry_evidence(entry: dict, max_results: int) -> dict:
@@ -83,7 +126,45 @@ def fetch_entry_evidence(entry: dict, max_results: int) -> dict:
             )
         return {"executorSource": "hn-readonly", "items": items}
 
+    if source == "github":
+        owner, repo = parse_github_repo(entry.get("url", ""))
+        if not owner or not repo:
+            return {"executorSource": "github-repo-readonly", "items": []}
+        payload = call_executor_tool(
+            source="github-repo-readonly",
+            group="repos",
+            tool="getRepo",
+            payload={
+                "owner": owner,
+                "repo": repo,
+            },
+        )
+        items = [
+            {
+                "kind": "github",
+                "full_name": payload.get("full_name") or f"{owner}/{repo}",
+                "url": payload.get("html_url") or entry.get("url", ""),
+                "description": payload.get("description") or "",
+                "stars": payload.get("stargazers_count"),
+                "forks": payload.get("forks_count"),
+                "issues": payload.get("open_issues_count"),
+                "language": payload.get("language") or "",
+                "updated_at": str(payload.get("updated_at") or "")[:10],
+            }
+        ]
+        return {"executorSource": "github-repo-readonly", "items": items}
+
     return {"executorSource": "", "items": []}
+
+
+def parse_github_repo(url: str) -> tuple[str, str]:
+    value = (url or "").strip().rstrip("/")
+    if not value.startswith("https://github.com/"):
+        return "", ""
+    parts = value.split("/")
+    if len(parts) < 5:
+        return "", ""
+    return parts[3], parts[4]
 
 
 def render_entry(entry: dict, evidence: dict) -> list[str]:
@@ -104,6 +185,13 @@ def render_entry(entry: dict, evidence: dict) -> list[str]:
     for item in items:
         if item.get("kind") == "crossref":
             lines.append(f"  - [Crossref] {item['title'][:100]} | {item.get('container') or 'N/A'} | {item.get('url') or 'N/A'}")
+        elif item.get("kind") == "github":
+            lines.append(
+                "  - [GitHub] "
+                f"{item['full_name']} | ⭐{item.get('stars')} | forks={item.get('forks')} | "
+                f"issues={item.get('issues')} | lang={item.get('language') or 'N/A'} | "
+                f"updated={item.get('updated_at') or 'N/A'} | {item.get('url') or 'N/A'}"
+            )
         else:
             lines.append(f"  - [HN] {item['title'][:100]} | {item.get('author') or 'N/A'} | {item.get('url') or 'N/A'}")
     return lines

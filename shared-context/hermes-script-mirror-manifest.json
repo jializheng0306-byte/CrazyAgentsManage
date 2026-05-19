@@ -37,6 +37,11 @@
       "source_relpath": "scripts/fetch-hn-stories-via-executor.py",
       "purpose": "Readonly Hacker News story fetch via executor for morning-intel workflows"
     },
+    "fetch-tech-radar-evidence-via-executor.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/fetch-tech-radar-evidence-via-executor.py",
+      "purpose": "Readonly evidence enrichment for high-priority tech-radar entries"
+    },
     "memory-maintenance.sh": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/memory-maintenance.sh",
@@ -51,6 +56,11 @@
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/morning-intel-v2.py",
       "purpose": "Repo-tracked morning intel wrapper authority"
+    },
+    "ensure-github-repo-readonly-source.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/runtime/ensure_github_repo_readonly_source.py",
+      "purpose": "Ensure GitHub repository readonly source exists before tech-radar enrichment"
     },
     "fetch-crossref-papers-via-executor.py": {
       "repo_root": "/root/CrazyAgentsManage",

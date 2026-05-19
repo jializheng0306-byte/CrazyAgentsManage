@@ -19,7 +19,7 @@ def test_filter_entries_limits_to_supported_sources_and_priority():
 
     filtered = MODULE.filter_entries(entries, {"P0", "P1"}, {"pending"}, 10)
 
-    assert [entry["name"] for entry in filtered] == ["A", "B"]
+    assert [entry["name"] for entry in filtered] == ["A", "B", "C"]
 
 
 def test_render_entry_includes_executor_source_and_items():
@@ -58,4 +58,51 @@ def test_filter_entries_can_fallback_to_ring_statuses():
     fallback = MODULE.filter_entries(entries, {"P0", "P1"}, {"adopt", "trial", "assess"}, 10)
 
     assert primary == []
-    assert [entry["name"] for entry in fallback] == ["A", "B"]
+    assert [entry["name"] for entry in fallback] == ["A", "B", "C"]
+
+
+def test_parse_github_repo_extracts_owner_and_repo():
+    owner, repo = MODULE.parse_github_repo("https://github.com/FrankHui/paragents")
+    assert (owner, repo) == ("FrankHui", "paragents")
+
+
+def test_render_entry_formats_github_evidence():
+    entry = {
+        "name": "paragents",
+        "source": "github",
+        "priority": "P1",
+        "action_suggested": "Review source",
+    }
+    evidence = {
+        "executorSource": "github-repo-readonly",
+        "items": [
+            {
+                "kind": "github",
+                "full_name": "FrankHui/paragents",
+                "url": "https://github.com/FrankHui/paragents",
+                "stars": 87,
+                "forks": 3,
+                "issues": 1,
+                "language": "Python",
+                "updated_at": "2026-05-18",
+            }
+        ],
+    }
+
+    lines = MODULE.render_entry(entry, evidence)
+
+    assert any("Executor evidence source: github-repo-readonly" in line for line in lines)
+    assert any("[GitHub] FrankHui/paragents" in line for line in lines)
+
+
+def test_filter_entries_keeps_source_coverage_for_priority_matches():
+    entries = [
+        {"name": "Arxiv A", "source": "arxiv", "priority": "P0", "status": "pending"},
+        {"name": "Arxiv B", "source": "arxiv", "priority": "P1", "status": "pending"},
+        {"name": "GitHub A", "source": "github", "priority": "P1", "status": "pending"},
+        {"name": "HN A", "source": "hn", "priority": "P1", "status": "pending"},
+    ]
+
+    filtered = MODULE.filter_entries(entries, {"P0", "P1"}, {"pending"}, 3)
+
+    assert [entry["name"] for entry in filtered] == ["Arxiv A", "GitHub A", "HN A"]

@@ -75,6 +75,7 @@ echo "3. 通过 executor 为 P0/P1 pending 条目补证据..." | tee -a "$LOG_FI
 {
     echo ""
     python3 /root/CrazyAgentsManage/scripts/runtime/ensure_crossref_readonly_source.py >/dev/null 2>&1 || true
+    python3 /root/CrazyAgentsManage/scripts/runtime/ensure_github_repo_readonly_source.py >/dev/null 2>&1 || true
     python3 /root/CrazyAgentsManage/scripts/runtime/ensure_hn_readonly_source.py >/dev/null 2>&1 || true
     python3 "$SCRIPT_DIR/fetch-tech-radar-evidence-via-executor.py" \
         --radar-file "$RADAR_FILE" \
