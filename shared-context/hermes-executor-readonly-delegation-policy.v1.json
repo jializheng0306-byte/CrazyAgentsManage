@@ -1,0 +1,137 @@
+{
+  "version": "v1",
+  "date": "2026-05-19",
+  "host": "ALI-HERMES",
+  "mode": "readonly",
+  "owners": {
+    "productShell": "CrazyAgentsManage",
+    "runtimeLifecycle": "HermesAgent",
+    "governanceTruth": "FlowMind",
+    "capabilityPlane": "executor"
+  },
+  "preconditions": [
+    "executor-sidecar.service active on ALI-HERMES",
+    "Crazy provider-mode == http",
+    "target source pre-created by Crazy/Operations",
+    "target tool schema visible via executor tools describe",
+    "delegated step is external read only",
+    "Hermes remains lifecycle and trace owner"
+  ],
+  "wave1_allowed": [
+    {
+      "taskType": "intel.morning",
+      "repoEntrypoints": [
+        "scripts/morning-intel-collector.sh",
+        "system crontab: morning-intel-v2.py"
+      ],
+      "delegationUnit": "external-read-step",
+      "allowedOperations": [
+        "external feed fetch",
+        "read-only API query",
+        "schema-first capability call"
+      ],
+      "disallowedOperations": [
+        "tech-radar writeback",
+        "Feishu delivery",
+        "memory mutation"
+      ]
+    },
+    {
+      "taskType": "intel.noon-paper",
+      "repoEntrypoints": [
+        "scripts/noon-paper-collector.sh",
+        "system crontab: noon-paper-review.sh"
+      ],
+      "delegationUnit": "external-read-step",
+      "allowedOperations": [
+        "paper metadata fetch",
+        "read-only source query",
+        "schema-first capability call"
+      ],
+      "disallowedOperations": [
+        "local report writeback",
+        "Feishu delivery",
+        "FlowMind ingress"
+      ]
+    },
+    {
+      "taskType": "intel.evening",
+      "repoEntrypoints": [
+        "scripts/evening-intel-collector.sh",
+        "system crontab: evening-trend-analysis.py"
+      ],
+      "delegationUnit": "external-read-step",
+      "allowedOperations": [
+        "news/feed fetch",
+        "read-only trend query",
+        "schema-first capability call"
+      ],
+      "disallowedOperations": [
+        "tech-radar JSON write",
+        "bitable sync",
+        "Feishu delivery"
+      ]
+    }
+  ],
+  "wave2_candidates": [
+    {
+      "taskType": "tech-radar.review",
+      "repoEntrypoints": [
+        "scripts/tech-radar-review.sh"
+      ],
+      "reason": "Current main value is local shared-context aggregation; external read benefit exists but is not first-wave critical."
+    },
+    {
+      "taskType": "flowmind.health-probe",
+      "repoEntrypoints": [
+        "historical AI cron: FlowMind巡检-每日一次"
+      ],
+      "reason": "Not currently on the repo-tracked supported mainline; conflicts with live guard and source-of-truth discipline."
+    }
+  ],
+  "forbidden_now": [
+    {
+      "taskType": "promise.review",
+      "repoEntrypoints": [
+        "scripts/daily-promise-review.py"
+      ],
+      "reason": "Writes Bitable and consumes FlowMind truth/trace/feedback into governance output."
+    },
+    {
+      "taskType": "promise.capture-clarify",
+      "repoEntrypoints": [
+        "scripts/promise-governance/promise_capture_clarify.py"
+      ],
+      "reason": "Creates local promises and writes trace; optional FlowMind ingress path."
+    },
+    {
+      "taskType": "flowmind.capture",
+      "repoEntrypoints": [
+        "scripts/flowmind_capture.py"
+      ],
+      "reason": "Direct candidate-ingress write path."
+    },
+    {
+      "taskType": "closeout.writeback",
+      "repoEntrypoints": [
+        "scripts/runtime/closeout_writeback.py"
+      ],
+      "reason": "Closeout and repo writeback truth must not be delegated to executor."
+    },
+    {
+      "taskType": "cron.health",
+      "repoEntrypoints": [
+        "scripts/cron-health-check.sh"
+      ],
+      "reason": "Local host observability task, not an external capability priority lane."
+    },
+    {
+      "taskType": "memory.maintenance",
+      "repoEntrypoints": [
+        "memory-maintenance.sh",
+        "auto-reflection.sh"
+      ],
+      "reason": "Local memory/learnings maintenance, not an external read capability problem."
+    }
+  ]
+}
