@@ -57,6 +57,11 @@
       "source_relpath": "scripts/fetch-crossref-papers-via-executor.py",
       "purpose": "Readonly Crossref literature fetch via executor for noon-paper workflows"
     },
+    "fetch-tech-radar-evidence-via-executor.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/fetch-tech-radar-evidence-via-executor.py",
+      "purpose": "Readonly evidence enrichment for high-priority pending tech-radar entries"
+    },
     "noon-paper-collector.sh": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/noon-paper-collector.sh",

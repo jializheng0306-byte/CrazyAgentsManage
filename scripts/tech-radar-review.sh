@@ -8,6 +8,7 @@ TODAY=$(date +%Y-%m-%d)
 RADAR_FILE="$HOME/CrazyAgentsManage/shared-context/tech-radar.json"
 INTEL_DIR="$HOME/.hermes/intel"
 LOG_DIR="$HOME/.hermes/logs"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 mkdir -p "$INTEL_DIR" "$LOG_DIR"
 
 LOG_FILE="$LOG_DIR/tech-radar-review-$(date +%Y%m%d).log"
@@ -68,6 +69,24 @@ echo "2. 汇总本周高星发现..." | tee -a "$LOG_FILE"
         echo ""
     done
 } >> "$REPORT_FILE" 2>&1
+
+# 3. P0/P1 pending 条目补证据
+echo "3. 通过 executor 为 P0/P1 pending 条目补证据..." | tee -a "$LOG_FILE"
+{
+    echo ""
+    python3 /root/CrazyAgentsManage/scripts/runtime/ensure_crossref_readonly_source.py >/dev/null 2>&1 || true
+    python3 /root/CrazyAgentsManage/scripts/runtime/ensure_hn_readonly_source.py >/dev/null 2>&1 || true
+    python3 "$SCRIPT_DIR/fetch-tech-radar-evidence-via-executor.py" \
+        --radar-file "$RADAR_FILE" \
+        --priorities "P0,P1" \
+        --statuses "pending" \
+        --max-entries 5 \
+        --max-results 3
+} >> "$REPORT_FILE" 2>&1 || {
+    echo "" >> "$REPORT_FILE"
+    echo "## P0/P1 Pending Radar 条目只读补证据（via executor）" >> "$REPORT_FILE"
+    echo "（补证据失败）" >> "$REPORT_FILE"
+}
 
 echo "=== Tech Radar 周审查完成 ===" | tee -a "$LOG_FILE"
 echo "REPORT_FILE=$REPORT_FILE"

@@ -6,6 +6,7 @@
       "taskType": "tech-radar.review",
       "entrypoint": "scripts/tech-radar-review.sh",
       "decision": "recommended",
+      "implementationStatus": "evidence-enrichment-landed",
       "executorFit": "evidence-enrichment-substep",
       "notRecommendedFor": [
         "weekly-summary-generation",

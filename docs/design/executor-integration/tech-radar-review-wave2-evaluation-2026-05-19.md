@@ -231,3 +231,13 @@ tech-radar entry evidence refresh
 ## 7. 一句话结论
 
 > `tech-radar.review` 进入 `Wave 2` 的正确方式，不是把周审查脚本整体 executor 化，而是新增一个面向 `P0/P1 + pending` 条目的 readonly evidence enrichment 子步骤，让 executor 负责补拉外部证据，Crazy/Hermes 仍负责本地审查与最终 truth promotion。  
+
+## 8. 当前状态
+
+截至 2026-05-19，本评估已进入实现态：
+
+- readonly evidence enrichment 子步骤已在宿主 `ALI-HERMES` 上跑通
+- `tech-radar-review-YYYY-MM-DD.md` 中已出现 executor 补证据分区
+- 当前仍保持：
+  - 周报主体为本地 summary 主链
+  - `tech-radar.json` authority 仍不交给 executor
