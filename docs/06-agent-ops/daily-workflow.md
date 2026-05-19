@@ -110,7 +110,7 @@ CrazyAgentsManage项目的每日工作流，覆盖07:00-23:45全天运营节奏�
 ### Cron Jobs
 ```bash
 # 晨间情报 (08:30)
-30 8 * * * /root/.hermes/scripts/morning-intel.sh
+30 8 * * * /usr/bin/python3 /root/.hermes/scripts/morning-intel-v2.py
 
 # 承诺审查统一刷新链（operator hours, only-if-changed）
 */30 8-21 * * * cd /root/CrazyAgentsManage && PROMISE_BITABLE_CONFIG_PATH=/root/CrazyAgentsManage/shared-context/promise-bitable-config.json PROMISE_LARK_AS=bot PROMISE_REVIEW_ONLY_IF_CHANGED=1 /usr/bin/python3 /root/.hermes/scripts/daily-promise-review.py >> /root/.hermes/logs/daily-promise-review.log 2>&1

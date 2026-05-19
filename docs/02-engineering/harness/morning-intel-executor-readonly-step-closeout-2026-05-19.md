@@ -11,8 +11,10 @@
 
 - `intel.morning`
 
-本轮不直接替换宿主上的 `morning-intel-v2.py` authority，
-而是先把 repo-tracked collector 的一段 external read step 接到 executor。
+本轮已经继续推进到：
+
+- `morning-intel-v2.py` authority 收口到 repo-tracked source-of-truth
+- 并让其中一段 external read step 接到 executor
 
 ## 2. 实际落地内容
 
@@ -49,6 +51,22 @@
 
 - `Hacker News AI / Agent Stories（via executor）`
 
+### 2.4 repo-tracked authority 已建立
+
+新增：
+
+- `scripts/morning-intel-v2.py`
+
+并同步到：
+
+- `/root/.hermes/scripts/morning-intel-v2.py`
+
+当前 system crontab 继续指向同一路径：
+
+- `30 8 * * * /usr/bin/python3 /root/.hermes/scripts/morning-intel-v2.py`
+
+但其 source-of-truth 已从宿主机本地副本切回仓库。
+
 ## 3. 实测结果
 
 ### 3.1 source 可见
@@ -72,14 +90,28 @@
 - `~/.hermes/intel/morning-intel-YYYY-MM-DD.md` 中新增 executor 段落
 - 原有 arXiv / RSS / GitHub 逻辑仍保留
 
+### 3.4 authority 主链已通过新实现跑通
+
+在 `ALI-HERMES` 上运行：
+
+- `/root/.hermes/scripts/morning-intel-v2.py`
+
+结果：
+
+- stdout 明确出现 `Hacker News (executor): 5 条`
+- 生成 `summary-YYYYMMDD-v2.md`
+- 生成 `intel-data-YYYYMMDD-v2.json`
+- 生成 `knowledge/intel-YYYYMMDD-v2.md`
+- 飞书群推送成功
+
 ## 4. 结论
 
 本轮之后，`Wave 1` 已经不是只有一条 executor 读链：
 
 - `intel.noon-paper`：完整 wrapper 链已落地
-- `intel.morning`：collector 级 external read step 已落地
+- `intel.morning`：collector 级 external read step 已落地，且 authority 已回到 repo
 
 这意味着后续真正需要决策的，不再是“能不能接第二条”，而是：
 
-1. 是否把 `morning-intel-v2.py` 收口到 repo-tracked wrapper authority
-2. 是否继续把 `intel.evening` 加一段 executor-backed read step
+1. 是否继续把 `intel.evening` 加一段 executor-backed read step
+2. 是否进一步统一 `morning-intel / noon-paper / evening-intel` 的 readonly delegation helper contract

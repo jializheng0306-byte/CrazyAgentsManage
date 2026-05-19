@@ -42,6 +42,11 @@
       "source_relpath": "scripts/morning-intel-collector.sh",
       "purpose": "Morning intel collector runtime mirror"
     },
+    "morning-intel-v2.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/morning-intel-v2.py",
+      "purpose": "Repo-tracked morning intel wrapper authority"
+    },
     "fetch-crossref-papers-via-executor.py": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/fetch-crossref-papers-via-executor.py",

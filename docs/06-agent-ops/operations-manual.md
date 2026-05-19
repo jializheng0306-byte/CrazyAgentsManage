@@ -98,7 +98,7 @@ cat ~/.hermes/cron/jobs.json
 tail -f /root/.hermes/logs/cron.log
 
 # 手动执行测试
-bash /root/.hermes/scripts/morning-intel.sh
+python3 /root/.hermes/scripts/morning-intel-v2.py
 ```
 
 **处理方法**:

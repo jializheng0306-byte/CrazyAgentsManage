@@ -22,7 +22,7 @@
       "taskType": "intel.morning",
       "repoEntrypoints": [
         "scripts/morning-intel-collector.sh",
-        "system crontab: morning-intel-v2.py"
+        "scripts/morning-intel-v2.py"
       ],
       "delegationUnit": "external-read-step",
       "allowedOperations": [

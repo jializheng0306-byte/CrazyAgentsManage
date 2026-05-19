@@ -42,6 +42,7 @@
         "scripts/fetch-crossref-papers-via-executor.py",
         "scripts/fetch-hn-stories-via-executor.py",
         "scripts/morning-intel-collector.sh",
+        "scripts/morning-intel-v2.py",
         "scripts/noon-paper-collector.sh",
         "scripts/noon-paper-review.sh",
         "scripts/runtime/enable_crazy_executor_http_mode_on_ali_hermes.sh",
