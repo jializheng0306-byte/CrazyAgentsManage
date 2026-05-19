@@ -119,7 +119,7 @@ CrazyAgentsManage项目的每日工作流，覆盖07:00-23:45全天运营节奏�
 0 12 * * * /root/.hermes/scripts/noon-paper-review.sh
 
 # 晚间趋势分析 (20:00)
-0 20 * * * /root/.hermes/scripts/evening-trend-analysis.sh
+0 20 * * * /usr/bin/python3 /root/.hermes/scripts/evening-trend-analysis.py
 
 # 每日反思 (23:00)
 0 23 * * * /root/.hermes/scripts/daily-reflection.sh

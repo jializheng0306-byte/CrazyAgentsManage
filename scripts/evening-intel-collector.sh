@@ -8,6 +8,7 @@ TODAY=$(date +%Y-%m-%d)
 INTEL_DIR="$HOME/.hermes/intel"
 LOG_DIR="$HOME/.hermes/logs"
 DIGEST_DIR="/root/ai-builders-digest"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 mkdir -p "$INTEL_DIR" "$LOG_DIR"
 
 LOG_FILE="$LOG_DIR/evening-intel-$(date +%Y%m%d).log"
@@ -38,6 +39,20 @@ cat > "$REPORT_FILE" << EOF
 
 采集时间: $(date)
 EOF
+
+# 0. HN via executor
+echo "0. 通过 executor 读取 HN agent trends..." | tee -a "$LOG_FILE"
+{
+    python3 "$SCRIPT_DIR/fetch-hn-stories-via-executor.py" \
+        --heading "Hacker News Agent / Builder Trends（via executor）" \
+        --query "AI agent" \
+        --rows 5
+} >> "$REPORT_FILE" 2>&1 || {
+    echo "" >> "$REPORT_FILE"
+    echo "## Hacker News Agent / Builder Trends（via executor）" >> "$REPORT_FILE"
+    echo "（HN via executor 采集失败）" >> "$REPORT_FILE"
+    echo "" >> "$REPORT_FILE"
+}
 
 if [ -f "$DIGEST_FILE" ]; then
     echo "3. 读取: $(basename "$DIGEST_FILE")" | tee -a "$LOG_FILE"

@@ -40,7 +40,7 @@
       "taskType": "intel.noon-paper",
       "repoEntrypoints": [
         "scripts/noon-paper-collector.sh",
-        "system crontab: noon-paper-review.sh"
+        "scripts/noon-paper-review.sh"
       ],
       "delegationUnit": "external-read-step",
       "allowedOperations": [
@@ -58,7 +58,7 @@
       "taskType": "intel.evening",
       "repoEntrypoints": [
         "scripts/evening-intel-collector.sh",
-        "system crontab: evening-trend-analysis.py"
+        "scripts/evening-trend-analysis.py"
       ],
       "delegationUnit": "external-read-step",
       "allowedOperations": [

@@ -22,6 +22,11 @@
       "source_relpath": "scripts/evening-intel-collector.sh",
       "purpose": "Evening intel collector runtime mirror"
     },
+    "evening-trend-analysis.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/evening-trend-analysis.py",
+      "purpose": "Repo-tracked evening trend wrapper authority"
+    },
     "executor_readonly_helper.py": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/executor_readonly_helper.py",

@@ -39,6 +39,8 @@
         "shared-context/executor-sources/hn-algolia-search-openapi.v1.json",
         "shared-context/hermes-script-mirror-manifest.json",
         "scripts/executor_readonly_helper.py",
+        "scripts/evening-intel-collector.sh",
+        "scripts/evening-trend-analysis.py",
         "scripts/fetch-crossref-papers-via-executor.py",
         "scripts/fetch-hn-stories-via-executor.py",
         "scripts/morning-intel-collector.sh",
