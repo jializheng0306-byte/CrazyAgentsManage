@@ -6,7 +6,14 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
+import sys
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from executor_readonly_helper import call_executor_tool, render_markdown_section
 
 
 def strip_jats(value: str) -> str:
@@ -70,56 +77,16 @@ def normalize_items(payload: dict, max_abstract_chars: int) -> list[dict]:
     return items
 
 
-def format_markdown(heading: str, items: list[dict]) -> str:
-    lines = ["", f"## {heading}", ""]
-    if not items:
-        lines.append("（未返回论文结果）")
-        lines.append("")
-        return "\n".join(lines)
-    for item in items:
-        lines.extend(
-            [
-                f"### {item['title'][:100]}",
-                f"- DOI: {item['doi'] or 'N/A'}",
-                f"- 作者: {item['authors']}",
-                f"- 日期: {item['date']}",
-                f"- 来源: {item['container'] or 'N/A'}",
-                f"- 摘要: {(item['abstract'] or '无摘要')[:400]}",
-                f"- 链接: {item['url'] or 'N/A'}",
-                "",
-            ]
-        )
-    return "\n".join(lines)
-
-
-def run_executor(source: str, query: str, rows: int, sort: str, order: str, filter_expr: str, mailto: str) -> dict:
-    payload = {
-        "query": query,
-        "rows": rows,
-        "sort": sort,
-        "order": order,
-    }
-    if filter_expr:
-        payload["filter"] = filter_expr
-    if mailto:
-        payload["mailto"] = mailto
-
-    result = subprocess.run(
-        [
-            "executor",
-            "call",
-            source,
-            "works",
-            "searchWorks",
-            json.dumps(payload, ensure_ascii=False),
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError((result.stderr or result.stdout or "executor call failed").strip())
-    return json.loads(result.stdout)
+def render_item(item: dict) -> list[str]:
+    return [
+        f"### {item['title'][:100]}",
+        f"- DOI: {item['doi'] or 'N/A'}",
+        f"- 作者: {item['authors']}",
+        f"- 日期: {item['date']}",
+        f"- 来源: {item['container'] or 'N/A'}",
+        f"- 摘要: {(item['abstract'] or '无摘要')[:400]}",
+        f"- 链接: {item['url'] or 'N/A'}",
+    ]
 
 
 def parse_args() -> argparse.Namespace:
@@ -139,20 +106,31 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    payload = run_executor(
+    payload = call_executor_tool(
         source=args.source,
-        query=args.query,
-        rows=args.rows,
-        sort=args.sort,
-        order=args.order,
-        filter_expr=args.filter,
-        mailto=args.mailto,
+        group="works",
+        tool="searchWorks",
+        payload={
+            "query": args.query,
+            "rows": args.rows,
+            "sort": args.sort,
+            "order": args.order,
+            **({"filter": args.filter} if args.filter else {}),
+            **({"mailto": args.mailto} if args.mailto else {}),
+        },
     )
     items = normalize_items(payload, args.max_abstract_chars)
     if args.json:
         print(json.dumps({"query": args.query, "items": items}, ensure_ascii=False, indent=2))
     else:
-        print(format_markdown(args.heading, items))
+        print(
+            render_markdown_section(
+                heading=args.heading,
+                items=items,
+                render_item=render_item,
+                empty_text="（未返回论文结果）",
+            )
+        )
     return 0
 
 

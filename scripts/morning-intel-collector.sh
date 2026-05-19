@@ -7,6 +7,7 @@ set -e
 TODAY=$(date +%Y-%m-%d)
 INTEL_DIR="$HOME/.hermes/intel"
 LOG_DIR="$HOME/.hermes/logs"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 mkdir -p "$INTEL_DIR" "$LOG_DIR"
 
 LOG_FILE="$LOG_DIR/morning-intel-$(date +%Y%m%d).log"
@@ -19,6 +20,19 @@ cat > "$REPORT_FILE" << EOF
 
 采集时间: $(date)
 EOF
+
+# 0. HN via executor
+echo "0. 通过 executor 读取 HN AI / Agent Stories..." | tee -a "$LOG_FILE"
+{
+    python3 "$SCRIPT_DIR/fetch-hn-stories-via-executor.py" \
+        --query "AI agent" \
+        --rows 5
+} >> "$REPORT_FILE" 2>&1 || {
+    echo "" >> "$REPORT_FILE"
+    echo "## Hacker News AI / Agent Stories（via executor）" >> "$REPORT_FILE"
+    echo "（HN via executor 采集失败）" >> "$REPORT_FILE"
+    echo "" >> "$REPORT_FILE"
+}
 
 # 1. arxiv 论文
 echo "1. 采集 arxiv 论文..." | tee -a "$LOG_FILE"

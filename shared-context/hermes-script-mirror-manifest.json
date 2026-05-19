@@ -22,6 +22,16 @@
       "source_relpath": "scripts/evening-intel-collector.sh",
       "purpose": "Evening intel collector runtime mirror"
     },
+    "executor_readonly_helper.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/executor_readonly_helper.py",
+      "purpose": "Shared readonly executor helper for Wave 1 intel collectors"
+    },
+    "fetch-hn-stories-via-executor.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/fetch-hn-stories-via-executor.py",
+      "purpose": "Readonly Hacker News story fetch via executor for morning-intel workflows"
+    },
     "memory-maintenance.sh": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/memory-maintenance.sh",

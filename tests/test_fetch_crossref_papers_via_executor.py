@@ -45,9 +45,9 @@ def test_strip_jats_and_normalize_items():
 
 
 def test_format_markdown_contains_core_fields():
-    markdown = MODULE.format_markdown(
-        "Crossref 测试",
-        [
+    markdown = MODULE.render_markdown_section(
+        heading="Crossref 测试",
+        items=[
             {
                 "title": "A Demo Paper",
                 "doi": "10.1000/demo",
@@ -57,7 +57,9 @@ def test_format_markdown_contains_core_fields():
                 "container": "Journal of Demos",
                 "abstract": "A concise abstract."
             }
-        ]
+        ],
+        render_item=MODULE.render_item,
+        empty_text="（未返回论文结果）"
     )
 
     assert "## Crossref 测试" in markdown

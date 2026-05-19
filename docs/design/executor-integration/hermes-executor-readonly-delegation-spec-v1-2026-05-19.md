@@ -104,6 +104,12 @@ v1 冻结的 delegation 单元不是“整个任务”，而是：
 - `system crontab` `morning-intel-v2.py`
 - `scripts/morning-intel-collector.sh`
 
+当前落地状态：
+
+- **collector 级 external read step 已接入 executor**
+- capability source: `hn-readonly`
+- repo-tracked helper: `scripts/fetch-hn-stories-via-executor.py`
+
 允许 delegation 的步骤：
 
 - arXiv / RSS / GitHub 等外部数据拉取

@@ -141,6 +141,19 @@ def copy_file_to_remote(
     return result.returncode == 0, string_result(result)
 
 
+def remote_chmod_file(
+    workspace_root: Path,
+    local_file: Path,
+    user: str,
+    host: str,
+    remote_file: str,
+    password_env: str | None,
+) -> tuple[bool, str]:
+    mode = format(local_file.stat().st_mode & 0o777, "o")
+    command = f"chmod {mode} {shlex.quote(remote_file)}"
+    return run_remote_command(workspace_root, user, host, command, password_env)
+
+
 def sync_profile(workspace_root: Path, profile: dict, dry_run: bool) -> dict:
     source_root = (workspace_root / profile["sourceRepoRoot"]).resolve()
     rows: list[dict] = []
@@ -187,6 +200,18 @@ def sync_profile(workspace_root: Path, profile: dict, dry_run: bool) -> dict:
         )
         if not ok:
             row["error"] = output or f"failed to copy {local_file} -> {remote_file}"
+            rows.append(row)
+            continue
+        ok, output = remote_chmod_file(
+            workspace_root,
+            local_file,
+            profile["user"],
+            profile["host"],
+            remote_file,
+            profile.get("passwordEnv"),
+        )
+        if not ok:
+            row["error"] = output or f"failed to chmod remote file {remote_file}"
             rows.append(row)
             continue
         row["ok"] = True
