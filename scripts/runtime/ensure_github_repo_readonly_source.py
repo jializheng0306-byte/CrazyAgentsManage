@@ -7,6 +7,7 @@ import argparse
 import json
 import time
 from pathlib import Path
+from urllib.parse import quote
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
@@ -48,6 +49,32 @@ def find_existing(base_url: str, namespace: str):
     return None
 
 
+def list_tools(base_url: str, namespace: str):
+    _, tools = http_json(
+        base_url.rstrip("/") + f"/api/operations/integrations/tools?sourceId={quote(namespace, safe='')}"
+    )
+    return tools or []
+
+
+def has_required_tool(base_url: str, namespace: str, required_tool: str) -> bool:
+    if not required_tool:
+        return True
+    suffix = "." + required_tool
+    for item in list_tools(base_url, namespace):
+        tool_id = str(item.get("id") or "")
+        tool_name = str(item.get("name") or "")
+        if tool_name == required_tool or tool_id == required_tool or tool_id.endswith(suffix):
+            return True
+    return False
+
+
+def delete_existing(base_url: str, namespace: str) -> None:
+    http_json(
+        base_url.rstrip("/") + f"/api/operations/integrations/sources/{quote(namespace, safe='')}",
+        method="DELETE",
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="http://47.99.217.1/manage")
@@ -55,11 +82,29 @@ def main() -> int:
     parser.add_argument("--name", default="GitHub Repository Readonly")
     parser.add_argument("--spec-path", default=str(DEFAULT_SPEC_PATH))
     parser.add_argument("--base-api-url", default="https://api.github.com")
+    parser.add_argument("--required-tool", default="listRepoCommits")
     args = parser.parse_args()
 
+    recreated = False
     existing = find_existing(args.base_url, args.namespace)
+    if existing is not None and not has_required_tool(args.base_url, args.namespace, args.required_tool):
+        delete_existing(args.base_url, args.namespace)
+        existing = None
+        recreated = True
+
     if existing is not None:
-        print(json.dumps({"created": False, "source": existing}, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {
+                    "created": False,
+                    "recreated": False,
+                    "requiredTool": args.required_tool,
+                    "source": existing,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return 0
 
     spec_text = Path(args.spec_path).read_text(encoding="utf-8")
@@ -76,7 +121,18 @@ def main() -> int:
         data=payload,
         timeout=60,
     )
-    print(json.dumps({"created": True, "source": created}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                "created": True,
+                "recreated": recreated,
+                "requiredTool": args.required_tool,
+                "source": created,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     return 0
 
 

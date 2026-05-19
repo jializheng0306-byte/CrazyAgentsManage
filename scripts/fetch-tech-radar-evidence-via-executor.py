@@ -289,15 +289,46 @@ def fetch_entry_evidence(entry: dict, max_results: int) -> dict:
         owner, repo = parse_github_repo(entry.get("url", ""))
         if not owner or not repo:
             return {"executorSource": "github-repo-readonly", "items": []}
-        payload = call_executor_tool(
-            source="github-repo-readonly",
-            group="repos",
-            tool="getRepo",
-            payload={
-                "owner": owner,
-                "repo": repo,
-            },
-        )
+        try:
+            payload = call_executor_tool(
+                source="github-repo-readonly",
+                group="repos",
+                tool="getRepo",
+                payload={
+                    "owner": owner,
+                    "repo": repo,
+                },
+            )
+        except RuntimeError:
+            return {"executorSource": "github-repo-readonly", "items": []}
+
+        recent_commits = []
+        try:
+            commit_payload = call_executor_tool(
+                source="github-repo-readonly",
+                group="repos",
+                tool="listRepoCommits",
+                payload={
+                    "owner": owner,
+                    "repo": repo,
+                    "per_page": max(1, min(max_results, 3)),
+                },
+            )
+        except RuntimeError:
+            commit_payload = []
+
+        for item in (commit_payload or [])[:max_results]:
+            commit = item.get("commit") or {}
+            author = commit.get("author") or {}
+            recent_commits.append(
+                {
+                    "sha": str(item.get("sha") or "")[:7],
+                    "message": str(commit.get("message") or "").splitlines()[0][:100],
+                    "date": str(author.get("date") or "")[:10],
+                    "url": item.get("html_url") or "",
+                }
+            )
+
         items = [
             {
                 "kind": "github",
@@ -309,6 +340,10 @@ def fetch_entry_evidence(entry: dict, max_results: int) -> dict:
                 "issues": payload.get("open_issues_count"),
                 "language": payload.get("language") or "",
                 "updated_at": str(payload.get("updated_at") or "")[:10],
+                "pushed_at": str(payload.get("pushed_at") or "")[:10],
+                "default_branch": payload.get("default_branch") or "",
+                "archived": bool(payload.get("archived")),
+                "recent_commits": recent_commits,
             }
         ]
         return {"executorSource": "github-repo-readonly", "items": items}
@@ -349,8 +384,16 @@ def render_entry(entry: dict, evidence: dict) -> list[str]:
                 "  - [GitHub] "
                 f"{item['full_name']} | ⭐{item.get('stars')} | forks={item.get('forks')} | "
                 f"issues={item.get('issues')} | lang={item.get('language') or 'N/A'} | "
-                f"updated={item.get('updated_at') or 'N/A'} | {item.get('url') or 'N/A'}"
+                f"updated={item.get('updated_at') or 'N/A'} | pushed={item.get('pushed_at') or 'N/A'} | "
+                f"branch={item.get('default_branch') or 'N/A'} | archived={'yes' if item.get('archived') else 'no'} | "
+                f"{item.get('url') or 'N/A'}"
             )
+            for commit in item.get("recent_commits") or []:
+                sha = commit.get("sha") or "unknown"
+                date = commit.get("date") or "N/A"
+                message = commit.get("message") or "No commit message"
+                url = commit.get("url") or "N/A"
+                lines.append(f"    - recent commit {sha} | {date} | {message} | {url}")
         else:
             lines.append(f"  - [HN] {item['title'][:100]} | {item.get('author') or 'N/A'} | {item.get('url') or 'N/A'}")
     return lines

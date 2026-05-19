@@ -85,6 +85,17 @@ def test_render_entry_formats_github_evidence():
                 "issues": 1,
                 "language": "Python",
                 "updated_at": "2026-05-18",
+                "pushed_at": "2026-05-19",
+                "default_branch": "main",
+                "archived": False,
+                "recent_commits": [
+                    {
+                        "sha": "abc1234",
+                        "date": "2026-05-19",
+                        "message": "Tighten runtime conflict checks",
+                        "url": "https://github.com/FrankHui/paragents/commit/abc1234",
+                    }
+                ],
             }
         ],
     }
@@ -93,6 +104,7 @@ def test_render_entry_formats_github_evidence():
 
     assert any("Executor evidence source: github-repo-readonly" in line for line in lines)
     assert any("[GitHub] FrankHui/paragents" in line for line in lines)
+    assert any("recent commit abc1234" in line for line in lines)
 
 
 def test_filter_entries_keeps_source_coverage_for_priority_matches():
@@ -238,3 +250,92 @@ def test_fetch_entry_evidence_tolerates_single_crossref_query_failure(monkeypatc
         "Memanto",
     ]
     assert [item["doi"] for item in evidence["items"]] == ["10.1000/good"]
+
+
+def test_fetch_entry_evidence_adds_recent_github_commit_activity(monkeypatch):
+    def fake_call_executor_tool(*, source, group, tool, payload):
+        assert source == "github-repo-readonly"
+        assert group == "repos"
+        if tool == "getRepo":
+            return {
+                "full_name": "dmae97/oh-my-kimichan",
+                "html_url": "https://github.com/dmae97/oh-my-kimichan",
+                "description": "multi-agent harness",
+                "stargazers_count": 20,
+                "forks_count": 2,
+                "open_issues_count": 4,
+                "language": "TypeScript",
+                "updated_at": "2026-05-18T12:00:00Z",
+                "pushed_at": "2026-05-19T08:00:00Z",
+                "default_branch": "main",
+                "archived": False,
+            }
+        if tool == "listRepoCommits":
+            assert payload["per_page"] == 3
+            return [
+                {
+                    "sha": "abc1234567",
+                    "html_url": "https://github.com/dmae97/oh-my-kimichan/commit/abc1234",
+                    "commit": {
+                        "message": "Stabilize DAG planning checks\n\nMore detail",
+                        "author": {"date": "2026-05-19T08:00:00Z"},
+                    },
+                }
+            ]
+        raise AssertionError(f"unexpected tool {tool}")
+
+    monkeypatch.setattr(MODULE, "call_executor_tool", fake_call_executor_tool)
+
+    evidence = MODULE.fetch_entry_evidence(
+        {
+            "name": "oh-my-kimichan",
+            "source": "github",
+            "url": "https://github.com/dmae97/oh-my-kimichan",
+        },
+        max_results=3,
+    )
+
+    item = evidence["items"][0]
+    assert item["full_name"] == "dmae97/oh-my-kimichan"
+    assert item["default_branch"] == "main"
+    assert item["recent_commits"] == [
+        {
+            "sha": "abc1234",
+            "date": "2026-05-19",
+            "message": "Stabilize DAG planning checks",
+            "url": "https://github.com/dmae97/oh-my-kimichan/commit/abc1234",
+        }
+    ]
+
+
+def test_fetch_entry_evidence_tolerates_github_commit_lookup_failure(monkeypatch):
+    def fake_call_executor_tool(*, source, group, tool, payload):
+        if tool == "getRepo":
+            return {
+                "full_name": "FrankHui/paragents",
+                "html_url": "https://github.com/FrankHui/paragents",
+                "stargazers_count": 87,
+                "forks_count": 3,
+                "open_issues_count": 1,
+                "language": "Python",
+                "updated_at": "2026-05-18T12:00:00Z",
+                "pushed_at": "2026-05-19T08:00:00Z",
+                "default_branch": "main",
+                "archived": False,
+            }
+        if tool == "listRepoCommits":
+            raise RuntimeError("executor call failed")
+        raise AssertionError(f"unexpected tool {tool}")
+
+    monkeypatch.setattr(MODULE, "call_executor_tool", fake_call_executor_tool)
+
+    evidence = MODULE.fetch_entry_evidence(
+        {
+            "name": "paragents",
+            "source": "github",
+            "url": "https://github.com/FrankHui/paragents",
+        },
+        max_results=3,
+    )
+
+    assert evidence["items"][0]["recent_commits"] == []
