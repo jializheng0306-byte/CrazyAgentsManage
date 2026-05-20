@@ -87,6 +87,11 @@
       "source_relpath": "scripts/flowmind-health-check.py",
       "purpose": "Repo-tracked FlowMind health probe wrapper authority for ALI-HERMES"
     },
+    "flowmind-health-notify.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/flowmind-health-notify.py",
+      "purpose": "Deterministic FlowMind health abnormal notification helper"
+    },
     "noon-paper-collector.sh": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/noon-paper-collector.sh",

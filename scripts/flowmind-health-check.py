@@ -27,6 +27,7 @@ DEFAULT_JSON_FILE = "/home/ubuntu/FlowMindDeploy-newhost/scripts/pilot/output/cu
 DEFAULT_LATEST_RUN_FILE = "/home/ubuntu/FlowMindDeploy-newhost/scripts/pilot/output/current/latest-run.json"
 DEFAULT_RUNS_ROOT = "/home/ubuntu/FlowMindDeploy-newhost/scripts/pilot/output/runs"
 DEFAULT_EXECUTOR_SOURCE = "flowmind-health-readonly"
+DEFAULT_SNAPSHOT_PATH = str(Path.home() / ".hermes" / "cron" / "state" / "flowmind-health-check-latest.json")
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,6 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--latest-run-file", default=DEFAULT_LATEST_RUN_FILE)
     parser.add_argument("--runs-root", default=DEFAULT_RUNS_ROOT)
     parser.add_argument("--executor-source", default=DEFAULT_EXECUTOR_SOURCE)
+    parser.add_argument("--snapshot-path", default=DEFAULT_SNAPSHOT_PATH)
     parser.add_argument("--ssh-timeout", type=int, default=30)
     parser.add_argument("--json", action="store_true", help="Emit structured JSON instead of STATUS lines")
     return parser.parse_args()
@@ -258,6 +260,12 @@ def probe_executor_health(source: str) -> dict:
     }
 
 
+def write_snapshot(path: str, payload: dict) -> None:
+    target = Path(path).expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def build_status_payload(report: dict) -> dict:
     passed = bool(report.get("passed", False))
     checked_at = str(report.get("checkedAt", "unknown"))
@@ -377,10 +385,12 @@ def main() -> int:
         )
     except subprocess.TimeoutExpired:
         payload = {"status": "ERROR", "message": "SSH连接超时"}
+        write_snapshot(args.snapshot_path, payload)
         print(json.dumps(payload, ensure_ascii=False, indent=2) if args.json else "STATUS: ERROR\nSSH连接超时")
         return 1
     except Exception as exc:
         payload = {"status": "ERROR", "message": f"巡检脚本异常: {exc}"}
+        write_snapshot(args.snapshot_path, payload)
         print(json.dumps(payload, ensure_ascii=False, indent=2) if args.json else f"STATUS: ERROR\n巡检脚本异常: {exc}")
         return 1
 
@@ -390,6 +400,7 @@ def main() -> int:
             "message": "无法解析当前巡检报告JSON",
             "errors": errors,
         }
+        write_snapshot(args.snapshot_path, payload)
         if args.json:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         else:
@@ -404,6 +415,7 @@ def main() -> int:
     payload = build_status_payload(report)
     executor_probe = probe_executor_health(args.executor_source)
     payload["executorProbe"] = executor_probe
+    write_snapshot(args.snapshot_path, payload)
     if args.json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:

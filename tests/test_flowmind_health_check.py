@@ -117,3 +117,13 @@ def test_render_status_lines_includes_executor_probe_summary():
     )
 
     assert any("Executor probe: flowmind-health-readonly healthz=ok readyz=ready" in line for line in lines)
+
+
+def test_write_snapshot_persists_json_payload(tmp_path):
+    target = tmp_path / "state" / "flowmind-health-check-latest.json"
+    payload = {"status": "ABNORMAL", "checkedAt": "2026-05-20T00:00:00Z"}
+
+    MODULE.write_snapshot(str(target), payload)
+
+    assert target.exists()
+    assert target.read_text(encoding="utf-8").strip().startswith("{")

@@ -112,6 +112,36 @@
 - 直跑 `python3 /root/.hermes/scripts/flowmind-health-check.py` 时已出现：
   - `Executor probe: flowmind-health-readonly healthz=ok readyz=ready`
 
+### 2.6 异常通知演练链路已 deterministic 化
+
+新增：
+
+- `scripts/flowmind-health-notify.py`
+
+它负责：
+
+- 读取 `flowmind-health-check.py` 写出的 runtime-local snapshot
+- 在 `ABNORMAL / ERROR` 状态下生成固定的 Feishu post payload
+- 支持 `--dry-run`，从而在不向正式群发误报的前提下完成异常通知演练
+
+当前 snapshot 默认写入：
+
+- `~/.hermes/cron/state/flowmind-health-check-latest.json`
+
+宿主演练已通过：
+
+- 真实 `OK` snapshot 由 `flowmind-health-check.py` 直接写出
+- 用受控 `ABNORMAL` fixture 执行：
+  - `python3 /root/.hermes/scripts/flowmind-health-notify.py --snapshot /tmp/flowmind-health-abnormal.json --dry-run`
+
+结果：
+
+- 成功打印待发送 payload
+- 摘要中包含：
+  - failed check
+  - review queue backlog
+  - executor probe degraded
+
 ## 3. 为什么这轮没有继续把主判断权交给 executor
 
 本轮结论是：
@@ -152,6 +182,7 @@
 5. `hermes cron resume/run/tick` 恢复并手动触发历史 job
 6. `python3 scripts/runtime/run_on_ali_hermes.py --cwd /root/CrazyAgentsManage -- 'python3 scripts/runtime/ensure_flowmind_health_readonly_source.py --required-tool getReadyz'`
 7. `python3 scripts/runtime/run_on_ali_hermes.py --cwd /root/CrazyAgentsManage -- 'python3 /root/.hermes/scripts/flowmind-health-check.py'`
+8. `python3 scripts/runtime/run_on_ali_hermes.py --cwd /root/CrazyAgentsManage -- 'python3 /root/.hermes/scripts/flowmind-health-notify.py --snapshot /tmp/flowmind-health-abnormal.json --dry-run'`
 
 ## 5. Wave 2 总状态
 
@@ -172,6 +203,7 @@
 
 1. 若未来要继续增强 executor 参与度，应先证明它比当前 host-owned report read + readonly probe 的组合更有实质收益。
 2. 宿主 `/root/CrazyAgentsManage` 当前是 live deploy copy，不等同于 git checkout 基线；这是一条长期边界规则，不再视为 Wave 2 未收口项。
+3. 当前生产 job prompt 仍保留旧的 inline `lark-cli` 说明，但异常通知的 deterministic helper 已经落地并完成 dry-run；后续若要把 runtime prompt 也切到 helper，需要先解决 live deploy copy 的 git-tracked prompt guard 约束。
 
 ## 7. 一句话结论
 

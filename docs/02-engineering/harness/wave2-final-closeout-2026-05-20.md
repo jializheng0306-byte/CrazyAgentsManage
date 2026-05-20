@@ -21,6 +21,7 @@ Wave 2 到这里不再保留开放 blocker。
    - AI cron guard 已清掉 source-of-truth blocker
    - 历史 paused job 已恢复
    - readonly `/healthz` + `/readyz` probe 已补齐并在宿主通过
+   - deterministic abnormal notify helper 已完成 host-side dry-run rehearsal
 
 ## 2. 子项结果
 
@@ -48,6 +49,7 @@ Wave 2 到这里不再保留开放 blocker。
 - direct host run 已出现：
   - `STATUS: OK`
   - `Executor probe: flowmind-health-readonly healthz=ok readyz=ready`
+- `flowmind-health-notify.py --dry-run` 已对受控 `ABNORMAL` fixture 产出实际待发送 payload
 
 ## 3. 本轮没有继续做的事
 
@@ -55,7 +57,8 @@ Wave 2 到这里不再保留开放 blocker。
 
 1. `techcrunch` / `podcast` 的更广 source 覆盖
 2. `flowmind.health-probe` 让 executor 接管主判断权
-3. 更复杂的 pause / resume / elicitation 回流设计
+3. 将宿主 runtime prompt 正式切到 `flowmind-health-notify.py` helper（当前受 live deploy copy 的 git-tracked prompt guard 约束）
+4. 更复杂的 pause / resume / elicitation 回流设计
 
 它们不是“还没做完的 Wave 2”，而是后续阶段的新工作。
 
@@ -70,4 +73,4 @@ Wave 2 到这里不再保留开放 blocker。
 
 ## 5. 一句话结论
 
-> Wave 2 已经从“readonly delegation 候选评估”推进到“`tech-radar.review` hardened + `flowmind.health-probe` recovered and probed”的完成态，当前不再保留开放 blocker。
+> Wave 2 已经从“readonly delegation 候选评估”推进到“`tech-radar.review` hardened + `flowmind.health-probe` recovered, probed, and rehearsed”的完成态，当前不再保留开放 blocker。
