@@ -87,7 +87,7 @@
         "scripts/flowmind-health-check.py",
         "AI cron: FlowMind巡检-每日一次"
       ],
-      "resolution": "repo-tracked host health wrapper landed; AI cron guard cleared; paused host job resumed and manually verified"
+      "resolution": "repo-tracked host health wrapper landed; AI cron guard cleared; paused host job resumed; readonly /healthz and /readyz probe also verified"
     }
   ],
   "forbidden_now": [

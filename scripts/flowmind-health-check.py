@@ -7,9 +7,17 @@ import argparse
 import json
 import shlex
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Optional
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from executor_readonly_helper import call_executor_tool
 
 
 DEFAULT_SSH_KEY = "/root/.ssh/id_ed25519_hermes_flowmind"
@@ -18,6 +26,7 @@ DEFAULT_LOG_FILE = "/var/log/flowmind/ops-health.log"
 DEFAULT_JSON_FILE = "/home/ubuntu/FlowMindDeploy-newhost/scripts/pilot/output/current/reports/ops-runtime-health.json"
 DEFAULT_LATEST_RUN_FILE = "/home/ubuntu/FlowMindDeploy-newhost/scripts/pilot/output/current/latest-run.json"
 DEFAULT_RUNS_ROOT = "/home/ubuntu/FlowMindDeploy-newhost/scripts/pilot/output/runs"
+DEFAULT_EXECUTOR_SOURCE = "flowmind-health-readonly"
 
 
 def parse_args() -> argparse.Namespace:
@@ -28,6 +37,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--json-file", default=DEFAULT_JSON_FILE)
     parser.add_argument("--latest-run-file", default=DEFAULT_LATEST_RUN_FILE)
     parser.add_argument("--runs-root", default=DEFAULT_RUNS_ROOT)
+    parser.add_argument("--executor-source", default=DEFAULT_EXECUTOR_SOURCE)
     parser.add_argument("--ssh-timeout", type=int, default=30)
     parser.add_argument("--json", action="store_true", help="Emit structured JSON instead of STATUS lines")
     return parser.parse_args()
@@ -216,6 +226,38 @@ def load_report(
     return None, errors
 
 
+def probe_executor_health(source: str) -> dict:
+    try:
+        healthz = call_executor_tool(
+            source=source,
+            group="health",
+            tool="getHealthz",
+            payload={},
+        )
+        readyz = call_executor_tool(
+            source=source,
+            group="health",
+            tool="getReadyz",
+            payload={},
+        )
+    except Exception as exc:
+        return {
+            "source": source,
+            "status": "unavailable",
+            "error": str(exc),
+        }
+
+    health_status = str(healthz.get("status") or "").lower()
+    ready_status = str(readyz.get("status") or "").lower()
+    overall = "ok" if health_status == "ok" and ready_status == "ready" else "degraded"
+    return {
+        "source": source,
+        "status": overall,
+        "healthz": healthz,
+        "readyz": readyz,
+    }
+
+
 def build_status_payload(report: dict) -> dict:
     passed = bool(report.get("passed", False))
     checked_at = str(report.get("checkedAt", "unknown"))
@@ -251,7 +293,7 @@ def build_status_payload(report: dict) -> dict:
     }
 
 
-def render_status_lines(payload: dict) -> list[str]:
+def render_status_lines(payload: dict, executor_probe: Optional[dict] = None) -> list[str]:
     status = payload["status"]
     if status == "OK":
         lines = [
@@ -261,6 +303,21 @@ def render_status_lines(payload: dict) -> list[str]:
         ]
         if payload["reviewQueue"]["pendingValidationCount"] > 0:
             lines.append(f"Validation backlog: {payload['reviewQueue']['pendingValidationCount']} (warning only)")
+        if executor_probe:
+            if executor_probe.get("status") == "ok":
+                lines.append(
+                    f"Executor probe: {executor_probe.get('source')} healthz=ok readyz=ready"
+                )
+            elif executor_probe.get("status") == "degraded":
+                lines.append(
+                    f"Executor probe: {executor_probe.get('source')} degraded "
+                    f"(healthz={str((executor_probe.get('healthz') or {}).get('status') or 'unknown')}, "
+                    f"readyz={str((executor_probe.get('readyz') or {}).get('status') or 'unknown')})"
+                )
+            else:
+                lines.append(
+                    f"Executor probe: {executor_probe.get('source')} unavailable ({executor_probe.get('error')})"
+                )
         return lines
 
     lines = [
@@ -345,10 +402,12 @@ def main() -> int:
         return 1
 
     payload = build_status_payload(report)
+    executor_probe = probe_executor_health(args.executor_source)
+    payload["executorProbe"] = executor_probe
     if args.json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
-        print("\n".join(render_status_lines(payload)))
+        print("\n".join(render_status_lines(payload, executor_probe)))
     return 0 if payload["status"] == "OK" else 1
 
 

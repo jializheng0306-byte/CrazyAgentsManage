@@ -62,6 +62,11 @@
       "source_relpath": "scripts/runtime/ensure_github_repo_readonly_source.py",
       "purpose": "Ensure GitHub repository readonly source exists before tech-radar enrichment"
     },
+    "ensure-flowmind-health-readonly-source.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/runtime/ensure_flowmind_health_readonly_source.py",
+      "purpose": "Ensure FlowMind health readonly source exists before host health probing"
+    },
     "ensure-x-publish-readonly-source.py": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/runtime/ensure_x_publish_readonly_source.py",

@@ -2,7 +2,7 @@
   "version": "v1",
   "date": "2026-05-20",
   "wave2": {
-    "status": "complete",
+    "status": "complete-no-open-blockers",
     "primaryCandidate": {
       "taskType": "tech-radar.review",
       "entrypoint": "scripts/tech-radar-review.sh",
@@ -36,11 +36,11 @@
       "entrypoint": "scripts/flowmind-health-check.py",
       "decision": "normalize-host-mainline",
       "implementationStatus": "repo-tracked-wrapper-landed-and-resumed",
-      "executorFit": "deferred",
+      "executorFit": "hybrid-host-mainline-plus-readonly-probe",
       "reasons": [
         "The blocking issue was missing repo-tracked source-of-truth on ALI-HERMES, not missing capability-plane access.",
         "A repo-tracked host health wrapper cleared AI cron guard findings and restored the paused FlowMind巡检 job.",
-        "This lane reads host-owned FlowMind health reports and should stay a host health surface until a concrete executor advantage appears."
+        "This lane now keeps host-owned FlowMind health reports as the main truth source while also probing /healthz and /readyz through the readonly capability plane."
       ]
     }
   }

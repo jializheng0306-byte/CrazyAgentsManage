@@ -92,22 +92,42 @@
 - script output = `STATUS: OK`
 - final response = `FlowMind巡检正常`
 
-## 3. 为什么这轮没有继续 executor 化
+### 2.5 readonly capability probe 也已补齐
+
+新增：
+
+- `shared-context/executor-sources/flowmind-health-readonly-openapi.v1.json`
+- `scripts/runtime/ensure_flowmind_health_readonly_source.py`
+
+并把 `scripts/flowmind-health-check.py` 扩为：
+
+- host-owned report read 仍是主判断链
+- 同时 best-effort 通过 executor 直读：
+  - `/healthz`
+  - `/readyz`
+
+宿主实测：
+
+- `flowmind-health-readonly` source 创建成功
+- 直跑 `python3 /root/.hermes/scripts/flowmind-health-check.py` 时已出现：
+  - `Executor probe: flowmind-health-readonly healthz=ok readyz=ready`
+
+## 3. 为什么这轮没有继续把主判断权交给 executor
 
 本轮结论是：
 
 - `flowmind.health-probe` 已经完成 Wave 2 收口
-- 但它的完成态不是“继续补 executor source”
+- 但它的完成态也不是“让 executor 接管主判断权”
 
 原因：
 
-1. 当前 blocker 是 host governance，不是 capability gap。
-2. 这条链的核心读取对象是 host-owned FlowMind health report，而不是一个需要先接 capability plane 才能访问的外部资料面。
-3. 在 source-of-truth 没闭合前继续谈 executor 只会把问题绕开，不会把主线做完。
+1. 当前 blocker 首先是 host governance，而不是 capability gap。
+2. 这条链的核心 truth 仍然是 host-owned FlowMind health report。
+3. readonly capability probe 有价值，但更适合作为补充验证面，而不是替代 host 主判断链。
 
 因此当前最准确的裁定是：
 
-> `flowmind.health-probe` 已经回到受支持的 repo-tracked host mainline，但暂不进入 executor default lane。
+> `flowmind.health-probe` 已经回到受支持的 repo-tracked host mainline，并补上了 readonly health endpoint probe；但 executor 仍不是这条链的主 authority。
 
 ## 4. 验证
 
@@ -130,6 +150,8 @@
 
 4. include-disabled AI cron guard audit
 5. `hermes cron resume/run/tick` 恢复并手动触发历史 job
+6. `python3 scripts/runtime/run_on_ali_hermes.py --cwd /root/CrazyAgentsManage -- 'python3 scripts/runtime/ensure_flowmind_health_readonly_source.py --required-tool getReadyz'`
+7. `python3 scripts/runtime/run_on_ali_hermes.py --cwd /root/CrazyAgentsManage -- 'python3 /root/.hermes/scripts/flowmind-health-check.py'`
 
 ## 5. Wave 2 总状态
 
@@ -146,12 +168,11 @@
 
 > Wave 2 不再有“还悬着的第二条候选线”。
 
-## 6. 剩余注意项
+## 6. 后续扩展点
 
-1. `flowmind.health-probe` 当前恢复的是 host health lane，不是 executor source lane。
-2. 若未来要继续 executor 化，应先证明它比当前 host-owned report read 方案更有实质收益。
-3. 宿主 `/root/CrazyAgentsManage` 当前是 live deploy copy，不等同于 git checkout 基线；不要把 host runtime-local 状态误读为 repo truth。
+1. 若未来要继续增强 executor 参与度，应先证明它比当前 host-owned report read + readonly probe 的组合更有实质收益。
+2. 宿主 `/root/CrazyAgentsManage` 当前是 live deploy copy，不等同于 git checkout 基线；这是一条长期边界规则，不再视为 Wave 2 未收口项。
 
 ## 7. 一句话结论
 
-> `flowmind.health-probe` 的 Wave 2 正确完成方式不是继续追 executor，而是先把宿主已有巡检脚本收回 repo fact layer、清掉 AI cron guard、恢复并验证历史 paused job；这一步已经在 `ALI-HERMES` 上完成。
+> `flowmind.health-probe` 的 Wave 2 完成方式不是让 executor 接管主判断，而是把宿主已有巡检脚本收回 repo fact layer、清掉 AI cron guard、恢复并验证历史 paused job，并补上一条 readonly health endpoint probe；这一步已经在 `ALI-HERMES` 上完成。

@@ -37,6 +37,7 @@
       "compareFiles": [
         "shared-context/tech-radar.json",
         "shared-context/executor-sources/crossref-works-openapi.v1.json",
+        "shared-context/executor-sources/flowmind-health-readonly-openapi.v1.json",
         "shared-context/executor-sources/github-repo-readonly-openapi.v1.json",
         "shared-context/executor-sources/hn-algolia-search-openapi.v1.json",
         "shared-context/executor-sources/x-publish-readonly-openapi.v1.json",
@@ -55,6 +56,7 @@
         "scripts/tech-radar-review.sh",
         "scripts/runtime/enable_crazy_executor_http_mode_on_ali_hermes.sh",
         "scripts/runtime/ensure_crossref_readonly_source.py",
+        "scripts/runtime/ensure_flowmind_health_readonly_source.py",
         "scripts/runtime/ensure_github_repo_readonly_source.py",
         "scripts/runtime/ensure_hn_readonly_source.py",
         "scripts/runtime/ensure_x_publish_readonly_source.py",

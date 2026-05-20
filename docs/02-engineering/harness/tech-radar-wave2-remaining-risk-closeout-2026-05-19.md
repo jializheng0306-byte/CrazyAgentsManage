@@ -131,12 +131,19 @@
 2. 第二条 GitHub 不再被当前报告名额挤掉
 3. GitHub 宿主侧 rate-limit 风险已有 runtime-local cache + stale fallback 缓冲
 
-## 5. 剩余注意项
+## 5. 收口说明
 
-1. `techcrunch` / `podcast` 仍未进入同等级 readonly capability，但当前条目仍以 `P2` 为主，不是本轮主阻塞。
-2. `x-syndication-readonly` 依赖公开 syndication 面；若宿主网络策略变化，需要重新做一次 host probe。
-3. GitHub cache 现在是 runtime-local 优化，不应被误读成 repo 事实层。
+本轮之后，不再保留 Wave 2 级别的开放 blocker。
+
+以下事项改为后续扩展点，而不是当前未收口风险：
+
+1. `techcrunch` / `podcast` 仍未进入同等级 readonly capability。
+   原因：当前条目优先级仍以 `P2` 为主，已被明确移出 Wave 2 收口范围。
+2. `x-syndication-readonly` 依赖公开 syndication 面。
+   当前解释：宿主实测已连续通过，后续若网络策略变化再按 host probe 处理，不再视为本轮缺口。
+3. GitHub cache 是 runtime-local 优化。
+   当前解释：这是一条已接受的边界规则，不再视为未解决风险。
 
 ## 6. 一句话结论
 
-> Wave 2 剩余风险已经从“source 缺口 / 选择偏斜 / rate-limit 未验证”推进到“`x/twitter` 已覆盖、两条 GitHub 稳定入报告、GitHub cache 已在 `ALI-HERMES` 上持续命中”。
+> `tech-radar.review` 的 Wave 2 已经完成到“`x/twitter` 已覆盖、两条 GitHub 稳定入报告、GitHub cache 已在 `ALI-HERMES` 上持续命中、无开放 Wave 2 blocker”的程度。
