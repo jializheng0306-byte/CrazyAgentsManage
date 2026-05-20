@@ -47,6 +47,7 @@
         "scripts/fetch-crossref-papers-via-executor.py",
         "scripts/fetch-hn-stories-via-executor.py",
         "scripts/fetch-tech-radar-evidence-via-executor.py",
+        "scripts/flowmind-health-check.py",
         "scripts/morning-intel-collector.sh",
         "scripts/morning-intel-v2.py",
         "scripts/noon-paper-collector.sh",

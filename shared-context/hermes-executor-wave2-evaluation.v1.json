@@ -1,7 +1,8 @@
 {
   "version": "v1",
-  "date": "2026-05-19",
+  "date": "2026-05-20",
   "wave2": {
+    "status": "complete",
     "primaryCandidate": {
       "taskType": "tech-radar.review",
       "entrypoint": "scripts/tech-radar-review.sh",
@@ -15,7 +16,7 @@
       "reasons": [
         "Current script is mostly local facts aggregation over repo/shared-context and recent intel markdowns.",
         "The real missing value is entry-level external evidence refresh for high-priority pending items.",
-        "The readonly capability plane now covers crossref, GitHub recent activity, and X publish oEmbed without handing repo truth to executor."
+        "The readonly capability plane now covers crossref, GitHub recent activity, and X syndication without handing repo truth to executor."
       ],
       "firstImplementationShape": {
         "scope": "P0/P1 + pending radar entries only",
@@ -29,6 +30,18 @@
         "selectionPolicy": "per-source base coverage, compact non-paper full coverage, then priority fill",
         "rateLimitMitigation": "runtime-local GitHub cache with stale fallback"
       }
+    },
+    "secondaryResolution": {
+      "taskType": "flowmind.health-probe",
+      "entrypoint": "scripts/flowmind-health-check.py",
+      "decision": "normalize-host-mainline",
+      "implementationStatus": "repo-tracked-wrapper-landed-and-resumed",
+      "executorFit": "deferred",
+      "reasons": [
+        "The blocking issue was missing repo-tracked source-of-truth on ALI-HERMES, not missing capability-plane access.",
+        "A repo-tracked host health wrapper cleared AI cron guard findings and restored the paused FlowMind巡检 job.",
+        "This lane reads host-owned FlowMind health reports and should stay a host health surface until a concrete executor advantage appears."
+      ]
     }
   }
 }

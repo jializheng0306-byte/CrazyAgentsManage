@@ -73,20 +73,21 @@
       ]
     }
   ],
-  "wave2_candidates": [
+  "wave2_completed": [
     {
       "taskType": "tech-radar.review",
       "repoEntrypoints": [
         "scripts/tech-radar-review.sh"
       ],
-      "reason": "Current main value is local shared-context aggregation; external read benefit exists but is not first-wave critical."
+      "resolution": "readonly evidence enrichment landed and hardened on ALI-HERMES"
     },
     {
       "taskType": "flowmind.health-probe",
       "repoEntrypoints": [
-        "historical AI cron: FlowMind巡检-每日一次"
+        "scripts/flowmind-health-check.py",
+        "AI cron: FlowMind巡检-每日一次"
       ],
-      "reason": "Not currently on the repo-tracked supported mainline; conflicts with live guard and source-of-truth discipline."
+      "resolution": "repo-tracked host health wrapper landed; AI cron guard cleared; paused host job resumed and manually verified"
     }
   ],
   "forbidden_now": [

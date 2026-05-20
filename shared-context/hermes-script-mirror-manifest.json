@@ -77,6 +77,11 @@
       "source_relpath": "scripts/fetch-tech-radar-evidence-via-executor.py",
       "purpose": "Readonly evidence enrichment for high-priority pending tech-radar entries"
     },
+    "flowmind-health-check.py": {
+      "repo_root": "/root/CrazyAgentsManage",
+      "source_relpath": "scripts/flowmind-health-check.py",
+      "purpose": "Repo-tracked FlowMind health probe wrapper authority for ALI-HERMES"
+    },
     "noon-paper-collector.sh": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/noon-paper-collector.sh",
