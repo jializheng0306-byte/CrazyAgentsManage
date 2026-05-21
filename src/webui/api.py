@@ -1127,8 +1127,7 @@ def overview_teams():
     return jsonify(teams)
 
 
-@api.route('/overview/memories')
-def overview_memories():
+def _load_overview_memories():
     home = _get_hermes_home()
     memories = []
 
@@ -1152,7 +1151,12 @@ def overview_memories():
             'size': len(soul_content),
         })
 
-    return jsonify(memories)
+    return memories
+
+
+@api.route('/overview/memories')
+def overview_memories():
+    return jsonify(_load_overview_memories())
 
 
 # ═══════════════════════════════════════════
@@ -1336,8 +1340,7 @@ def dashboard_stream():
                     headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 
-@api.route('/dashboard/gateway-status')
-def dashboard_gateway_status():
+def _load_gateway_status():
     home = _get_hermes_home()
     status = {
         'running': False,
@@ -1367,7 +1370,12 @@ def dashboard_gateway_status():
         if state_data.get('gateway_state') == 'running':
             status['running'] = True
 
-    return jsonify(status)
+    return status
+
+
+@api.route('/dashboard/gateway-status')
+def dashboard_gateway_status():
+    return jsonify(_load_gateway_status())
 
 
 # ═══════════════════════════════════════════
@@ -1711,8 +1719,7 @@ def promise_review_trace(candidate_id):
 # Cron APIs
 # ═══════════════════════════════════════════
 
-@api.route('/cron/list')
-def cron_list():
+def _load_cron_jobs():
     home = _get_hermes_home()
     jobs_file = home / 'cron' / 'jobs.json'
 
@@ -1733,7 +1740,12 @@ def cron_list():
         else:
             job['output_count'] = 0
 
-    return jsonify(jobs)
+    return jobs
+
+
+@api.route('/cron/list')
+def cron_list():
+    return jsonify(_load_cron_jobs())
 
 
 @api.route('/cron/create', methods=['POST'])
@@ -2201,11 +2213,10 @@ def _scan_remote_skills(cfg):
     return skills
 
 
-@api.route('/skills/list')
-def skills_list():
+def _load_skills_inventory():
     now = time.time()
     if _skills_cache['data'] is not None and (now - _skills_cache['timestamp']) < _skills_cache_ttl:
-        return jsonify(_skills_cache['data'])
+        return _skills_cache['data']
 
     if _is_remote_mode():
         skills = _scan_remote_skills(_get_remote_config())
@@ -2231,7 +2242,12 @@ def skills_list():
     }
     _skills_cache['data'] = result
     _skills_cache['timestamp'] = now
-    return jsonify(result)
+    return result
+
+
+@api.route('/skills/list')
+def skills_list():
+    return jsonify(_load_skills_inventory())
 
 
 @api.route('/skills/detail/<path:skill_path>')
@@ -2288,8 +2304,7 @@ def skills_detail(skill_path):
 # Alerts APIs
 # ═══════════════════════════════════════════
 
-@api.route('/alerts/list')
-def alerts_list():
+def _load_alerts():
     alerts = []
 
     if _is_remote_mode():
@@ -2341,7 +2356,12 @@ def alerts_list():
                 'time': state_data.get('updated_at', ''),
             })
 
-    return jsonify(alerts)
+    return alerts
+
+
+@api.route('/alerts/list')
+def alerts_list():
+    return jsonify(_load_alerts())
 
 
 @api.route('/alerts/platform-status')
@@ -2534,8 +2554,7 @@ def agents_list():
             'success_rate': success_rate,
         })
 
-    gateway_status = dashboard_gateway_status()
-    gw_data = json.loads(gateway_status.get_data(as_text=True))
+    gw_data = _load_gateway_status()
 
     for platform_name, platform_state in gw_data.get('platforms', {}).items():
         existing = [a for a in agents if a['source'] == platform_name]
@@ -2949,6 +2968,239 @@ def overview_data():
 # ═══════════════════════════════════════════
 
 from executor_bridge import get_executor_provider, get_provider_mode
+
+
+def _ops_status_rank(status):
+    if status in ('failed', 'missing', 'expired', 'invalid-schema'):
+        return 3
+    if status in ('degraded', 'missing-auth', 'auth-required', 'unknown', 'inactive', 'disabled'):
+        return 2
+    return 1
+
+
+def _ops_pick_status(*statuses):
+    picked = 'healthy'
+    best_rank = _ops_status_rank(picked)
+    for status in statuses:
+        if not status:
+            continue
+        rank = _ops_status_rank(status)
+        if rank > best_rank:
+            picked = status
+            best_rank = rank
+    return picked
+
+
+def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, cron_status, skills_status, memory_status):
+    if alert_status == 'failed' or connectivity_status == 'failed':
+        return {
+            'href': '/operations/alerts',
+            'label': '先处理告警与连接异常',
+            'reason': '当前异常优先级高于对象库存巡检。',
+        }
+    if integrations_status == 'failed':
+        return {
+            'href': '/operations#providers',
+            'label': '先处理 Provider Health',
+            'reason': '集成能力面存在 provider 失败，需要先恢复外部能力。',
+        }
+    if integrations_status == 'degraded':
+        return {
+            'href': '/operations#credentials',
+            'label': '检查凭证与 Source 绑定',
+            'reason': '集成能力面已降级，优先确认凭证缺失或 source 覆盖不足。',
+        }
+    if cron_status == 'degraded':
+        return {
+            'href': '/operations/cron',
+            'label': '检查定时任务状态',
+            'reason': '存在暂停或未恢复的例行机制。',
+        }
+    if skills_status == 'unknown':
+        return {
+            'href': '/operations/skills',
+            'label': '补齐技能库存基线',
+            'reason': '当前技能库存为空，先确认 host 技能目录与装载情况。',
+        }
+    if memory_status == 'unknown':
+        return {
+            'href': '/operations/team-memory',
+            'label': '检查 Team Memory',
+            'reason': '当前没有可消费记忆文件，先确认 shared context 与角色记忆可见性。',
+        }
+    return {
+        'href': '/operations#sources',
+        'label': '继续巡检集成能力面',
+        'reason': '当前基础对象健康，可继续沿 source / tool / credential 深入核对。',
+    }
+
+
+def _build_operations_summary():
+    skills_payload = _load_skills_inventory() or {'skills': [], 'total': 0, 'categories': []}
+    cron_jobs = _load_cron_jobs() or []
+    memories = _load_overview_memories() or []
+    alerts = _load_alerts() or []
+    gateway = _load_gateway_status() or {'gateway_state': 'unknown', 'platforms': {}, 'running': False, 'active_agents': 0}
+    integrations = get_executor_provider().get_summary() or {}
+
+    skill_total = skills_payload.get('total', 0) or 0
+    skill_categories = skills_payload.get('categories', []) or []
+    top_skill_category = skill_categories[0]['display'] if skill_categories else '未分类'
+    skills_status = 'healthy' if skill_total > 0 else 'unknown'
+
+    cron_total = len(cron_jobs)
+    cron_active = len([job for job in cron_jobs if job.get('active') is not False and job.get('paused') is not True])
+    cron_paused = max(cron_total - cron_active, 0)
+    cron_status = 'healthy'
+    if cron_total == 0:
+        cron_status = 'unknown'
+    elif cron_paused > 0:
+        cron_status = 'degraded'
+
+    memory_total = len(memories)
+    memory_status = 'healthy' if memory_total > 0 else 'unknown'
+
+    critical_alerts = len([alert for alert in alerts if alert.get('level') == 'critical'])
+    warning_alerts = len([alert for alert in alerts if alert.get('level') == 'warning'])
+    info_alerts = len([alert for alert in alerts if alert.get('level') == 'info'])
+    alert_status = 'healthy'
+    if critical_alerts > 0:
+        alert_status = 'failed'
+    elif warning_alerts > 0:
+        alert_status = 'degraded'
+
+    platforms = gateway.get('platforms', {}) or {}
+    platform_total = len(platforms)
+    platform_connected = 0
+    platform_warning = 0
+    platform_failed = 0
+    for platform_state in platforms.values():
+        state = platform_state.get('state', 'unknown')
+        if state == 'connected':
+            platform_connected += 1
+        elif state in ('error', 'fatal'):
+            platform_failed += 1
+        else:
+            platform_warning += 1
+
+    connectivity_status = 'healthy'
+    gateway_state = gateway.get('gateway_state', 'unknown')
+    if gateway_state != 'running' or platform_failed > 0:
+        connectivity_status = 'failed'
+    elif platform_warning > 0 or platform_total == 0:
+        connectivity_status = 'degraded'
+
+    integration_source_count = integrations.get('sourceCount', 0) or 0
+    integration_tool_count = integrations.get('toolCount', 0) or 0
+    integration_credential_count = integrations.get('credentialCount', 0) or 0
+    integration_provider_count = integrations.get('providerCount', 0) or 0
+    integration_missing_credentials = integrations.get('missingCredentialCount', 0) or 0
+    integration_failed_providers = integrations.get('failedProviderCount', 0) or 0
+    integrations_status = 'healthy'
+    if integration_failed_providers > 0:
+        integrations_status = 'failed'
+    elif integration_missing_credentials > 0 or integration_source_count == 0:
+        integrations_status = 'degraded'
+
+    overall_status = _ops_pick_status(
+        alert_status,
+        connectivity_status,
+        integrations_status,
+        cron_status,
+        skills_status,
+        memory_status,
+    )
+
+    next_hop = _build_operations_next_hop(
+        alert_status,
+        connectivity_status,
+        integrations_status,
+        cron_status,
+        skills_status,
+        memory_status,
+    )
+
+    families = [
+        {
+            'key': 'skills',
+            'title': 'Skills Inventory',
+            'icon': '⚡',
+            'status': skills_status,
+            'count': skill_total,
+            'summary': f'{len(skill_categories)} categories · top {top_skill_category}',
+            'href': '/operations/skills',
+        },
+        {
+            'key': 'cron',
+            'title': 'Cron / Routines',
+            'icon': '⏰',
+            'status': cron_status,
+            'count': cron_total,
+            'summary': f'{cron_active} active · {cron_paused} paused',
+            'href': '/operations/cron',
+        },
+        {
+            'key': 'memory',
+            'title': 'Team Memory',
+            'icon': '📝',
+            'status': memory_status,
+            'count': memory_total,
+            'summary': 'SOUL / memories / shared context visible',
+            'href': '/operations/team-memory',
+        },
+        {
+            'key': 'connectivity',
+            'title': 'Platform Connectivity',
+            'icon': '📡',
+            'status': connectivity_status,
+            'count': platform_total,
+            'summary': f'gateway={gateway_state} · {platform_connected}/{platform_total} connected',
+            'href': '/operations/alerts',
+        },
+        {
+            'key': 'integrations',
+            'title': 'Integrations Capability',
+            'icon': '🔌',
+            'status': integrations_status,
+            'count': integration_source_count,
+            'summary': f'{integration_tool_count} tools · {integration_provider_count} providers · {integration_missing_credentials} credential gaps',
+            'href': '/operations#sources',
+        },
+    ]
+
+    return {
+        'status': overall_status,
+        'generatedAt': datetime.now(timezone.utc).isoformat(),
+        'briefing': {
+            'label': 'Sprint 1 aggregation lane',
+            'title': '运营对象摘要已收口到单一聚合层',
+            'summary': '技能、定时任务、记忆、平台连接与 executor capability plane 现在通过同一份 summary payload 暴露给 Operations 页面。',
+        },
+        'nextHop': next_hop,
+        'metrics': {
+            'skillsCount': skill_total,
+            'cronCount': cron_total,
+            'memoryCount': memory_total,
+            'integrationCount': integration_source_count,
+            'alertCount': len(alerts),
+            'toolCount': integration_tool_count,
+            'credentialCount': integration_credential_count,
+            'providerCount': integration_provider_count,
+        },
+        'alerts': {
+            'status': alert_status,
+            'total': len(alerts),
+            'critical': critical_alerts,
+            'warning': warning_alerts,
+            'info': info_alerts,
+        },
+        'families': families,
+    }
+
+
+@api.route('/operations/summary')
+def operations_summary():
+    return jsonify(_build_operations_summary())
 
 
 @api.route('/operations/integrations/sources')

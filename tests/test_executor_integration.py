@@ -189,6 +189,50 @@ class TestExecutorSampleProvider:
 
 
 class TestExecutorIntegrationApi:
+    def test_operations_summary_aggregates_page_families(self, client, monkeypatch):
+        class FakeProvider:
+            def get_summary(self):
+                return {
+                    'sourceCount': 2,
+                    'toolCount': 5,
+                    'credentialCount': 2,
+                    'providerCount': 2,
+                    'failedProviderCount': 1,
+                    'missingCredentialCount': 0,
+                }
+
+        monkeypatch.setattr(webui_api, '_load_skills_inventory', lambda: {
+            'skills': [],
+            'total': 3,
+            'categories': [{'name': 'ops', 'display': 'Operations', 'count': 2}],
+        })
+        monkeypatch.setattr(webui_api, '_load_cron_jobs', lambda: [
+            {'id': 'cron-1', 'active': True, 'paused': False},
+        ])
+        monkeypatch.setattr(webui_api, '_load_overview_memories', lambda: [
+            {'name': 'SOUL', 'path': 'SOUL.md', 'preview': 'seed', 'size': 4},
+        ])
+        monkeypatch.setattr(webui_api, '_load_alerts', lambda: [])
+        monkeypatch.setattr(webui_api, '_load_gateway_status', lambda: {
+            'running': True,
+            'gateway_state': 'running',
+            'platforms': {'feishu': {'state': 'connected'}},
+            'active_agents': 1,
+        })
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: FakeProvider())
+
+        resp = client.get('/api/operations/summary')
+
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert payload['status'] == 'failed'
+        assert payload['metrics']['skillsCount'] == 3
+        assert payload['metrics']['providerCount'] == 2
+        assert payload['nextHop']['href'] == '/operations#providers'
+        families = {item['key']: item for item in payload['families']}
+        assert families['integrations']['status'] == 'failed'
+        assert families['cron']['summary'] == '1 active · 0 paused'
+
     def test_create_source_requires_type_specific_fields(self, client):
         resp = client.post('/api/operations/integrations/sources', json={'type': 'openapi'})
         assert resp.status_code == 400
@@ -260,10 +304,20 @@ class TestExecutorIntegrationApi:
 
 
 class TestExecutorOperationsUiAssets:
+    def test_operations_page_exposes_aggregation_shell(self, client):
+        resp = client.get('/operations')
+        assert resp.status_code == 200
+        html = resp.data.decode('utf-8', errors='replace')
+        assert 'ops-briefing-label' in html
+        assert 'ops-summary-grid' in html
+        assert 'ops-next-hop' in html
+        assert 'ops-subpage-card' in html
+
     def test_operations_js_exposes_schema_summary_language(self, client):
         resp = client.get('/static/js/operations.js')
         assert resp.status_code == 200
         data = resp.data.decode('utf-8', errors='replace')
         assert 'Schema 摘要' in data
-        assert '/api/operations/integrations/summary' in data
+        assert '/api/operations/summary' in data
+        assert '/api/operations/integrations/provider-mode' in data
         assert 'Credential Health' in data

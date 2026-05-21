@@ -12,6 +12,7 @@ var OPS = {
   currentFamily: 'cron',
   selectedItemId: null,
   cache: {},
+  summary: null,
   filterText: '',
   filterChip: '',
   providerMode: 'sample',
@@ -47,6 +48,11 @@ function _setText(id, text) {
   if (el) el.textContent = text;
 }
 
+function _familyFromHash() {
+  var hash = (window.location.hash || '').replace(/^#/, '');
+  return FAMILIES[hash] ? hash : '';
+}
+
 // ============================================================
 // Family definitions
 // ============================================================
@@ -67,6 +73,16 @@ var FAMILIES = {
 // ============================================================
 
 function loadMetrics() {
+  _fetch('/api/operations/summary').then(function(summary) {
+    OPS.summary = summary || null;
+    applySummaryCounts(summary || {});
+    renderBriefing(summary || {});
+    renderSummaryGrid(summary || {});
+  }).catch(function() {
+    renderBriefing({});
+    renderSummaryGrid({});
+  });
+
   _fetch('/api/operations/integrations/provider-mode').then(function(info) {
     OPS.providerMode = info.mode || 'sample';
     OPS.capabilities = info.capabilities || OPS.capabilities;
@@ -77,43 +93,71 @@ function loadMetrics() {
     }
     updateWorkspaceActions(OPS.currentFamily);
   }).catch(function() {});
-
-  _fetch('/api/overview/stats').then(function(stats) {
-    _setText('ops-skills-count', stats.skills || 0);
-    _setText('ops-memory-count', stats.memory_files || 0);
-    _updateTreeCount('skills', stats.skills || 0);
-    _updateTreeCount('memory', stats.memory_files || 0);
-  }).catch(function() {});
-
-  _fetch('/api/cron/list').then(function(jobs) {
-    var n = Array.isArray(jobs) ? jobs.length : 0;
-    _setText('ops-cron-count', n);
-    _updateTreeCount('cron', n);
-  }).catch(function() { _setText('ops-cron-count', '0'); });
-
-  _fetch('/api/alerts/list').then(function(alerts) {
-    var n = Array.isArray(alerts) ? alerts.length : 0;
-    _updateTreeCount('alerts', n);
-  }).catch(function() {});
-
-  _fetch('/api/operations/integrations/summary').then(function(s) {
-    _setText('ops-integrations-count', s.sourceCount || 0);
-    _updateTreeCount('sources', s.sourceCount || 0);
-    _updateTreeCount('tools', s.toolCount || 0);
-  }).catch(function() {});
-
-  _fetch('/api/operations/integrations/credentials').then(function(creds) {
-    _updateTreeCount('credentials', Array.isArray(creds) ? creds.length : 0);
-  }).catch(function() {});
-
-  _fetch('/api/operations/integrations/providers').then(function(provs) {
-    _updateTreeCount('providers', Array.isArray(provs) ? provs.length : 0);
-  }).catch(function() {});
 }
 
 function _updateTreeCount(family, count) {
   var el = document.querySelector('.ops-tree-item[data-family="' + family + '"] .ops-tree-item-count');
   if (el) el.textContent = count;
+}
+
+function applySummaryCounts(summary) {
+  var metrics = summary.metrics || {};
+  _setText('ops-skills-count', metrics.skillsCount || 0);
+  _setText('ops-cron-count', metrics.cronCount || 0);
+  _setText('ops-memory-count', metrics.memoryCount || 0);
+  _setText('ops-integrations-count', metrics.integrationCount || 0);
+
+  _updateTreeCount('skills', metrics.skillsCount || 0);
+  _updateTreeCount('cron', metrics.cronCount || 0);
+  _updateTreeCount('memory', metrics.memoryCount || 0);
+  _updateTreeCount('alerts', (summary.alerts && summary.alerts.total) || 0);
+  _updateTreeCount('sources', metrics.integrationCount || 0);
+  _updateTreeCount('tools', metrics.toolCount || 0);
+  _updateTreeCount('credentials', metrics.credentialCount || 0);
+  _updateTreeCount('providers', metrics.providerCount || 0);
+}
+
+function renderBriefing(summary) {
+  var briefing = summary.briefing || {};
+  _setText('ops-briefing-label', briefing.label || 'Operations aggregation');
+  _setText('ops-briefing-title', briefing.title || '运营对象聚合摘要不可用');
+  _setText('ops-briefing-copy', briefing.summary || '当前未拿到 Operations summary payload。');
+
+  var nextHop = summary.nextHop || {};
+  var nextHopEl = _el('ops-next-hop');
+  if (nextHopEl) {
+    nextHopEl.href = _url(nextHop.href || '/operations');
+    nextHopEl.setAttribute('data-status', summary.status || 'unknown');
+  }
+  _setText('ops-next-hop-label', nextHop.label || '回到 Operations 主面');
+  _setText('ops-next-hop-reason', nextHop.reason || '当前没有可用的下一跳建议。');
+}
+
+function renderSummaryGrid(summary) {
+  var grid = _el('ops-summary-grid');
+  if (!grid) return;
+  var families = summary.families || [];
+  if (!families.length) {
+    grid.innerHTML = '<div class="ops-summary-card">' +
+      '<div class="ops-summary-icon">⚠️</div>' +
+      '<div><div class="ops-summary-title">摘要不可用</div><div class="ops-summary-copy">当前未能加载 Operations summary payload。</div></div>' +
+    '</div>';
+    return;
+  }
+
+  grid.innerHTML = families.map(function(card) {
+    return '<a class="ops-summary-card" href="' + _url(card.href || '/operations') + '">' +
+      '<div class="ops-summary-icon">' + (card.icon || '•') + '</div>' +
+      '<div style="min-width:0;">' +
+        '<div class="ops-summary-header">' +
+          '<div class="ops-summary-title">' + (card.title || card.key || 'Summary') + '</div>' +
+          '<span class="ops-chip ' + (card.status || 'unknown') + '">' + statusLabel(card.status || 'unknown') + '</span>' +
+        '</div>' +
+        '<div class="ops-summary-value">' + (card.count != null ? card.count : '--') + '</div>' +
+        '<div class="ops-summary-copy">' + (card.summary || '—') + '</div>' +
+      '</div>' +
+    '</a>';
+  }).join('');
 }
 
 // ============================================================
@@ -1080,10 +1124,26 @@ function unbindCredential(credId) {
 // Init
 // ============================================================
 
+function applyHashFamily() {
+  var family = _familyFromHash();
+  if (family && family !== OPS.currentFamily) switchFamily(family);
+}
+
 function init() {
-  updateWorkspaceActions('cron');
+  window.addEventListener('hashchange', applyHashFamily);
+  var initialFamily = _familyFromHash();
+  if (initialFamily) {
+    OPS.currentFamily = initialFamily;
+    var items = document.querySelectorAll('.ops-tree-item');
+    for (var i = 0; i < items.length; i++) {
+      items[i].classList.toggle('active', items[i].getAttribute('data-family') === initialFamily);
+    }
+    var def = FAMILIES[initialFamily];
+    _el('ops-workspace-title').innerHTML = '<span>' + def.icon + '</span> ' + def.label;
+  }
+  updateWorkspaceActions(OPS.currentFamily);
   loadMetrics();
-  loadWorkspace('cron');
+  loadWorkspace(OPS.currentFamily);
 }
 
 if (document.readyState === 'loading') {

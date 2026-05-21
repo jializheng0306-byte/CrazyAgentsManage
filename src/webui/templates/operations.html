@@ -32,6 +32,19 @@
       </div>
     </section>
 
+    <section class="ops-briefing">
+      <div class="ops-briefing-copy">
+        <p class="ops-briefing-label" id="ops-briefing-label">Sprint 1 aggregation lane</p>
+        <h2 class="ops-briefing-title" id="ops-briefing-title">载入运营聚合摘要...</h2>
+        <p class="ops-briefing-text" id="ops-briefing-copy">等待 shared operations summary payload。</p>
+      </div>
+      <a class="ops-next-hop" id="ops-next-hop" href="{{ BASE }}/operations/alerts">
+        <span class="ops-next-hop-kicker">Next hop</span>
+        <strong class="ops-next-hop-label" id="ops-next-hop-label">载入中...</strong>
+        <small class="ops-next-hop-reason" id="ops-next-hop-reason">等待聚合摘要。</small>
+      </a>
+    </section>
+
     <!-- ======== Metrics Strip ======== -->
     <div class="ops-metrics-strip">
       <div class="ops-metric-card">
@@ -62,6 +75,39 @@
           <div class="ops-metric-label">集成源</div>
         </div>
       </div>
+    </div>
+
+    <section class="ops-summary-grid" id="ops-summary-grid">
+      <div class="ops-summary-card">
+        <div class="ops-summary-icon">⏳</div>
+        <div>
+          <div class="ops-summary-title">载入中</div>
+          <div class="ops-summary-copy">正在获取运营对象聚合摘要。</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ops-subpages">
+      <a class="ops-subpage-card" href="{{ BASE }}/operations/skills">
+        <span class="ops-subpage-icon">⚡</span>
+        <span class="ops-subpage-title">Skills Inventory</span>
+        <span class="ops-subpage-desc">查看角色能力、技能分类与缺失/失效状态。</span>
+      </a>
+      <a class="ops-subpage-card" href="{{ BASE }}/operations/cron">
+        <span class="ops-subpage-icon">⏰</span>
+        <span class="ops-subpage-title">Cron / Routines</span>
+        <span class="ops-subpage-desc">检查例行机制、运行频率与暂停恢复状态。</span>
+      </a>
+      <a class="ops-subpage-card" href="{{ BASE }}/operations/team-memory">
+        <span class="ops-subpage-icon">📝</span>
+        <span class="ops-subpage-title">Team Memory</span>
+        <span class="ops-subpage-desc">核对团队记忆、共享上下文与角色事实层。</span>
+      </a>
+      <a class="ops-subpage-card" href="{{ BASE }}/operations/alerts">
+        <span class="ops-subpage-icon">🔔</span>
+        <span class="ops-subpage-title">Alerts / Connectivity</span>
+        <span class="ops-subpage-desc">优先处理连接异常、平台告警与运行阻塞证据。</span>
+      </a>
     </div>
 
     <!-- ======== Three-column Workbench ======== -->
