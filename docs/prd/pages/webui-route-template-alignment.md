@@ -118,6 +118,9 @@
 
 - 新增协作主模板
 - 先通过 `dashboard.html` 或 `graph.html` 临时挂载协作链路入口
+- `Loop Surface` 建议作为 `Collaboration` 主入口下的子表面，路由优先考虑：
+  - `/collaboration/loops`
+  - 必要时从 `Governance` 提供次入口，但不单独升成一级 IA
 
 ### 架构可视化页
 
@@ -147,6 +150,7 @@
 - `/operations/skills`
 - `/operations/cron`
 - `/operations/team-memory`
+- `/collaboration/loops`
 
 架构页建议路由：
 

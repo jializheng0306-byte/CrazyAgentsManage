@@ -203,6 +203,7 @@ CrazyAgentsManage 现在使用一套拆分式 PRD 体系，而不再依赖单一
 - `docs/prd/pages/governance-page-prd.md`
 - `docs/prd/pages/operations-page-prd.md`
 - `docs/prd/pages/collaboration-page-prd.md`
+- `docs/prd/pages/loop-surface-page-prd.md`
 - `docs/prd/pages/architecture-visualization-pages-prd.md`
 - `docs/prd/pages/webui-route-template-alignment.md`
 

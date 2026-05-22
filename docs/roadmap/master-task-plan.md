@@ -210,6 +210,9 @@
   - `5e88b51` freeze baseline
   - `cedc03c` close remaining overview hardening risks
 - `Operations / Overview / host health / focused Playwright gate` 已完成第一轮闭环
+- `Centaur Loop` 借鉴线当前已从纯分析层推进到两份执行文档：
+  - `docs/prd/pages/loop-surface-page-prd.md`
+  - `docs/roadmap/sprint2-cycle-upgrade-first-batch-2026-05-22.md`
 
 ### 子项状态
 
@@ -219,6 +222,10 @@
 | Automation Promotion Gate | Crazy 主 | `planned` | 固定 prototype → rehearsed → approved-for-automation → automated 的晋升链 |
 | Executor Capability Plane Integration | Crazy 主 | `planned` | 将 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面 |
 | Role / Credential / Memory Isolation | Crazy 主 | `planned` | 让角色边界、凭证归属、记忆边界、runbook 在控制面可见且可审计 |
+| Loop Surface PRD | Crazy 主 | `planned` | 将显式人工 gate、round/cycle、feedback、memory candidate 收成 `Collaboration` 子表面 |
+| Cycle Upgrade First Batch | Crazy 主 | `planned` | 首批把 `daily-promise-review.py` 与 `morning-intel-v2.py` 升级成 cycle 对象 |
+| Memory Candidate Confirmation | Crazy 主 | `queued-after-cycle` | `memory candidate -> confirm/reject` 最小数据面依赖 cycle 主对象先稳定 |
+| Feedback Input Surface | Crazy 主 | `queued-after-cycle` | 轻量 feedback 表单依赖 loop/cycle 对象先落到页面 |
 | FlowMind Contract Gate | Shared | `standing-gate` | 继续只在 Crazy 明确上报新的 contract/read-surface gap 时切回 FlowMind 开发执行 |
 
 ### 后续任务
@@ -229,6 +236,8 @@
 4. 将 executor capability plane 的 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面
 5. 让 `Operations` 承载 task registry、promotion state、host/provider/cron/alert evidence 与 next-hop runbook
 6. 保持 `FlowMind` 只作为 contract/truth authority，不在 Crazy 本地重写主治理状态
+7. 将 `Loop Surface` 做成 `Collaboration` 子表面，而不是新一级 IA
+8. 先把 `daily-promise-review.py` 与 `morning-intel-v2.py` 升级成首批 cycle 对象，再进入 memory candidate / feedback 输入面
 
 ### 验收标准
 

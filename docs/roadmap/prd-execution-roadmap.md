@@ -263,6 +263,8 @@ scripts/check_cross_repo_prd_sync.sh
      - role / credential / memory isolation 做实
      - executor capability plane integration
      - `Operations` 升级为真正 control room
+     - `Loop Surface` 页面级 PRD
+     - `daily-promise-review.py` + `morning-intel-v2.py` 首批 cycle 升级拆解
 3. FlowMind `contract-gate`
    - 只在 Crazy 明确上报新的 contract/read-surface gap 后，才切回 FlowMind 开发执行
 
