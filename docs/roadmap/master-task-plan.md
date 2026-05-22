@@ -218,7 +218,7 @@
 
 | 子项 | Owner | 状态 | 当前口径 |
 |---|---|---|---|
-| Task Bus Productization | Crazy 主 | `planned` | 将 `shared-context/agent-requests/` 推进为结构化 task bus |
+| Task Bus Productization | Crazy 主 | `planned` | 将 `shared-context/agent-requests/` 从 `requests.jsonl + three_state_protocol.py` 的 prototype/skeleton 推进为结构化 task bus |
 | Automation Promotion Gate | Crazy 主 | `planned` | 固定 prototype → rehearsed → approved-for-automation → automated 的晋升链 |
 | Executor Capability Plane Integration | Crazy 主 | `planned` | 将 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面 |
 | Role / Credential / Memory Isolation | Crazy 主 | `planned` | 让角色边界、凭证归属、记忆边界、runbook 在控制面可见且可审计 |
@@ -230,7 +230,7 @@
 
 ### 后续任务
 
-1. 将 `shared-context/agent-requests/` 推进为结构化 task bus
+1. 将 `shared-context/agent-requests/` 从 `requests.jsonl + three_state_protocol.py` 的 prototype/skeleton 推进为结构化 task bus
 2. 固定 prototype → rehearsed → approved-for-automation → automated 的 promotion gate
 3. 让 role / credential / memory isolation 在控制面上可见、可审计
 4. 将 executor capability plane 的 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面
