@@ -169,6 +169,11 @@ def collaboration():
     return render_template('collaboration.html')
 
 
+@app.route('/collaboration/loops')
+def collaboration_loops():
+    return render_template('loop-surface.html')
+
+
 @app.route('/collaboration/tasks')
 def collaboration_tasks():
     return render_template('tasks.html')

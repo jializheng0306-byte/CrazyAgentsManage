@@ -222,8 +222,8 @@
 | Automation Promotion Gate | Crazy 主 | `planned` | 固定 prototype → rehearsed → approved-for-automation → automated 的晋升链 |
 | Executor Capability Plane Integration | Crazy 主 | `planned` | 将 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面 |
 | Role / Credential / Memory Isolation | Crazy 主 | `planned` | 让角色边界、凭证归属、记忆边界、runbook 在控制面可见且可审计 |
-| Loop Surface PRD | Crazy 主 | `planned` | 将显式人工 gate、round/cycle、feedback、memory candidate 收成 `Collaboration` 子表面 |
-| Cycle Upgrade First Batch | Crazy 主 | `planned` | 首批把 `daily-promise-review.py` 与 `morning-intel-v2.py` 升级成 cycle 对象 |
+| Loop Surface PRD | Crazy 主 | `completed-in-lane` | `loop-surface-page-prd.md` 已落地，且 `/collaboration/loops` 已接入最小 vertical slice 模板与 API |
+| Cycle Upgrade First Batch | Crazy 主 | `in-progress` | 已落第一条 `promise-review-cycle`，下一步再决定是否扩到 `morning-intel-v2.py` |
 | Memory Candidate Confirmation | Crazy 主 | `queued-after-cycle` | `memory candidate -> confirm/reject` 最小数据面依赖 cycle 主对象先稳定 |
 | Feedback Input Surface | Crazy 主 | `queued-after-cycle` | 轻量 feedback 表单依赖 loop/cycle 对象先落到页面 |
 | FlowMind Contract Gate | Shared | `standing-gate` | 继续只在 Crazy 明确上报新的 contract/read-surface gap 时切回 FlowMind 开发执行 |

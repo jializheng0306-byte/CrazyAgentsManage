@@ -611,6 +611,95 @@ class TestV04ContextManagementAPIs:
         assert 'failure_count' in data
 
 
+class TestLoopSurfaceApis:
+    @pytest.fixture(autouse=True)
+    def reset_loop_surface_state(self, monkeypatch, tmp_path):
+        monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+        webui_api._hermes_home = None
+        webui_api._remote_config = {}
+        yield
+        webui_api._hermes_home = None
+        webui_api._remote_config = None
+
+    def test_collaboration_loops_page_reachable(self, client):
+        resp = client.get('/collaboration/loops')
+        assert resp.status_code == 200
+        body = resp.data.decode('utf-8', errors='replace')
+        assert 'loop-surface.js' in body
+        assert 'Loop Surface' in body
+
+    def test_collaboration_page_links_to_loop_surface(self, client):
+        resp = client.get('/collaboration')
+        assert resp.status_code == 200
+        body = resp.data.decode('utf-8', errors='replace')
+        assert '/collaboration/loops' in body
+
+    def test_collaboration_loops_api_returns_empty_without_state(self, client):
+        resp = client.get('/api/collaboration/loops')
+        assert resp.status_code == 200
+        assert resp.get_json() == []
+
+    def test_collaboration_loops_api_builds_promise_review_cycle(self, client, tmp_path):
+        reviews_dir = tmp_path / 'promises' / 'reviews'
+        reviews_dir.mkdir(parents=True, exist_ok=True)
+        (reviews_dir / 'review-20260522.md').write_text('# review\n', encoding='utf-8')
+        (reviews_dir / 'daily-promise-review-state.json').write_text(
+            json.dumps(
+                {
+                    'digest': 'abc123def456',
+                    'checked_at': '2026-05-22T09:00:00+08:00',
+                    'snapshot': {
+                        'promise_count': 2,
+                        'classified_counts': {
+                            'total': 2,
+                            'overdue': 1,
+                            'due_today': 0,
+                            'due_soon': 0,
+                            'in_progress': 0,
+                            'completed': 1,
+                            'blocked': 1,
+                            'pending_count': 0,
+                        },
+                        'promises': [
+                            {
+                                'promise_id': 'promise-1',
+                                'title': 'P1',
+                                'needs_follow_up': 'true',
+                            },
+                            {
+                                'promise_id': 'promise-2',
+                                'title': 'P2',
+                                'needs_follow_up': 'false',
+                            },
+                        ],
+                    },
+                },
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+
+        resp = client.get('/api/collaboration/loops')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert isinstance(data, list)
+        assert len(data) == 1
+        loop = data[0]
+        assert loop['cycleType'] == 'promise-review-cycle'
+        assert loop['sourceJobId'] == 'daily-promise-review'
+        assert loop['roundNumber'] == 1
+        assert loop['stage'] == 'awaiting_feedback'
+        assert loop['feedbackStatus'] == 'follow-up-pending'
+        assert loop['memoryCandidateStatus'] == 'not-started'
+        assert loop['sourcePaths']['state'] == 'promises/reviews/daily-promise-review-state.json'
+
+        detail = client.get(f"/api/collaboration/loops/{loop['loopId']}")
+        assert detail.status_code == 200
+        payload = detail.get_json()
+        assert payload['loopId'] == loop['loopId']
+        assert payload['classifiedCounts']['blocked'] == 1
+
+
 class TestV05DashboardAPIs:
     """Regression: current dashboard monitoring endpoints remain functional."""
 

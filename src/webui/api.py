@@ -313,6 +313,137 @@ def _read_optional_json(path):
         return {}
 
 
+def _list_review_report_files():
+    home = _get_hermes_home()
+    rel_path = 'promises/reviews'
+    return _list_files(home, rel_path, 'review-*.md')
+
+
+def _load_promise_review_state():
+    home = _get_hermes_home()
+    state_path = home / 'promises' / 'reviews' / 'daily-promise-review-state.json'
+    return _read_json(state_path, default={})
+
+
+def _promise_review_stage(snapshot):
+    promise_count = snapshot.get('promise_count', 0) or 0
+    classified = snapshot.get('classified_counts', {}) or {}
+    promises = snapshot.get('promises', []) or []
+
+    if promise_count == 0:
+        return {
+            'stage': 'collecting_governance_inputs',
+            'stageOwner': 'operator',
+            'nextAction': '等待新的 promise review 输入进入本轮 cycle。',
+            'status': 'idle',
+        }
+
+    completed = classified.get('completed', 0) or 0
+    blocked = classified.get('blocked', 0) or 0
+    pending = classified.get('pending_count', 0) or 0
+    due_today = classified.get('due_today', 0) or 0
+    due_soon = classified.get('due_soon', 0) or 0
+    overdue = classified.get('overdue', 0) or 0
+    in_progress = classified.get('in_progress', 0) or 0
+    has_follow_up = any(str(item.get('needs_follow_up') or '').lower() == 'true' for item in promises)
+
+    if completed == promise_count and not has_follow_up:
+        return {
+            'stage': 'cycle_closed',
+            'stageOwner': 'system',
+            'nextAction': '当前 review cycle 已闭合，可等待下一轮输入。',
+            'status': 'closed',
+        }
+
+    if has_follow_up:
+        return {
+            'stage': 'awaiting_feedback',
+            'stageOwner': 'operator',
+            'nextAction': '优先处理仍需 follow-up 的 promise，并判断是否需要新的治理反馈。',
+            'status': 'open',
+        }
+
+    if blocked or pending or due_today or due_soon or overdue or in_progress:
+        return {
+            'stage': 'awaiting_operational_review',
+            'stageOwner': 'operator',
+            'nextAction': '检查 blocked / pending / due 项，并完成本轮承诺审查判断。',
+            'status': 'open',
+        }
+
+    return {
+        'stage': 'collecting_governance_inputs',
+        'stageOwner': 'operator',
+        'nextAction': '补齐治理输入并准备下一轮审查。',
+        'status': 'open',
+    }
+
+
+def _build_promise_review_loop():
+    state = _load_promise_review_state() or {}
+    snapshot = state.get('snapshot') or {}
+    if not snapshot:
+        return None
+
+    checked_at = state.get('checked_at')
+    digest = str(state.get('digest') or '')
+    digest_short = digest[:12] if digest else 'unknown'
+    reports = _list_review_report_files()
+    latest_report = reports[-1] if reports else ''
+    round_number = len(reports) if reports else 1
+
+    stage_info = _promise_review_stage(snapshot)
+    promises = snapshot.get('promises', []) or []
+    classified = snapshot.get('classified_counts', {}) or {}
+    blocked = classified.get('blocked', 0) or 0
+    overdue = classified.get('overdue', 0) or 0
+    due_today = classified.get('due_today', 0) or 0
+    needs_follow_up = len([
+        item for item in promises
+        if str(item.get('needs_follow_up') or '').lower() == 'true'
+    ])
+
+    evidence_refs = [
+        ref for ref in [
+            'state:promises/reviews/daily-promise-review-state.json',
+            f'report:{latest_report}' if latest_report else '',
+            'script:scripts/daily-promise-review.py',
+        ] if ref
+    ]
+
+    summary_parts = [
+        f'promises={snapshot.get("promise_count", 0) or 0}',
+        f'blocked={blocked}',
+        f'overdue={overdue}',
+        f'due_today={due_today}',
+        f'needs_follow_up={needs_follow_up}',
+    ]
+
+    return {
+        'loopId': f'promise-review-cycle:{digest_short}',
+        'cycleType': 'promise-review-cycle',
+        'sourceJobId': 'daily-promise-review',
+        'sourceJobName': 'daily-promise-review.py',
+        'roundNumber': round_number,
+        'stage': stage_info['stage'],
+        'stageOwner': stage_info['stageOwner'],
+        'openedAt': checked_at,
+        'updatedAt': checked_at,
+        'status': stage_info['status'],
+        'nextAction': stage_info['nextAction'],
+        'feedbackStatus': 'follow-up-pending' if needs_follow_up else 'no-follow-up-required',
+        'memoryCandidateStatus': 'not-started',
+        'summary': ' | '.join(summary_parts),
+        'evidenceRefs': evidence_refs,
+        'classifiedCounts': classified,
+        'promises': promises,
+        'sourcePaths': {
+            'state': 'promises/reviews/daily-promise-review-state.json',
+            'latestReport': latest_report,
+        },
+    }
+
+
 def _health_status_for_percent(used_percent):
     if used_percent is None:
         return 'unknown'
@@ -1788,6 +1919,22 @@ def runtime_harness_summary():
         summary['latest_failure'] = _read_optional_json(failure_files[0])
 
     return jsonify(summary)
+
+
+@api.route('/collaboration/loops')
+def collaboration_loops():
+    loop = _build_promise_review_loop()
+    if not loop:
+        return jsonify([])
+    return jsonify([loop])
+
+
+@api.route('/collaboration/loops/<loop_id>')
+def collaboration_loop_detail(loop_id):
+    loop = _build_promise_review_loop()
+    if not loop or loop.get('loopId') != loop_id:
+        return jsonify({'error': 'Loop not found', 'loopId': loop_id}), 404
+    return jsonify(loop)
 
 @api.route('/flowmind/records')
 def flowmind_records():

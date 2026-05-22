@@ -70,7 +70,7 @@
 2. 左侧交接对象池
 3. 中央协作执行语义区
 4. 右侧 harness 证据面板
-5. `Loop Surface` 子表面入口
+5. `Loop Surface` 子表面入口（当前已挂到 `/collaboration/loops`）
 
 ## 页面模块树
 

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loop Surface - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/collaboration.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+</head>
+<body>
+  {% set active_nav = 'collaboration' %}
+  {% include 'ia-nav.html' %}
+
+  <main id="loop-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+    <section class="console-page-header">
+      <div>
+        <div class="console-page-kicker">Sprint 2 Control Plane Hardening</div>
+        <h1 class="console-page-title">
+          <span class="console-page-title-icon">🔁</span>
+          Loop Surface
+        </h1>
+        <p class="console-page-subtitle">先用 `daily-promise-review.py` 这一条 cycle object 验证显式 gate、round、evidence 与 next action 是否值得进入主产品面。</p>
+      </div>
+      <div class="console-surface-map" aria-label="loop-zones">
+        <span class="console-surface-chip active">左侧 cycle 对象池</span>
+        <span class="console-surface-chip">中央 round 详情</span>
+        <span class="console-surface-chip">右侧证据 / 下一步</span>
+      </div>
+    </section>
+
+    <div class="cl-metrics-strip">
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="loop-count">--</div>
+        <div class="cl-metric-label">Cycle 对象</div>
+      </div>
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="loop-stage-count">--</div>
+        <div class="cl-metric-label">当前 Stage</div>
+      </div>
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="loop-promise-count">--</div>
+        <div class="cl-metric-label">Promise 数量</div>
+      </div>
+      <div class="cl-metric-card">
+        <div class="cl-metric-value" id="loop-followup-count">--</div>
+        <div class="cl-metric-label">待 Follow-up</div>
+      </div>
+    </div>
+
+    <section class="cl-section console-section-emphasis">
+      <div class="cl-section-header">
+        <div>
+          <div class="console-section-kicker">左侧对象池</div>
+          <h2 class="cl-section-title">
+            <span class="cl-section-icon">🗂️</span>
+            Cycle 对象池
+          </h2>
+          <p class="cl-section-subtitle">当前只接入 `promise-review-cycle`。后续如 vertical slice 成立，再扩到 `morning-intel-cycle`。</p>
+        </div>
+      </div>
+      <div class="loop-list" id="loop-list">
+        <div class="cl-empty"><div class="cl-empty-icon">⏳</div><p>加载中...</p></div>
+      </div>
+    </section>
+
+    <section class="cl-section">
+      <div class="cl-body-grid">
+        <div class="cl-body-card primary">
+          <span class="cl-body-kicker">中央 round 详情</span>
+          <h3 id="loop-detail-title">等待 cycle 载入</h3>
+          <p id="loop-detail-summary">当前 detail panel 将显示 stage、owner、summary 与当前 round 的聚合状态。</p>
+          <div class="loop-detail-grid" id="loop-detail-grid"></div>
+        </div>
+        <div class="cl-body-card support">
+          <span class="cl-body-kicker">右侧证据 / 下一步</span>
+          <h3>Evidence / Next Action</h3>
+          <p id="loop-next-action">等待 cycle 载入。</p>
+          <div class="loop-evidence-list" id="loop-evidence-list"></div>
+          <div class="cl-inline-support-links">
+            <a class="cl-inline-support-link" href="{{ BASE }}/collaboration">返回协作工作台</a>
+            <a class="cl-inline-support-link" href="{{ BASE }}/operations/cron">查看 Cron</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/loop-surface.js"></script>
+</body>
+</html>

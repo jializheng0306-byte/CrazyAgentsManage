@@ -35,6 +35,7 @@
 - `/governance/graph` -> `graph.html`
 - `/collaboration` -> `collaboration.html`
 - `/collaboration/tasks` -> `tasks.html`
+- `/collaboration/loops` -> `loop-surface.html`
 - `/architecture/philosophy` -> `architecture-philosophy.html`
 - `/architecture/product` -> `architecture-product.html`
 - `/architecture/tech` -> `architecture-tech.html`
@@ -51,6 +52,7 @@
 - `home.html`
 - `governance.html`
 - `collaboration.html`
+- `loop-surface.html`
 - `operations.html`
 - `overview.html`
 - `runtime.html`
@@ -142,14 +144,15 @@
 
 - 已有 `collaboration.html` 作为协作一级分区模板
 - `tasks.html` 继续作为协作主工作台子表面
+- 已有 `loop-surface.html` 作为 Sprint 2 第一条 vertical slice 的协作子表面
 
 建议：
 
 - `collaboration.html` 继续承担交接对象池 / 支持证据 / 子表面分流入口
 - `tasks.html` 继续作为协作执行工作台
-- `Loop Surface` 建议作为 `Collaboration` 主入口下的子表面，路由优先考虑：
+- `Loop Surface` 当前已经作为 `Collaboration` 主入口下的子表面接入：
   - `/collaboration/loops`
-  - 必要时从 `Governance` 提供次入口，但不单独升成一级 IA
+  - 后续如需从 `Governance` 提供次入口，仍不单独升成一级 IA
 
 ### 架构可视化页
 
@@ -191,7 +194,7 @@
 
 1. 旧功能页仍然保留原有平铺路由，但一级 IA 路由与主模板已经全部建立
 2. 新增的 IA 页面仍有“聚合深度不足”的问题；当前缺口不再是“有没有模板”，而是“真实数据和行为是否全部接入”
-3. `Loop Surface` 已进入页面级 PRD，但尚未挂载真实路由/模板实现
+3. `Loop Surface` 已接入真实路由/模板实现，但当前仍只承接 `promise-review-cycle` 的最小 vertical slice
 4. 3 个架构页已接入当前 WebUI 路由体系，但仍是占位性接入，尚未挂载真实 TSX 展示实现
 
 ## 对齐原则
