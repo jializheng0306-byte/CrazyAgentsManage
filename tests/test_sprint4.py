@@ -120,6 +120,15 @@ class TestOverviewEntrypointHardening:
         assert 'href="/manage/runtime"' in html
         assert '/manage/static/css/design-system.css' in html
 
+    def test_overview_page_exposes_briefing_and_summary_shell(self, client):
+        resp = client.get('/overview')
+        assert resp.status_code == 200
+        html = resp.data.decode('utf-8', errors='replace')
+        assert 'ov-briefing-label' in html
+        assert 'ov-summary-grid' in html
+        assert 'ov-next-hop' in html
+        assert 'support-signals-list' in html
+
     def test_overview_api_returns_empty_safe_payload_without_state_db(self, client):
         resp = client.get('/api/overview')
         assert resp.status_code == 200
@@ -147,6 +156,24 @@ class TestOverviewEntrypointHardening:
         assert payload['metrics']['error_count'] == 0
         assert payload['active_sessions'] == []
         assert payload['tool_usage'] == []
+
+    def test_runtime_host_health_api_returns_shape(self, client):
+        resp = client.get('/api/runtime/host-health')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert 'status' in data
+        assert 'disk' in data
+        assert 'memory' in data
+        assert 'used_percent' in data['disk']
+        assert 'used_percent' in data['memory']
+
+    def test_overview_js_reuses_operations_summary_and_host_health(self, client):
+        resp = client.get('/static/js/overview.js')
+        assert resp.status_code == 200
+        data = resp.data.decode('utf-8', errors='replace')
+        assert '/api/operations/summary' in data
+        assert '/api/runtime/host-health' in data
+        assert 'ov-briefing-label' in data or 'ov-briefing-title' in data
 
 
 class TestArchitecturePagesReachable:

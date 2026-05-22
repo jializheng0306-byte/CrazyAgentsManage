@@ -73,6 +73,16 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function statusLabel(status) {
+  var map = {
+    healthy: '健康',
+    degraded: '降级',
+    failed: '异常',
+    unknown: '未知'
+  };
+  return map[status] || status || '未知';
+}
+
 function getSessionStatus(session) {
   if (!session) return { key: 'idle', label: '空闲' };
   if (session.end_reason === 'error') return { key: 'error', label: '异常' };
@@ -99,6 +109,74 @@ function pickFocusSession(data) {
 
   var runningSession = sessions.find(function(s) { return !s.ended_at; });
   return runningSession || sessions[0];
+}
+
+function renderOverviewBriefing(opsSummary, hostHealth) {
+  var briefing = (opsSummary && opsSummary.briefing) || {};
+  setText('ov-briefing-label', briefing.label || 'Overview aggregation');
+  setText('ov-briefing-title', briefing.title || '跨域摘要不可用');
+
+  var hostStatus = hostHealth && hostHealth.status ? statusLabel(hostHealth.status) : '未知';
+  var opsStatus = opsSummary && opsSummary.status ? statusLabel(opsSummary.status) : '未知';
+  var hostDisk = hostHealth && hostHealth.disk && hostHealth.disk.used_percent != null
+    ? hostHealth.disk.used_percent + '%'
+    : '--';
+  var hostMemory = hostHealth && hostHealth.memory && hostHealth.memory.used_percent != null
+    ? hostHealth.memory.used_percent + '%'
+    : '--';
+
+  var copy = briefing.summary || '当前未拿到跨域聚合摘要。';
+  copy += ' 当前运营面状态 ' + opsStatus + '；主机磁盘 ' + hostDisk + '，内存 ' + hostMemory + '，主机状态 ' + hostStatus + '。';
+  setText('ov-briefing-copy', copy);
+
+  var nextHop = (opsSummary && opsSummary.nextHop) || {};
+  var nextHopEl = document.getElementById('ov-next-hop');
+  if (nextHopEl) {
+    nextHopEl.href = OVERVIEW_CONFIG.apiBase + (nextHop.href || '/operations');
+  }
+  setText('ov-next-hop-label', nextHop.label || '进入 Operations');
+  setText('ov-next-hop-reason', nextHop.reason || '继续查看跨域对象与运行支持信号。');
+}
+
+function renderOverviewSummary(opsSummary, hostHealth) {
+  var el = document.getElementById('ov-summary-grid');
+  if (!el) return;
+
+  var families = (opsSummary && opsSummary.families) || [];
+  var hostCard = {
+    key: 'host',
+    title: 'Host Health',
+    icon: '🖥️',
+    status: (hostHealth && hostHealth.status) || 'unknown',
+    count: hostHealth && hostHealth.disk && hostHealth.disk.used_percent != null ? hostHealth.disk.used_percent + '%' : '--',
+    summary: 'disk / memory 输入已进入 Overview 支持信号层'
+  };
+  var cards = families.concat([hostCard]);
+
+  if (!cards.length) {
+    el.innerHTML = '<div class="ov-summary-card">' +
+      '<div class="ov-summary-icon">⚠️</div>' +
+      '<div><div class="ov-summary-title">摘要不可用</div><div class="ov-summary-copy">当前未能加载 Operations summary payload。</div></div>' +
+    '</div>';
+    return;
+  }
+
+  el.innerHTML = cards.map(function(card) {
+    var href = card.key === 'host' ? (OVERVIEW_CONFIG.apiBase + '/operations/alerts') : (OVERVIEW_CONFIG.apiBase + (card.href || '/operations'));
+    var value = card.count != null ? card.count : '--';
+    if (typeof value === 'number') value = fmt(value);
+    return '<a class="ov-summary-card" href="' + href + '">' +
+      '<div class="ov-summary-icon">' + escapeHtml(card.icon || '•') + '</div>' +
+      '<div style="min-width:0;">' +
+        '<div class="ov-summary-header">' +
+          '<div class="ov-summary-title">' + escapeHtml(card.title || card.key || 'Summary') + '</div>' +
+          '<span class="ov-status-chip ' + escapeHtml(card.status || 'unknown') + '">' + escapeHtml(statusLabel(card.status || 'unknown')) + '</span>' +
+        '</div>' +
+        '<div class="ov-summary-value">' + escapeHtml(value) + '</div>' +
+        '<div class="ov-summary-copy">' + escapeHtml(card.summary || '—') + '</div>' +
+      '</div>' +
+    '</a>';
+  }).join('');
 }
 
 function renderGlobalStatus(metrics, focusSession) {
@@ -338,15 +416,23 @@ function renderErrors(errors) {
   }).join('');
 }
 
-function renderSupportSignals(stats, collab, data) {
+function renderSupportSignals(stats, collab, data, opsSummary, hostHealth) {
   var el = document.getElementById('support-signals-list');
   if (!el) return;
+
+  var opsMetrics = (opsSummary && opsSummary.metrics) || {};
+  var hostDisk = hostHealth && hostHealth.disk && hostHealth.disk.used_percent != null
+    ? hostHealth.disk.used_percent + '%'
+    : '--';
+  var hostMemory = hostHealth && hostHealth.memory && hostHealth.memory.used_percent != null
+    ? hostHealth.memory.used_percent + '%'
+    : '--';
 
   var cards = [
     {
       label: '运营面',
-      value: fmt(stats.skills || 0),
-      desc: '技能数量，仅作为对象操作背景信号'
+      value: fmt(opsMetrics.skillsCount || 0),
+      desc: '直接复用 Operations summary 的技能库存摘要'
     },
     {
       label: '治理面',
@@ -360,8 +446,13 @@ function renderSupportSignals(stats, collab, data) {
     },
     {
       label: '定时任务',
-      value: fmt(stats.cron || 0),
-      desc: '系统调度规模，降级为支持信号'
+      value: fmt(opsMetrics.cronCount || stats.cron || 0),
+      desc: '直接复用 Operations summary 的 routines 规模'
+    },
+    {
+      label: '主机健康',
+      value: statusLabel((hostHealth && hostHealth.status) || 'unknown'),
+      desc: 'disk ' + hostDisk + ' · memory ' + hostMemory
     }
   ];
 
@@ -376,7 +467,7 @@ function renderSupportSignals(stats, collab, data) {
   }).join('');
 }
 
-function renderFacts(focusSession, data, stats, collab) {
+function renderFacts(focusSession, data, stats, collab, opsSummary, hostHealth) {
   var el = document.getElementById('detail-facts-list');
   if (!el) return;
 
@@ -392,7 +483,9 @@ function renderFacts(focusSession, data, stats, collab) {
     { key: '对象工具调用', value: fmt(focusSession.tool_call_count || 0) },
     { key: '总会话规模', value: fmt((data.metrics || {}).total_sessions || 0) },
     { key: 'Open Handoffs', value: fmt(collab.handoffs || 0) },
-    { key: '记忆文件', value: fmt(stats.memory_files || 0) }
+    { key: '记忆文件', value: fmt((opsSummary && opsSummary.metrics && opsSummary.metrics.memoryCount) || stats.memory_files || 0) },
+    { key: '主机磁盘', value: hostHealth && hostHealth.disk && hostHealth.disk.used_percent != null ? hostHealth.disk.used_percent + '%' : '--' },
+    { key: '主机内存', value: hostHealth && hostHealth.memory && hostHealth.memory.used_percent != null ? hostHealth.memory.used_percent + '%' : '--' }
   ];
 
   el.innerHTML = facts.map(function(fact) {
@@ -428,7 +521,9 @@ function loadSupportData() {
     fetchJSON('/api/overview/stats').catch(function() { return {}; }),
     fetchJSON('/api/cron/list').catch(function() { return []; }),
     fetchJSON('/api/runtime/handoffs').catch(function() { return []; }),
-    fetchJSON('/api/runtime/harness-summary').catch(function() { return {}; })
+    fetchJSON('/api/runtime/harness-summary').catch(function() { return {}; }),
+    fetchJSON('/api/operations/summary').catch(function() { return {}; }),
+    fetchJSON('/api/runtime/host-health').catch(function() { return {}; })
   ]).then(function(results) {
     return {
       stats: {
@@ -440,7 +535,9 @@ function loadSupportData() {
         handoffs: Array.isArray(results[2]) ? results[2].length : 0,
         traces: (results[3].success_count || 0) + (results[3].failure_count || 0),
         failures: results[3].failure_count || 0,
-      }
+      },
+      operations: results[4] || {},
+      hostHealth: results[5] || {}
     };
   });
 }
@@ -452,10 +549,14 @@ function loadOverview() {
   ]).then(function(results) {
     var data = results[0] || {};
     var support = results[1] || { stats: {}, collab: {} };
+    var opsSummary = support.operations || {};
+    var hostHealth = support.hostHealth || {};
     var metrics = data.metrics || {};
     var sessions = data.active_sessions || [];
     var focusSession = pickFocusSession(data);
 
+    renderOverviewBriefing(opsSummary, hostHealth);
+    renderOverviewSummary(opsSummary, hostHealth);
     renderGlobalStatus(metrics, focusSession);
     renderObjectCluster(metrics, sessions);
     renderObjectTree(sessions, focusSession);
@@ -465,8 +566,8 @@ function loadOverview() {
     renderWorkspaceTools(data.tool_usage || [], focusSession);
     renderWorkspacePerformance(data.performance || {}, focusSession);
     renderErrors(data.recent_errors || []);
-    renderSupportSignals(support.stats, support.collab, data);
-    renderFacts(focusSession, data, support.stats, support.collab);
+    renderSupportSignals(support.stats, support.collab, data, opsSummary, hostHealth);
+    renderFacts(focusSession, data, support.stats, support.collab, opsSummary, hostHealth);
     renderSources(data.sources || []);
   }).catch(function(err) {
     console.error('Failed to load overview:', err);

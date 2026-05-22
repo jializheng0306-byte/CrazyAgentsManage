@@ -136,6 +136,150 @@ body {
   flex-wrap: wrap;
 }
 
+.ov-briefing {
+  display: grid;
+  grid-template-columns: 1.7fr minmax(240px, 0.85fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.ov-briefing-copy,
+.ov-next-hop {
+  background: rgba(17, 24, 39, 0.88);
+  border: 1px solid var(--ov-border);
+  box-shadow: 0 22px 45px rgba(3, 8, 20, 0.32);
+  backdrop-filter: blur(8px);
+  border-radius: 18px;
+  padding: 18px 20px;
+}
+
+.ov-briefing-label {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ov-color-cyan);
+  font-weight: 700;
+}
+
+.ov-briefing-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.ov-briefing-text {
+  margin: 10px 0 0;
+  color: var(--ov-text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.ov-next-hop {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ov-text-primary);
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.ov-next-hop:hover {
+  border-color: var(--ov-color-blue);
+  transform: translateY(-1px);
+}
+
+.ov-next-hop-kicker {
+  font-size: 11px;
+  color: var(--ov-text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.ov-next-hop-label {
+  font-size: 18px;
+}
+
+.ov-next-hop-reason {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ov-text-secondary);
+}
+
+.ov-summary-section {
+  margin-bottom: 20px;
+}
+
+.ov-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.ov-section-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.ov-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ov-summary-card {
+  background: var(--ov-bg-surface-2);
+  border: 1px solid var(--ov-border);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  text-decoration: none;
+  color: var(--ov-text-primary);
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.ov-summary-card:hover {
+  border-color: var(--ov-border-light);
+  transform: translateY(-1px);
+}
+
+.ov-summary-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.ov-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.ov-summary-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ov-summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.05;
+  margin-bottom: 4px;
+}
+
+.ov-summary-copy {
+  color: var(--ov-text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .ov-action-link,
 .ov-inline-link {
   color: var(--ov-text-primary);
@@ -624,6 +768,41 @@ body {
   white-space: nowrap;
 }
 
+.ov-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ov-status-chip.healthy {
+  color: var(--ov-color-green);
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.24);
+}
+
+.ov-status-chip.degraded {
+  color: var(--ov-color-orange);
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.24);
+}
+
+.ov-status-chip.failed {
+  color: var(--ov-color-red);
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.24);
+}
+
+.ov-status-chip.unknown {
+  color: var(--ov-text-muted);
+  background: rgba(100, 116, 139, 0.12);
+  border-color: rgba(100, 116, 139, 0.24);
+}
+
 .ov-empty {
   text-align: center;
   padding: 22px 16px;
@@ -634,6 +813,14 @@ body {
 }
 
 @media (max-width: 1380px) {
+  .ov-briefing {
+    grid-template-columns: 1fr;
+  }
+
+  .ov-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .ov-workbench {
     grid-template-columns: 280px minmax(0, 1fr) 300px;
   }
@@ -647,6 +834,10 @@ body {
   .ov-page-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .ov-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .ov-workbench {
@@ -673,7 +864,8 @@ body {
 
   .ov-object-cluster,
   .ov-workspace-metrics,
-  .ov-focus-lanes {
+  .ov-focus-lanes,
+  .ov-summary-grid {
     grid-template-columns: 1fr;
   }
 

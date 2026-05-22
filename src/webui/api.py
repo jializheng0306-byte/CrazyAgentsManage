@@ -6,6 +6,7 @@ Supports both local and remote (SSH) data access modes
 
 import json
 import os
+import shutil
 import sqlite3
 import sys
 import threading
@@ -220,6 +221,28 @@ def _fetch_remote_file_list(path, ext='*.md'):
         return []
 
 
+def _run_remote_command(command, timeout=15):
+    cfg = _get_remote_config()
+    host = cfg.get('host', '')
+    user = cfg.get('user', 'root')
+    password = cfg.get('password', '')
+
+    if not host:
+        return ''
+
+    try:
+        import paramiko
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(host, username=user, password=password, timeout=30)
+        stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
+        out = stdout.read().decode('utf-8', errors='replace')
+        client.close()
+        return out
+    except Exception:
+        return ''
+
+
 def _read_json(path, default=None):
     if _is_remote_mode():
         result = _fetch_remote_json(path)
@@ -288,6 +311,172 @@ def _read_optional_json(path):
         return json.loads(path.read_text(encoding='utf-8'))
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
+
+
+def _health_status_for_percent(used_percent):
+    if used_percent is None:
+        return 'unknown'
+    if used_percent >= 90:
+        return 'failed'
+    if used_percent >= 80:
+        return 'degraded'
+    return 'healthy'
+
+
+def _empty_host_health(source):
+    return {
+        'source': source,
+        'status': 'unknown',
+        'disk': {
+            'mount': '/',
+            'total_bytes': 0,
+            'used_bytes': 0,
+            'free_bytes': 0,
+            'used_percent': None,
+            'status': 'unknown',
+        },
+        'memory': {
+            'total_bytes': 0,
+            'used_bytes': 0,
+            'available_bytes': 0,
+            'used_percent': None,
+            'status': 'unknown',
+        },
+    }
+
+
+def _load_local_host_health():
+    try:
+        disk = shutil.disk_usage('/')
+        disk_total = int(disk.total)
+        disk_used = int(disk.used)
+        disk_free = int(disk.free)
+        disk_used_percent = round((disk_used / disk_total) * 100, 1) if disk_total else None
+    except Exception:
+        disk_total = disk_used = disk_free = 0
+        disk_used_percent = None
+
+    mem_total = mem_available = mem_used = 0
+    mem_used_percent = None
+    try:
+        meminfo = {}
+        with open('/proc/meminfo', 'r', encoding='utf-8') as handle:
+            for line in handle:
+                if ':' not in line:
+                    continue
+                key, raw_value = line.split(':', 1)
+                value_kb = int(raw_value.strip().split()[0])
+                meminfo[key] = value_kb * 1024
+        mem_total = int(meminfo.get('MemTotal', 0))
+        mem_available = int(meminfo.get('MemAvailable', 0))
+        mem_used = max(mem_total - mem_available, 0)
+        mem_used_percent = round((mem_used / mem_total) * 100, 1) if mem_total else None
+    except Exception:
+        pass
+
+    disk_status = _health_status_for_percent(disk_used_percent)
+    memory_status = _health_status_for_percent(mem_used_percent)
+    overall_status = 'healthy'
+    for status in (disk_status, memory_status):
+        if status == 'failed':
+            overall_status = 'failed'
+            break
+        if status == 'degraded':
+            overall_status = 'degraded'
+
+    return {
+        'source': 'local',
+        'status': overall_status,
+        'disk': {
+            'mount': '/',
+            'total_bytes': disk_total,
+            'used_bytes': disk_used,
+            'free_bytes': disk_free,
+            'used_percent': disk_used_percent,
+            'status': disk_status,
+        },
+        'memory': {
+            'total_bytes': mem_total,
+            'used_bytes': mem_used,
+            'available_bytes': mem_available,
+            'used_percent': mem_used_percent,
+            'status': memory_status,
+        },
+    }
+
+
+def _load_remote_host_health():
+    python_snippet = r"""python3 - <<'PY'
+import json, shutil
+
+def _status(value):
+    if value is None:
+        return 'unknown'
+    if value >= 90:
+        return 'failed'
+    if value >= 80:
+        return 'degraded'
+    return 'healthy'
+
+disk = shutil.disk_usage('/')
+disk_total = int(disk.total)
+disk_used = int(disk.used)
+disk_free = int(disk.free)
+disk_used_percent = round((disk_used / disk_total) * 100, 1) if disk_total else None
+
+mem_total = mem_available = mem_used = 0
+mem_used_percent = None
+with open('/proc/meminfo', 'r', encoding='utf-8') as handle:
+    info = {}
+    for line in handle:
+        if ':' not in line:
+            continue
+        key, raw = line.split(':', 1)
+        info[key] = int(raw.strip().split()[0]) * 1024
+mem_total = int(info.get('MemTotal', 0))
+mem_available = int(info.get('MemAvailable', 0))
+mem_used = max(mem_total - mem_available, 0)
+mem_used_percent = round((mem_used / mem_total) * 100, 1) if mem_total else None
+
+disk_status = _status(disk_used_percent)
+memory_status = _status(mem_used_percent)
+overall = 'healthy'
+for status in (disk_status, memory_status):
+    if status == 'failed':
+        overall = 'failed'
+        break
+    if status == 'degraded':
+        overall = 'degraded'
+
+print(json.dumps({
+    'source': 'remote',
+    'status': overall,
+    'disk': {
+        'mount': '/',
+        'total_bytes': disk_total,
+        'used_bytes': disk_used,
+        'free_bytes': disk_free,
+        'used_percent': disk_used_percent,
+        'status': disk_status,
+    },
+    'memory': {
+        'total_bytes': mem_total,
+        'used_bytes': mem_used,
+        'available_bytes': mem_available,
+        'used_percent': mem_used_percent,
+        'status': memory_status,
+    },
+}))
+PY"""
+    out = _run_remote_command(python_snippet, timeout=20)
+    try:
+        return json.loads(out.strip()) if out.strip() else _empty_host_health('remote')
+    except json.JSONDecodeError:
+        return _empty_host_health('remote')
+
+
+def _load_host_health():
+    return _load_remote_host_health() if _is_remote_mode() else _load_local_host_health()
 
 def _get_flowmind_base_url():
     return os.environ.get('FLOWMIND_API_BASE_URL', 'http://127.0.0.1:3001').rstrip('/')
@@ -2752,6 +2941,11 @@ def server_info():
         'hermes_home': cfg.get('hermes_home', '/root/.hermes'),
         'connected': True,
     })
+
+
+@api.route('/runtime/host-health')
+def runtime_host_health():
+    return jsonify(_load_host_health())
 
 
 # ═══════════════════════════════════════════
