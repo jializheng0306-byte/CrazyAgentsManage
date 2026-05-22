@@ -67,6 +67,7 @@ Operator console 必须显式暴露以下对象：
 - runtime alerts
 - gateway / platform connection state
 - FlowMind bridge state
+- executor capability plane
 - token / cost usage
 
 ## 基于 IA 的运营模型
@@ -115,6 +116,7 @@ Operator needs：
 - role / team-memory awareness
 - platform connectivity state
 - FlowMind 与外部平台、输入端、集成端的交互状态
+- `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary`
 
 ### 4. `Governance`
 

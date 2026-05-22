@@ -104,6 +104,22 @@
 - 至少提供 open handoff、pending closeout、missing writeback、unreviewed artifact 四类摘要
 - 可供架构展示页复用
 
+### 6. Loop / Cycle Collaboration Surface
+
+目标：
+
+- 把 handoff / acceptance / feedback / memory candidate 的闭环表达，沉淀成 `Collaboration` 下的显式子表面
+
+实现要求：
+
+- `Loop Surface` 不单独升格为新的一级 IA
+- 至少能表达：
+  - 当前 round / cycle
+  - 当前 gate
+  - 待提交 feedback
+  - 待确认 memory candidate
+- 必须明确该面是协作/运营表达，不是新的治理 authority
+
 ## 实施优先级
 
 ### P0

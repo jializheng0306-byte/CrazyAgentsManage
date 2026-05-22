@@ -20,6 +20,24 @@
 - `/cron` -> `cron.html`
 - `/skills` -> `skills.html`
 - `/overview` -> `overview.html`
+- `/runtime` -> `runtime.html`
+- `/runtime/sessions` -> `sessions.html`
+- `/runtime/dashboard` -> `dashboard.html`
+- `/runtime/tokens` -> `tokens.html`
+- `/runtime/agents` -> `agent.html`
+- `/operations` -> `operations.html`
+- `/operations/skills` -> `skills.html`
+- `/operations/cron` -> `cron.html`
+- `/operations/team-memory` -> `team-memory.html`
+- `/operations/alerts` -> `alerts.html`
+- `/operations/timeline` -> `timeline.html`
+- `/governance` -> `governance.html`
+- `/governance/graph` -> `graph.html`
+- `/collaboration` -> `collaboration.html`
+- `/collaboration/tasks` -> `tasks.html`
+- `/architecture/philosophy` -> `architecture-philosophy.html`
+- `/architecture/product` -> `architecture-product.html`
+- `/architecture/tech` -> `architecture-tech.html`
 
 ## 当前模板集合
 
@@ -31,12 +49,20 @@
 - `dashboard.html`
 - `graph.html`
 - `home.html`
+- `governance.html`
+- `collaboration.html`
+- `operations.html`
 - `overview.html`
+- `runtime.html`
 - `sessions.html`
 - `skills.html`
 - `tasks.html`
 - `team-memory.html`
+- `timeline.html`
 - `tokens.html`
+- `architecture-philosophy.html`
+- `architecture-product.html`
+- `architecture-tech.html`
 
 ## 目标 IA
 
@@ -99,25 +125,28 @@
 
 ### `Governance`
 
-当前缺口：
+当前状态：
 
-- 还没有直接对齐 `Governance` 的模板
+- 已有 `governance.html` 作为治理一级分区模板
+- `graph.html` 继续作为治理图谱子表面
 
 建议：
 
-- 新增治理主模板，或先由 `graph.html` 过渡承载
-- 后续把 candidate / truth / review / feedback / drift 表面聚合进去
+- `governance.html` 继续承担一级治理入口
+- `graph.html` 保持为对象关系与治理图谱详情子表面
+- 后续只补真实 candidate / truth / review / feedback / drift 数据源，不再把“缺主模板”当成问题
 
 ### `Collaboration`
 
-当前缺口：
+当前状态：
 
-- 还没有直接对齐 `Collaboration` 的模板
+- 已有 `collaboration.html` 作为协作一级分区模板
+- `tasks.html` 继续作为协作主工作台子表面
 
 建议：
 
-- 新增协作主模板
-- 先通过 `dashboard.html` 或 `graph.html` 临时挂载协作链路入口
+- `collaboration.html` 继续承担交接对象池 / 支持证据 / 子表面分流入口
+- `tasks.html` 继续作为协作执行工作台
 - `Loop Surface` 建议作为 `Collaboration` 主入口下的子表面，路由优先考虑：
   - `/collaboration/loops`
   - 必要时从 `Governance` 提供次入口，但不单独升成一级 IA
@@ -160,9 +189,10 @@
 
 ## 当前差距
 
-1. 旧功能页仍然保留原有平铺路由，只有 `overview.html` 已切换到新的 IA 导航壳，其他旧模板仍待逐步收口
-2. 新增的 IA 页面目前仍是过渡聚合层；`Overview` 已承担总入口职责，但治理/协作摘要聚合 API 仍未补齐
-3. 3 个架构页已接入当前 WebUI 路由体系，但仍是占位性接入，尚未挂载真实 TSX 展示实现
+1. 旧功能页仍然保留原有平铺路由，但一级 IA 路由与主模板已经全部建立
+2. 新增的 IA 页面仍有“聚合深度不足”的问题；当前缺口不再是“有没有模板”，而是“真实数据和行为是否全部接入”
+3. `Loop Surface` 已进入页面级 PRD，但尚未挂载真实路由/模板实现
+4. 3 个架构页已接入当前 WebUI 路由体系，但仍是占位性接入，尚未挂载真实 TSX 展示实现
 
 ## 对齐原则
 

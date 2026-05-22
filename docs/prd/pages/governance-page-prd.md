@@ -15,6 +15,12 @@
 
 `Governance` 页面负责让用户看见 FlowMind 治理状态，而不是把治理信息混在 runtime 里。
 
+当前实现已经收敛成**治理对象控制台**，因此页面重点不再是单纯的列表分区，而是：
+
+- 左侧治理对象池
+- 中央治理关系工作区
+- 右侧 Agent 节点证据与架构参考
+
 它要回答：
 
 - 什么只是 candidate
@@ -31,30 +37,31 @@
 
 ## 页面应承载的核心信息
 
-### 1. Candidate / Truth 边界
+### 1. 治理节点对象池
 
 内容：
 
-- candidate 列表
-- truth 对象摘要
-- 状态来源标签
+- governance nodes
+- agent nodes
+- 节点分组与可达性
+- 监控对象选择入口
 
-### 2. Review / Feedback 队列
-
-内容：
-
-- pending review 项
-- feedback 状态
-- 已回写 / 未回写状态
-
-### 3. 异常治理状态
+### 2. 治理关系工作区
 
 内容：
 
-- drift
-- blocked
-- stale
-- awaiting-confirmation
+- 当前节点关系预览
+- 节点类型摘要
+- 关系类型摘要
+- 当前应下钻的对象家族
+
+### 3. Agent 节点证据
+
+内容：
+
+- 当前 agent snapshot
+- 执行主体节点状态
+- 与治理节点的对应关系
 
 ### 4. 架构交互入口
 
@@ -68,18 +75,18 @@
 
 建议页面结构自上而下为：
 
-1. candidate / truth 边界区
-2. review / feedback 队列区
-3. 异常治理状态区
+1. 左侧治理对象池
+2. 中央治理关系工作区
+3. 右侧 agent 节点证据区
 4. 架构交互入口区
 
 ## 页面模块树
 
 - GovernancePage
-  - CandidateTruthBoundaryPanel
-  - ReviewQueuePanel
-  - FeedbackStatusPanel
-  - GovernanceExceptionPanel
+  - GovernanceNodeListPanel
+  - GovernanceGraphPreviewPanel
+  - GovernanceMetaPanel
+  - AgentEvidencePanel
   - ProductArchitectureEntryPanel
 
 ## 关键交互
@@ -105,6 +112,7 @@
 
 ## 完成标准
 
-1. candidate、truth、review、feedback、drift 状态边界清楚
-2. 用户能知道下一步应该处理哪种治理问题
+1. 用户能围绕 graph node / agent node 识别治理对象和关系
+2. 页面不再只是静态分类列表，而具备工作区语义
 3. 页面可作为 `ProductArchitecturePreviewPage` 的治理详情依托
+4. candidate / truth / review / feedback / drift 仍需通过后续真实数据面持续补强

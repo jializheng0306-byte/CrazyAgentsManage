@@ -109,6 +109,24 @@ Operator 在 `Governance` 分区中必须能完成：
 - operator 能明确知道问题归属
 - 每种状态至少有一个规范 follow-up 路径
 
+### 5. Loop Stage / Gate Projection Workflow
+
+目标：
+
+- 让 operator 能看到治理闭环当前卡在哪个显式 gate，而不是只从 trace / closeout / feedback 文本里反推
+
+关键步骤：
+
+1. 判断当前对象属于哪类 gate stage
+2. 识别下一步动作归属给谁
+3. 区分该 stage 是运营投影还是治理 authority
+
+验收标准：
+
+- `Loop Stage` 只表达运营闭环，不新增 `truth.status`
+- operator 能分清 `review decision`、`operational gate`、`feedback closure`
+- 页面可为后续 `Loop Surface` 子表面提供治理侧输入
+
 ## 与架构展示页的关系
 
 `ProductArchitecturePreviewPage` 应成为 Governance 工作流的高层入口之一。

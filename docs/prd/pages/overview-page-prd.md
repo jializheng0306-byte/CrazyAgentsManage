@@ -15,7 +15,7 @@
 
 `Overview` 页面是整个产品的总入口。
 
-它不是简单的数据看板，而是让用户在一次扫描中回答：
+当前实现已经从“多摘要并排看板”进一步收口为**当前监控对象工作台**，因此它不只是简单的数据看板，而要让用户在一次扫描中回答：
 
 - 系统现在整体是否健康
 - 哪些问题最值得优先处理
@@ -45,31 +45,31 @@
 
 - 不打开任何细节页也能知道系统是不是处于异常态
 
-### 2. 治理摘要
+### 2. 跨域支持信号摘要
 
 内容：
 
-- candidate 数量
-- pending review 数量
-- blocked / drift 数量
-- feedback 未闭环项
+- operations summary
+- host health
+- alerts / connectivity
+- governance / collaboration 支持信号
 
 目标：
 
-- 让用户知道 FlowMind 治理链路当前是否积压
+- 让用户知道当前对象之外还有哪些跨域信号正在影响后续动作判断
 
-### 3. 协作摘要
+### 3. 中央对象工作区
 
 内容：
 
-- open handoff 数量
-- pending closeout 数量
-- missing writeback 数量
-- 未复核 artifacts 数量
+- 当前焦点对象
+- 该对象的来源 / 模型 / 工具轨迹
+- 运行表现
+- 当前对象相关异常
 
 目标：
 
-- 让用户知道 Codex / HermesAgent 协作是否已闭环
+- 把总览主语从“摘要集合”收口为“当前对象的工作上下文”
 
 ### 4. 快捷跳转
 
@@ -90,20 +90,22 @@
 建议页面结构自上而下为：
 
 1. 顶部全局状态带
-2. runtime 健康摘要区
-3. governance 摘要区
-4. collaboration 摘要区
-5. 快捷跳转区
-6. 架构可视化入口区
+2. briefing + next hop 区
+3. cross-domain summary 区
+4. 左侧对象树 / 支持信号区
+5. 中央对象工作区
+6. 右侧绑定详情 / 架构参考区
 
 ## 页面模块树
 
 - OverviewPage
   - GlobalStatusBar
-  - RuntimeHealthSummary
-  - GovernanceSummary
-  - CollaborationSummary
-  - QuickActionRouter
+  - BriefingPanel
+  - CrossDomainSummaryGrid
+  - ObjectTreePanel
+  - SupportSignalsPanel
+  - WorkspaceFocusPanel
+  - BoundDetailPanel
   - ArchitectureEntryPanel
 
 ## 关键交互
@@ -130,6 +132,7 @@
 
 ## 完成标准
 
-1. 用户能在一个页面上看见 runtime、governance、collaboration 的顶层状态
+1. 用户能在一个页面上看见当前对象与跨域支持信号的组合状态
 2. 页面具备明确的下一步分流能力
-3. 页面不与下一级详情页重复承担深度诊断职责
+3. 页面以对象工作台为主，不再只是 runtime / governance / collaboration 摘要卡并列
+4. 页面不与下一级详情页重复承担深度诊断职责

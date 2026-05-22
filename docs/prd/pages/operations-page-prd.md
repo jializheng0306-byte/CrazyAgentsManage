@@ -23,6 +23,15 @@
 - 哪些对象异常
 - 哪些对象可继续操作
 
+当前实现还额外承担一层 page-level aggregation shell：
+
+- briefing
+- summary grid
+- next hop
+- subpage framing
+
+因此 `Operations` 不只是对象列表，而是 Crazy control room 的第一块聚合页壳。
+
 ## 继承关系
 
 本文档继承：
@@ -73,6 +82,19 @@
 - Provider Health
 - readonly capability / delegation boundary
 
+### 6. Summary Shell / Next Hop
+
+内容：
+
+- briefing
+- summary grid
+- next hop
+- subpage cards
+
+目标：
+
+- 让 `Operations` 先给出 operator 该从哪个对象族继续巡检，而不是一打开就直接落入细节列表
+
 ## 页面信息架构
 
 建议页面结构自上而下为：
@@ -82,6 +104,7 @@
 3. team memory / shared context 区
 4. platform connectivity 区
 5. executor integrations 区
+6. summary shell / next hop 区
 
 ## 页面模块树
 
@@ -95,6 +118,8 @@
   - ToolCatalogPanel
   - CredentialHealthPanel
   - ProviderHealthPanel
+  - SummaryBriefingPanel
+  - NextHopPanel
 
 ## 关键交互
 
@@ -124,4 +149,5 @@
 
 1. 页面不再只是资源罗列，而能表达运营健康度
 2. 外部连接和内部运维对象有统一状态口径
-3. 页面可作为 `ProductArchitecturePreviewPage` 的 operations 详情依托
+3. 页面具备 page-level aggregation shell，而不是只剩对象列表
+4. 页面可作为 `ProductArchitecturePreviewPage` 的 operations 详情依托
