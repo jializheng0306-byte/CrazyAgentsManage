@@ -31,6 +31,7 @@
 0. `docs/roadmap/HermesAgent-FlowMind-联合产品功能基线-2026-04-30.md`
 0.1 `FlowMindDeploy/docs/01-product/HermesAgent-FlowMind-交互框架设计-2026-04-29.md`
 0.2 `FlowMindDeploy/docs/01-product/HermesAgent-FlowMind-产品功能基线与迭代路线图-2026-04-30.md`
+0.3 `FlowMindDeploy/docs/01-product/双仓-Control-Room-First-定位与规划调整-2026-05-22.md`
 
 1. `docs/prd/hermesagent-hosted-flowmind-product-foundation.md`
 2. `docs/prd/technical-implementation-prd.md`
@@ -106,6 +107,7 @@ scripts/check_cross_repo_prd_sync.sh
 项目已经形成以下产品方向共识：
 
 - `CrazyAgentsManage` 是一个以 HermesAgent 为宿主的 FlowMind 运营产品
+- 在当前下一阶段中，它的主定位应收紧为 `operator-facing control room / control plane`
 - `FlowMind` 是治理引擎 / canonical truth 层
 - `Codex` 负责实施规划与交付
 - `HermesAgent` 负责运营 framing 与验收
@@ -248,6 +250,21 @@ scripts/check_cross_repo_prd_sync.sh
 - `Overview` 已切换到五分区 IA 导航壳，并改为 `BASE` 感知的 API / 链接生成
 - 旧功能模板的静态资源路径正在从硬编码 `/manage/static/*` 收口到 `{{ BASE }}/static/*`
 - 治理摘要与协作摘要已进入 `Overview` 入口语义，但真实聚合数据仍待后续 API 补齐
+- 2026-05-22 的双仓 control-room-first 校准已把 Phase 5 之后的默认下一跳收紧为 Crazy `Sprint 2 Control Plane Hardening`，其优先级高于继续扩更多 IA 聚合页
+
+### Phase 5 之后的当前默认顺序（2026-05-22）
+
+1. Crazy `Sprint 1 Operator Console Real Aggregation`
+   - 当前状态：已在 Crazy lane 以本地提交 `5e88b51`、`cedc03c` 收口
+2. Crazy `Sprint 2 Control Plane Hardening`
+   - 默认任务：
+     - task bus 产品化
+     - automation promotion gate 固化
+     - role / credential / memory isolation 做实
+     - executor capability plane integration
+     - `Operations` 升级为真正 control room
+3. FlowMind `contract-gate`
+   - 只在 Crazy 明确上报新的 contract/read-surface gap 后，才切回 FlowMind 开发执行
 
 ## 迭代收口规则
 

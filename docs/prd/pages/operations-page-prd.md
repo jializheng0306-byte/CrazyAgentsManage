@@ -18,6 +18,7 @@
 它要回答：
 
 - 当前有哪些 roles / skills / jobs / memory / connectivity 对象
+- 当前有哪些 executor sources / tools / credentials / providers
 - 哪些对象缺失配置
 - 哪些对象异常
 - 哪些对象可继续操作
@@ -62,6 +63,16 @@
 - Hermes、FlowMind、外部平台、输入端连接状态
 - 在线 / 异常 / 未配置区分
 
+### 5. Executor Integrations
+
+内容：
+
+- Sources
+- Tool Catalog
+- Credential Health
+- Provider Health
+- readonly capability / delegation boundary
+
 ## 页面信息架构
 
 建议页面结构自上而下为：
@@ -70,6 +81,7 @@
 2. cron / routines 区
 3. team memory / shared context 区
 4. platform connectivity 区
+5. executor integrations 区
 
 ## 页面模块树
 
@@ -79,12 +91,18 @@
   - TeamMemoryPanel
   - SharedContextPanel
   - PlatformConnectivityPanel
+  - SourcesPanel
+  - ToolCatalogPanel
+  - CredentialHealthPanel
+  - ProviderHealthPanel
 
 ## 关键交互
 
 - 从 skills 异常跳转到阻断链路
 - 从 cron 异常跳转到 runtime 或 alerts
 - 从 connectivity 节点跳转到架构展示页
+- 从 provider / credential 异常跳转到 `Operations > Integrations`
+- 从 readonly capability 节点跳转到 delegation boundary / runbook
 
 ## 依赖来源
 
@@ -92,6 +110,7 @@
 - cron / routine surface
 - team memory / shared context surface
 - platform connectivity surface
+- executor / integrations capability surface
 
 ## 非目标
 

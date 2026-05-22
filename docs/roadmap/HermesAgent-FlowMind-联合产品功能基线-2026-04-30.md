@@ -6,6 +6,7 @@
 > canonical source:
 > - `FlowMindDeploy/docs/01-product/HermesAgent-FlowMind-交互框架设计-2026-04-29.md`
 > - `FlowMindDeploy/docs/01-product/HermesAgent-FlowMind-产品功能基线与迭代路线图-2026-04-30.md`
+> - `FlowMindDeploy/docs/01-product/双仓-Control-Room-First-定位与规划调整-2026-05-22.md`
 
 ---
 
@@ -39,6 +40,12 @@
 - 我们是在建设：
   - Hermes 上游运营编排系统
   - 与 FlowMind 下游治理真值系统联动的 operator product
+
+2026-05-22 新增的 planning clarification：
+
+- Crazy 的下一阶段主定位应收紧为 `operator-facing control room / control plane`
+- `FlowMindDeploy` 继续是 governance kernel / canonical truth / contract authority
+- Phase 6 在 Sprint 1 之后的默认下一跳不再是“继续扩更多聚合页”，而是 Crazy `Sprint 2 Control Plane Hardening`
 
 ---
 
@@ -160,6 +167,19 @@ Crazy 侧直接动作：
    - `handoff packet`
    - `runtime heartbeat`
 6. 让 webhook 成为正式触发通道，而不是隐式边界
+
+Phase 6 当前活动切片顺序（2026-05-22）：
+
+1. `Sprint 1 Operator Console Real Aggregation`
+   - 当前状态：Crazy lane 已以本地提交 `5e88b51`、`cedc03c` 收口
+2. `Sprint 2 Control Plane Hardening`
+   - 当前默认下一跳：
+     - `shared-context/agent-requests/` task bus 产品化
+     - automation promotion gate 固化
+     - role / credential / memory isolation 做实
+     - `Operations` 升级为真正 control room
+3. `FlowMind contract-gate`
+   - 默认不主动开新开发 lane，直到 Crazy 明确上报新的 contract/read-surface gap
 
 Phase 6 当前默认口径还必须与 FlowMind canonical docs 保持一致：
 

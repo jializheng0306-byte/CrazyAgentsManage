@@ -34,6 +34,7 @@
 - [治理动作分层口径-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E6%B2%BB%E7%90%86%E5%8A%A8%E4%BD%9C%E5%88%86%E5%B1%82%E5%8F%A3%E5%BE%84-v1-2026-05-07.md)
 - [执行包字段对照与消费顺序-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E6%89%A7%E8%A1%8C%E5%8C%85%E5%AD%97%E6%AE%B5%E5%AF%B9%E7%85%A7%E4%B8%8E%E6%B6%88%E8%B4%B9%E9%A1%BA%E5%BA%8F-v1-2026-05-07.md)
 - [治理证据资产索引-v1-2026-05-07.md](/home/flowmind/FlowMindDeploy/docs/05-version-control/%E6%B2%BB%E7%90%86%E8%AF%81%E6%8D%AE%E8%B5%84%E4%BA%A7%E7%B4%A2%E5%BC%95-v1-2026-05-07.md)
+- [双仓-Control-Room-First-定位与规划调整-2026-05-22.md](/home/flowmind/FlowMindDeploy/docs/01-product/%E5%8F%8C%E4%BB%93-Control-Room-First-%E5%AE%9A%E4%BD%8D%E4%B8%8E%E8%A7%84%E5%88%92%E8%B0%83%E6%95%B4-2026-05-22.md)
 
 当前 `operational follow-up` mirror 入口还必须参考：
 
@@ -56,6 +57,7 @@
 2. 按 PRD 分层更新对应文档
 3. 如果触发 FlowMind canonical 变化，再同步更新 roadmap 和镜像入口并跑双仓检查
 4. 如果变化影响 `operational follow-up`，继续采用 FlowMind 的同一 Slice 1 消费模型，不在 Crazy / Hermes 侧另起词表
+5. 如果变化影响双仓 control-plane 定位或下一阶段优先级，优先同步 `双仓-Control-Room-First-定位与规划调整-2026-05-22.md` 及其 mirror 入口
 
 ### 常见误区
 
@@ -82,6 +84,7 @@ CrazyAgentsManage 现在使用一套拆分式 PRD 体系，而不再依赖单一
 当前仓库共享的产品理解是：
 
 - `CrazyAgentsManage` 是一个以 HermesAgent 为宿主的 FlowMind 运营产品
+- 它在下一阶段的主定位应收紧为 `operator-facing control room / control plane`
 - `FlowMind` 是治理引擎与 canonical truth 层，而不是 operator console 本身
 - `Codex` 仍然是开发 lane
 - `HermesAgent` 仍然是运营 lane

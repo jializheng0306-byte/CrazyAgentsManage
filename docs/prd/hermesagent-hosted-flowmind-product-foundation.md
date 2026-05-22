@@ -42,6 +42,7 @@ CrazyAgentsManage 的规范性定位是：
 - `HermesAgent` 是运行时宿主与运营执行面
 - `FlowMind` 是治理引擎与规范真相层
 - `CrazyAgentsManage` 是产品层，负责让运行态可见、让运营对象可管理、让治理闭环可执行
+- 在当前双仓下一阶段中，它的主定位应继续收紧为 `operator-facing control room / control plane`，而不是第二套 truth authority
 
 ## 叙事边界
 

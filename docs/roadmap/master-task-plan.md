@@ -23,6 +23,12 @@
 
 `一个以 HermesAgent 为宿主的 FlowMind 运营产品`
 
+当前双仓下一阶段补充解释：
+
+- 它的默认下一阶段主定位应收紧为 `operator-facing control room / control plane`
+- 不是第二套 truth authority
+- 也不是“继续扩更多 agent 角色”优先的 playground
+
 ### 2. 规范性一级信息架构
 
 - `Overview`
@@ -89,6 +95,16 @@
 3. 治理闭环回写
 4. operator console 收敛
 5. 安全自动化升级
+
+### D. Control Plane Hardening 主线
+
+把 CrazyAgentsManage 从“已经能展示真实状态的 operator UI”推进为“可审计的 operator control plane”：
+
+1. task bus
+2. automation promotion gate
+3. role / credential / memory isolation
+4. executor capability plane integration
+5. `Operations` control room consolidation
 
 ## 四、任务分解
 
@@ -181,6 +197,46 @@
 - 每个 IA 分区都能回答它被定义时应该回答的问题
 - 主要状态能回链到真实数据或真实工件
 - 不再依赖 chat-only 解释
+
+## Workstream 3.5：Control Plane Hardening
+
+### 目标
+
+在 Sprint 1 聚合页基础上，把 Crazy 的下一阶段重点从“继续补页面”提升为“让控制平面本身成为产品能力”。
+
+### 当前状态
+
+- Sprint 1 已在 Crazy lane 本地形成两轮 Lore 提交：
+  - `5e88b51` freeze baseline
+  - `cedc03c` close remaining overview hardening risks
+- `Operations / Overview / host health / focused Playwright gate` 已完成第一轮闭环
+
+### 子项状态
+
+| 子项 | Owner | 状态 | 当前口径 |
+|---|---|---|---|
+| Task Bus Productization | Crazy 主 | `planned` | 将 `shared-context/agent-requests/` 推进为结构化 task bus |
+| Automation Promotion Gate | Crazy 主 | `planned` | 固定 prototype → rehearsed → approved-for-automation → automated 的晋升链 |
+| Executor Capability Plane Integration | Crazy 主 | `planned` | 将 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面 |
+| Role / Credential / Memory Isolation | Crazy 主 | `planned` | 让角色边界、凭证归属、记忆边界、runbook 在控制面可见且可审计 |
+| FlowMind Contract Gate | Shared | `standing-gate` | 继续只在 Crazy 明确上报新的 contract/read-surface gap 时切回 FlowMind 开发执行 |
+
+### 后续任务
+
+1. 将 `shared-context/agent-requests/` 推进为结构化 task bus
+2. 固定 prototype → rehearsed → approved-for-automation → automated 的 promotion gate
+3. 让 role / credential / memory isolation 在控制面上可见、可审计
+4. 将 executor capability plane 的 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面
+5. 让 `Operations` 承载 task registry、promotion state、host/provider/cron/alert evidence 与 next-hop runbook
+6. 保持 `FlowMind` 只作为 contract/truth authority，不在 Crazy 本地重写主治理状态
+
+### 验收标准
+
+- 任务流转不再只靠群聊口头 ACK
+- 自动化晋升有明确证据、审批与回退规则
+- 凭证、角色、记忆边界可在产品中被审计
+- executor integration 不再只停留在设计文档，而进入 `Operations` 的正式能力面
+- `Operations` 可作为 control room，而不只是对象列表页
 
 ## Workstream 4：Harness 机制迁移与产品化
 

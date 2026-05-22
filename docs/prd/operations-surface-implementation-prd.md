@@ -17,6 +17,7 @@
 本文档将技术实现 PRD 中的 `Operations` 分区继续拆解为可执行实施范围，聚焦：
 
 - roles / skills / team memory / cron / alerts / platform connectivity
+- executor capability plane 的 sources / tools / credentials / provider health
 - 外部系统交互状态的可见化
 - 对应架构展示页中的外部交互状态投影
 
@@ -94,6 +95,19 @@
 - 汇总层至少提供 skills、cron、memory、connectivity 四类摘要
 - 必须可复用，而不是单页面临时拼装
 
+### 6. Executor / Integrations Capability Surface
+
+目标：
+
+- 把 executor 明确作为 Crazy 的 external capability plane 接入 `Operations`
+
+实现要求：
+
+- `Sources / Tool Catalog / Credential Health / Provider Health` 必须成为显式可见对象
+- source / provider / credential 的状态需区分 `healthy / degraded / missing / failed`
+- Crazy 侧默认只消费 capability plane，不让 executor 接管 repo truth / runtime truth / governance truth
+- readonly delegation boundary 必须可见，避免把 capability visibility 和 write authority 混成同一层
+
 ## 实施优先级
 
 ### P0
@@ -105,6 +119,7 @@
 
 - team memory / shared context 表面标准化
 - `ProductArchitecturePreviewPage` 获得第一版外部交互状态覆盖层
+- executor capability plane 的 `Sources / Tool Catalog / Credential Health / Provider Health` 成为正式产品面
 
 ### P2
 
