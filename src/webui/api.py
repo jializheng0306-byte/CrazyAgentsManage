@@ -6,6 +6,7 @@ Supports both local and remote (SSH) data access modes
 
 import json
 import os
+import shlex
 import shutil
 import sqlite3
 import sys
@@ -32,10 +33,16 @@ _dashboard_cache = {'data': None, 'timestamp': 0}
 _dashboard_cache_ttl = 30
 _local_db_cache = {}
 _local_db_lock = threading.Lock()
+_LOOP_SURFACE_MEMORY_DECISIONS = 'shared-context/loop-surface/memory-candidate-decisions.jsonl'
+_LOOP_SURFACE_FEEDBACK_INPUTS = 'shared-context/loop-surface/feedback-inputs.jsonl'
 
 
 def _get_repo_root():
     return Path(__file__).resolve().parents[2]
+
+
+def _now_iso():
+    return datetime.now(timezone.utc).astimezone().isoformat()
 
 
 def _get_hermes_home():
@@ -332,15 +339,58 @@ def _read_shared_context_lines(rel_path):
     return [line for line in full_path.read_text(encoding='utf-8').splitlines() if line.strip()]
 
 
-def _load_task_bus_requests():
+def _read_shared_context_rows(rel_path):
     rows = []
-    for line in _read_shared_context_lines('shared-context/agent-requests/requests.jsonl'):
+    for line in _read_shared_context_lines(rel_path):
         try:
             payload = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if not isinstance(payload, dict):
-            continue
+        if isinstance(payload, dict):
+            rows.append(payload)
+    return rows
+
+
+def _latest_shared_context_rows_by_key(rel_path, key):
+    latest = {}
+    for row in _read_shared_context_rows(rel_path):
+        row_key = str(row.get(key) or '').strip()
+        if row_key:
+            latest[row_key] = row
+    return latest
+
+
+def _append_shared_context_row(rel_path, payload):
+    line = json.dumps(payload, ensure_ascii=False)
+    if _is_remote_mode():
+        remote_repo_root = _get_remote_repo_root()
+        remote_file = str(Path(remote_repo_root) / rel_path)
+        remote_dir = str(Path(remote_file).parent)
+        command = (
+            f"mkdir -p {shlex.quote(remote_dir)} && "
+            f"printf '%s\\n' {shlex.quote(line)} >> {shlex.quote(remote_file)} && "
+            "printf ok"
+        )
+        return _run_remote_command(command, timeout=15).strip() == 'ok'
+
+    full_path = _get_repo_root() / rel_path
+    full_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(full_path, 'a', encoding='utf-8') as handle:
+        handle.write(line + '\n')
+    return True
+
+
+def _normalize_evidence_refs(raw_value):
+    if isinstance(raw_value, list):
+        return [str(item).strip() for item in raw_value if str(item).strip()]
+    if isinstance(raw_value, str):
+        return [part.strip() for part in raw_value.split(',') if part.strip()]
+    return []
+
+
+def _load_task_bus_requests():
+    rows = []
+    for payload in _read_shared_context_rows('shared-context/agent-requests/requests.jsonl'):
         rows.append(payload)
     rows.sort(key=lambda item: item.get('updated_at') or item.get('created_at') or '', reverse=True)
     return rows
@@ -491,12 +541,289 @@ def _build_promise_review_loop():
         'summary': ' | '.join(summary_parts),
         'evidenceRefs': evidence_refs,
         'classifiedCounts': classified,
+        'objectCount': snapshot.get('promise_count', 0) or 0,
+        'followUpCount': needs_follow_up,
         'promises': promises,
         'sourcePaths': {
             'state': 'promises/reviews/daily-promise-review-state.json',
             'latestReport': latest_report,
         },
     }
+
+
+def _list_intel_summary_files():
+    home = _get_hermes_home()
+    rel_path = 'intel'
+    files = _list_files(home, rel_path, 'summary-*.md')
+    return sorted(files)
+
+
+def _list_intel_data_files():
+    home = _get_hermes_home()
+    rel_path = 'intel'
+    files = _list_files(home, rel_path, 'intel-data-*.json')
+    return sorted(files)
+
+
+def _load_latest_intel_data():
+    home = _get_hermes_home()
+    files = _list_intel_data_files()
+    if not files:
+        return {}
+    return _read_json(home / 'intel' / files[-1], default={})
+
+
+def _build_morning_intel_loop():
+    data = _load_latest_intel_data()
+    if not isinstance(data, dict) or not data:
+        return None
+
+    papers = data.get('papers') or []
+    rss_items = data.get('rss_items') or []
+    summary_files = _list_intel_summary_files()
+    latest_summary = summary_files[-1] if summary_files else ''
+    timestamp = data.get('timestamp')
+    round_number = len(summary_files) if summary_files else 1
+    digest_date = ''
+    if latest_summary:
+        digest_date = latest_summary.replace('summary-', '').replace('.md', '')
+    elif timestamp:
+        digest_date = str(timestamp)[:10]
+
+    return {
+        'loopId': f'morning-intel-cycle:{digest_date or "latest"}',
+        'cycleType': 'morning-intel-cycle',
+        'sourceJobId': 'morning-intel',
+        'sourceJobName': 'morning-intel-v2.py',
+        'roundNumber': round_number,
+        'stage': 'awaiting_operational_acceptance',
+        'stageOwner': 'operator',
+        'openedAt': timestamp,
+        'updatedAt': timestamp,
+        'status': 'open',
+        'nextAction': '检查本轮情报摘要并决定是否需要 follow-up、纳入 radar、或沉淀成后续 memory candidate。',
+        'feedbackStatus': 'not-started',
+        'memoryCandidateStatus': 'not-started',
+        'summary': f'papers={len(papers)} | feeds={len(rss_items)}',
+        'evidenceRefs': [
+            ref for ref in [
+                f'report:{latest_summary}' if latest_summary else '',
+                f'data:{_list_intel_data_files()[-1]}' if _list_intel_data_files() else '',
+                'script:scripts/morning-intel-v2.py',
+            ] if ref
+        ],
+        'objectCount': len(papers) + len(rss_items),
+        'followUpCount': 0,
+        'classifiedCounts': {
+            'total': len(papers) + len(rss_items),
+            'papers': len(papers),
+            'feeds': len(rss_items),
+        },
+        'sourcePaths': {
+            'latestReport': latest_summary,
+            'latestData': _list_intel_data_files()[-1] if _list_intel_data_files() else '',
+        },
+    }
+
+
+def _build_promise_review_memory_candidates(loop):
+    if not isinstance(loop, dict):
+        return []
+    candidates = []
+    for item in loop.get('promises') or []:
+        if str(item.get('needs_follow_up') or '').lower() != 'true':
+            continue
+        promise_id = str(item.get('promise_id') or '')
+        candidate_id = str(item.get('flowmind_candidate_id') or '')
+        lesson = item.get('latest_feedback_summary') or item.get('last_trace_summary') or item.get('title') or ''
+        if not lesson:
+            lesson = 'Follow-up changed this promise review round and should be checked for durable learning value.'
+        candidates.append({
+            'candidateId': f'memory-candidate:{promise_id}',
+            'loopId': loop.get('loopId'),
+            'promiseId': promise_id,
+            'flowmindCandidateId': candidate_id,
+            'candidateType': 'reflection_learning',
+            'sourcePlane': 'reflection',
+            'status': 'candidate',
+            'proposedTarget': 'MEMORY.md',
+            'targetMemoryPlane': 'host-memory',
+            'proposedLesson': str(lesson)[:300],
+            'sourceRefs': [
+                ref for ref in [
+                    f'promise:{promise_id}',
+                    f'candidate:{candidate_id}' if candidate_id else '',
+                    'state:promises/reviews/daily-promise-review-state.json',
+                ] if ref
+            ],
+        })
+    return candidates
+
+
+def _build_promise_review_feedback_inputs(loop):
+    if not isinstance(loop, dict):
+        return []
+    inputs = []
+    for item in loop.get('promises') or []:
+        if str(item.get('needs_follow_up') or '').lower() != 'true':
+            continue
+        promise_id = str(item.get('promise_id') or '')
+        follow_up_kind = str(item.get('follow_up_kind') or '')
+        next_actor = str(item.get('next_actor') or '') or 'operator'
+        latest_feedback_type = str(item.get('latest_feedback_type') or '')
+        summary = item.get('latest_feedback_summary') or item.get('last_trace_summary') or item.get('title') or ''
+        base_event_type = (latest_feedback_type or follow_up_kind).lower()
+        if base_event_type in ('confirmed', 'blocked', 'clarified'):
+            input_mode = 'event_annotation'
+            allowed_event_types = [base_event_type]
+            default_event_type = base_event_type
+        else:
+            input_mode = 'explicit_event'
+            allowed_event_types = ['deferred', 'cancelled']
+            default_event_type = 'deferred'
+        inputs.append({
+            'inputId': f'feedback-input:{promise_id}',
+            'loopId': loop.get('loopId'),
+            'promiseId': promise_id,
+            'flowmindCandidateId': str(item.get('flowmind_candidate_id') or ''),
+            'targetInstanceId': str(item.get('instance_id') or ''),
+            'targetSourceAgent': 'HermesAgent',
+            'followUpKind': follow_up_kind,
+            'nextActor': next_actor,
+            'status': 'pending-input',
+            'latestFeedbackType': latest_feedback_type,
+            'inputMode': input_mode,
+            'allowedEventTypes': allowed_event_types,
+            'defaultEventType': default_event_type,
+            'prefillText': str(summary)[:300],
+            'sourceRefs': [
+                ref for ref in [
+                    f'promise:{promise_id}',
+                    f'candidate:{item.get("flowmind_candidate_id")}' if item.get('flowmind_candidate_id') else '',
+                    'state:promises/reviews/daily-promise-review-state.json',
+                ] if ref
+            ],
+        })
+    return inputs
+
+
+def _apply_memory_candidate_decision(candidate, decision_row):
+    if not isinstance(candidate, dict):
+        return candidate
+    if not isinstance(decision_row, dict):
+        return candidate
+    candidate['status'] = str(decision_row.get('status') or candidate.get('status') or 'candidate')
+    candidate['lastAction'] = str(decision_row.get('action') or '')
+    candidate['decisionNote'] = str(decision_row.get('note') or '')
+    candidate['decisionEvidenceRefs'] = decision_row.get('evidenceRefs') or []
+    candidate['decidedAt'] = str(decision_row.get('recordedAt') or '')
+    candidate['decidedBy'] = str(decision_row.get('recordedBy') or '')
+    candidate['authorityPlane'] = str(decision_row.get('authorityPlane') or candidate.get('targetMemoryPlane') or '')
+    return candidate
+
+
+def _apply_feedback_input_submission(input_item, submission_row):
+    if not isinstance(input_item, dict):
+        return input_item
+    if not isinstance(submission_row, dict):
+        return input_item
+    payload = submission_row.get('payload') if isinstance(submission_row.get('payload'), dict) else {}
+    input_item['status'] = str(submission_row.get('status') or input_item.get('status') or 'pending-input')
+    input_item['lastSubmissionMode'] = str(submission_row.get('mode') or '')
+    input_item['lastSubmissionEventType'] = str(submission_row.get('eventType') or '')
+    input_item['lastSubmissionReason'] = str(payload.get('reason') or '')
+    input_item['lastSubmissionNote'] = str(payload.get('note') or '')
+    input_item['lastSubmissionEvidenceRefs'] = payload.get('evidenceRefs') or []
+    input_item['lastSubmissionAt'] = str(submission_row.get('recordedAt') or '')
+    input_item['lastSubmissionBoundary'] = str(submission_row.get('writeBoundary') or 'local-operator-queue')
+    input_item['lastRecordedBy'] = str(submission_row.get('recordedBy') or '')
+    return input_item
+
+
+def _summarize_memory_candidate_status(candidates):
+    if not candidates:
+        return 'not-started'
+    settled = [
+        item for item in candidates
+        if str(item.get('status') or '') in ('accepted', 'rejected', 'deferred')
+    ]
+    if not settled:
+        return 'awaiting-confirmation'
+    if len(settled) == len(candidates):
+        return 'decision-recorded'
+    return 'partial-decision-recorded'
+
+
+def _summarize_feedback_input_status(inputs, base_status):
+    if not inputs:
+        return base_status
+    submitted = [
+        item for item in inputs
+        if str(item.get('status') or '') == 'submitted-local'
+    ]
+    if not submitted:
+        return base_status
+    if len(submitted) == len(inputs):
+        return 'local-submission-recorded'
+    return 'partial-local-submission'
+
+
+def _build_enriched_promise_review_loop():
+    loop = _build_promise_review_loop()
+    if not loop:
+        return None
+
+    decision_map = _latest_shared_context_rows_by_key(_LOOP_SURFACE_MEMORY_DECISIONS, 'candidateId')
+    submission_map = _latest_shared_context_rows_by_key(_LOOP_SURFACE_FEEDBACK_INPUTS, 'inputId')
+
+    candidates = [
+        _apply_memory_candidate_decision(candidate, decision_map.get(candidate.get('candidateId')))
+        for candidate in _build_promise_review_memory_candidates(loop)
+    ]
+    inputs = [
+        _apply_feedback_input_submission(input_item, submission_map.get(input_item.get('inputId')))
+        for input_item in _build_promise_review_feedback_inputs(loop)
+    ]
+
+    loop['memoryCandidates'] = candidates
+    loop['feedbackInputs'] = inputs
+    loop['memoryCandidateStatus'] = _summarize_memory_candidate_status(candidates)
+    loop['feedbackStatus'] = _summarize_feedback_input_status(inputs, loop.get('feedbackStatus'))
+    return loop
+
+
+def _build_collaboration_loops():
+    loops = []
+    promise_loop = _build_enriched_promise_review_loop()
+    if promise_loop:
+        loops.append(promise_loop)
+
+    morning_loop = _build_morning_intel_loop()
+    if morning_loop:
+        morning_loop['memoryCandidates'] = []
+        morning_loop['feedbackInputs'] = []
+        loops.append(morning_loop)
+    return loops
+
+
+def _find_memory_candidate(candidate_id):
+    loop = _build_enriched_promise_review_loop()
+    if not loop:
+        return None
+    for candidate in loop.get('memoryCandidates') or []:
+        if candidate.get('candidateId') == candidate_id:
+            return candidate
+    return None
+
+
+def _find_feedback_input(input_id):
+    loop = _build_enriched_promise_review_loop()
+    if not loop:
+        return None
+    for input_item in loop.get('feedbackInputs') or []:
+        if input_item.get('inputId') == input_id:
+            return input_item
+    return None
 
 
 def _health_status_for_percent(used_percent):
@@ -1978,18 +2305,122 @@ def runtime_harness_summary():
 
 @api.route('/collaboration/loops')
 def collaboration_loops():
-    loop = _build_promise_review_loop()
-    if not loop:
+    loops = _build_collaboration_loops()
+    if not loops:
         return jsonify([])
-    return jsonify([loop])
+    return jsonify(loops)
 
 
 @api.route('/collaboration/loops/<loop_id>')
 def collaboration_loop_detail(loop_id):
-    loop = _build_promise_review_loop()
-    if not loop or loop.get('loopId') != loop_id:
+    loops = _build_collaboration_loops()
+    loop = next((item for item in loops if item.get('loopId') == loop_id), None)
+    if not loop:
         return jsonify({'error': 'Loop not found', 'loopId': loop_id}), 404
     return jsonify(loop)
+
+
+@api.route('/collaboration/memory-candidates')
+def collaboration_memory_candidates():
+    loop = _build_enriched_promise_review_loop()
+    if not loop:
+        return jsonify([])
+    return jsonify(loop.get('memoryCandidates') or [])
+
+
+@api.route('/collaboration/feedback-inputs')
+def collaboration_feedback_inputs():
+    loop = _build_enriched_promise_review_loop()
+    if not loop:
+        return jsonify([])
+    return jsonify(loop.get('feedbackInputs') or [])
+
+
+@api.route('/collaboration/memory-candidates/<path:candidate_id>/decision', methods=['POST'])
+def collaboration_memory_candidate_decision(candidate_id):
+    payload = request.get_json(silent=True) or {}
+    action = str(payload.get('action') or '').strip().lower()
+    action_to_status = {
+        'confirm': 'accepted',
+        'reject': 'rejected',
+        'defer': 'deferred',
+    }
+    if action not in action_to_status:
+        return jsonify({'error': 'action must be one of: confirm, reject, defer'}), 400
+
+    candidate = _find_memory_candidate(candidate_id)
+    if not candidate:
+        return jsonify({'error': 'Memory candidate not found', 'candidateId': candidate_id}), 404
+
+    record = {
+        'recordId': f'memory-decision:{candidate_id}:{int(time.time() * 1000)}',
+        'candidateId': candidate_id,
+        'loopId': candidate.get('loopId'),
+        'promiseId': candidate.get('promiseId'),
+        'flowmindCandidateId': candidate.get('flowmindCandidateId'),
+        'candidateType': candidate.get('candidateType'),
+        'sourcePlane': candidate.get('sourcePlane'),
+        'proposedTarget': candidate.get('proposedTarget'),
+        'authorityPlane': candidate.get('targetMemoryPlane') or 'host-memory',
+        'action': action,
+        'status': action_to_status[action],
+        'note': str(payload.get('note') or '').strip(),
+        'evidenceRefs': _normalize_evidence_refs(payload.get('evidenceRefs')),
+        'recordedBy': str(payload.get('recordedBy') or 'operator'),
+        'recordedAt': _now_iso(),
+    }
+    if not _append_shared_context_row(_LOOP_SURFACE_MEMORY_DECISIONS, record):
+        return jsonify({'error': 'Failed to persist memory candidate decision'}), 500
+
+    candidate = _apply_memory_candidate_decision(candidate, record)
+    return jsonify(candidate), 201
+
+
+@api.route('/collaboration/feedback-inputs/<path:input_id>/submit', methods=['POST'])
+def collaboration_feedback_input_submit(input_id):
+    payload = request.get_json(silent=True) or {}
+    input_item = _find_feedback_input(input_id)
+    if not input_item:
+        return jsonify({'error': 'Feedback input not found', 'inputId': input_id}), 404
+
+    mode = str(payload.get('mode') or input_item.get('inputMode') or '').strip().lower()
+    if mode not in ('explicit_event', 'event_annotation'):
+        return jsonify({'error': 'mode must be explicit_event or event_annotation'}), 400
+
+    event_type = str(payload.get('eventType') or input_item.get('defaultEventType') or '').strip().lower()
+    allowed_event_types = [str(item).lower() for item in (input_item.get('allowedEventTypes') or [])]
+    if allowed_event_types and event_type not in allowed_event_types:
+        return jsonify({'error': 'eventType is not allowed for this feedback input', 'allowedEventTypes': allowed_event_types}), 400
+
+    reason = str(payload.get('reason') or '').strip()
+    if not reason:
+        return jsonify({'error': 'reason is required'}), 400
+
+    record = {
+        'recordId': f'feedback-input:{input_id}:{int(time.time() * 1000)}',
+        'inputId': input_id,
+        'loopId': input_item.get('loopId'),
+        'promiseId': input_item.get('promiseId'),
+        'flowmindCandidateId': input_item.get('flowmindCandidateId'),
+        'targetInstanceId': input_item.get('targetInstanceId'),
+        'targetSourceAgent': input_item.get('targetSourceAgent'),
+        'mode': mode,
+        'eventType': event_type,
+        'payload': {
+            'reason': reason,
+            'note': str(payload.get('note') or '').strip(),
+            'evidenceRefs': _normalize_evidence_refs(payload.get('evidenceRefs')),
+        },
+        'status': 'submitted-local',
+        'writeBoundary': 'local-operator-queue',
+        'recordedBy': str(payload.get('recordedBy') or 'operator'),
+        'recordedAt': _now_iso(),
+    }
+    if not _append_shared_context_row(_LOOP_SURFACE_FEEDBACK_INPUTS, record):
+        return jsonify({'error': 'Failed to persist feedback input'}), 500
+
+    input_item = _apply_feedback_input_submission(input_item, record)
+    return jsonify(input_item), 201
 
 @api.route('/flowmind/records')
 def flowmind_records():

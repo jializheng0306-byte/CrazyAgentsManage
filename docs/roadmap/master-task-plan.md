@@ -223,9 +223,9 @@
 | Executor Capability Plane Integration | Crazy 主 | `planned` | 将 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面 |
 | Role / Credential / Memory Isolation | Crazy 主 | `planned` | 让角色边界、凭证归属、记忆边界、runbook 在控制面可见且可审计 |
 | Loop Surface PRD | Crazy 主 | `completed-in-lane` | `loop-surface-page-prd.md` 已落地，且 `/collaboration/loops` 已接入最小 vertical slice 模板与 API |
-| Cycle Upgrade First Batch | Crazy 主 | `in-progress` | 已落第一条 `promise-review-cycle`，下一步再决定是否扩到 `morning-intel-v2.py` |
-| Memory Candidate Confirmation | Crazy 主 | `queued-after-cycle` | `memory candidate -> confirm/reject` 最小数据面依赖 cycle 主对象先稳定 |
-| Feedback Input Surface | Crazy 主 | `queued-after-cycle` | 轻量 feedback 表单依赖 loop/cycle 对象先落到页面 |
+| Cycle Upgrade First Batch | Crazy 主 | `completed-in-lane` | 已落 `promise-review-cycle` 与 `morning-intel-cycle` 两条首批 cycle 对象，并由 `/collaboration/loops` 统一消费 |
+| Memory Candidate Confirmation | Crazy 主 | `completed-in-lane` | `Loop Surface` 已支持 `confirm / reject / defer` 本地留痕，并持久化到 `shared-context/loop-surface/memory-candidate-decisions.jsonl`；该动作只作用于 host-memory 候选，不等于 repo-side canonical accept |
+| Feedback Input Surface | Crazy 主 | `completed-in-lane` | `Loop Surface` 已支持 manual-form-first 本地 operator queue，并持久化到 `shared-context/loop-surface/feedback-inputs.jsonl`；当前仍不直接写入 FlowMind feedback authority |
 | FlowMind Contract Gate | Shared | `standing-gate` | 继续只在 Crazy 明确上报新的 contract/read-surface gap 时切回 FlowMind 开发执行 |
 
 ### 后续任务

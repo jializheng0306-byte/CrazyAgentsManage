@@ -45,6 +45,7 @@ shared-context/
 ├── status/                  # 各 Agent 当前状态 JSON
 ├── monitor-tasks/           # Task Watcher 持久化存储
 ├── agent-requests/          # 通信 Guardrail 请求生命周期
+├── loop-surface/            # cycle / feedback input / memory candidate 本地 operator 留痕
 └── job-status/              # cron 任务状态
 ```
 
@@ -62,6 +63,7 @@ shared-context/
 - 重大决策 → 写入 `decisions/`
 - Agent 状态 → 写入 `status/`（JSON 格式）
 - Task Watcher → 写入 `monitor-tasks/`
+- Loop Surface operator 动作 → 写入 `loop-surface/`
 
 ## 参考
 

@@ -22,7 +22,7 @@
           <span class="console-page-title-icon">🔁</span>
           Loop Surface
         </h1>
-        <p class="console-page-subtitle">先用 `daily-promise-review.py` 这一条 cycle object 验证显式 gate、round、evidence 与 next action 是否值得进入主产品面。</p>
+        <p class="console-page-subtitle">当前已接入 `daily-promise-review.py` 与 `morning-intel-v2.py` 两条 cycle object，并把 feedback / memory candidate 提升成可留痕的 operator 子表面。</p>
       </div>
       <div class="console-surface-map" aria-label="loop-zones">
         <span class="console-surface-chip active">左侧 cycle 对象池</span>
@@ -50,6 +50,8 @@
       </div>
     </div>
 
+    <div id="loop-action-banner" class="card" style="display:none; margin-bottom: var(--spacing-lg); padding: var(--spacing-md);"></div>
+
     <section class="cl-section console-section-emphasis">
       <div class="cl-section-header">
         <div>
@@ -58,7 +60,7 @@
             <span class="cl-section-icon">🗂️</span>
             Cycle 对象池
           </h2>
-          <p class="cl-section-subtitle">当前只接入 `promise-review-cycle`。后续如 vertical slice 成立，再扩到 `morning-intel-cycle`。</p>
+          <p class="cl-section-subtitle">当前统一承接 `promise-review-cycle` 与 `morning-intel-cycle`。下一步重点不再是扩第三条 cycle，而是收稳 confirm / reject 与 feedback input 的写面边界。</p>
         </div>
       </div>
       <div class="loop-list" id="loop-list">
@@ -83,6 +85,23 @@
             <a class="cl-inline-support-link" href="{{ BASE }}/collaboration">返回协作工作台</a>
             <a class="cl-inline-support-link" href="{{ BASE }}/operations/cron">查看 Cron</a>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cl-section">
+      <div class="cl-body-grid">
+        <div class="cl-body-card primary">
+          <span class="cl-body-kicker">Feedback Inbox</span>
+          <h3>待补运营输入</h3>
+          <p>在这里先记录本地 operator input queue。当前只落 `shared-context`，不直接改写 FlowMind truth / feedback authority。</p>
+          <div class="loop-evidence-list" id="loop-feedback-list"></div>
+        </div>
+        <div class="cl-body-card support">
+          <span class="cl-body-kicker">Memory Candidate Queue</span>
+          <h3>待确认记忆候选</h3>
+          <p>当前允许记录 `confirm / reject / defer` 留痕，但只作用于 host-memory 候选确认，不把 Crazy 提升为 repo-side canonical memory authority。</p>
+          <div class="loop-evidence-list" id="loop-memory-candidate-list"></div>
         </div>
       </div>
     </section>

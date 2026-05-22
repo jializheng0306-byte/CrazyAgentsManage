@@ -1,7 +1,7 @@
 # Sprint 2 Cycle 升级首批实施拆解
 
 > 日期: 2026-05-22  
-> 状态: proposed / execution-ready  
+> 状态: completed-in-lane / verified  
 > 所属主线: `Sprint 2 Control Plane Hardening`  
 > 来源判断:
 > - `docs/02-engineering/external-analysis/centaur-loop-reference-value-for-crazyagentsmanage-2026-05-11.md`
@@ -163,3 +163,10 @@
 ## 八、一句话结论
 
 > Sprint 2 的 cycle 首批不求面面俱到，只先把 `daily-promise-review.py` 和 `morning-intel-v2.py` 升成可追踪的 cycle 对象，用来证明 `Loop Surface` 和 `feedback / memory candidate` 这条 `Centaur Loop` 借鉴线值得进入主产品面。  
+
+## 九、当前落地结果（2026-05-22）
+
+1. `Loop Surface` 已统一消费 `promise-review-cycle` 与 `morning-intel-cycle` 两条首批 cycle 对象。
+2. `Loop Surface` 已支持对 `reflection_learning -> MEMORY.md` 候选记录 `confirm / reject / defer` 本地留痕，并持久化到 `shared-context/loop-surface/memory-candidate-decisions.jsonl`。
+3. `Loop Surface` 已支持 manual-form-first 的 feedback input 本地 operator queue，并持久化到 `shared-context/loop-surface/feedback-inputs.jsonl`。
+4. 上述两条写面都只作用于 Crazy / Hermes 的本地 operator plane，不直接改写 FlowMind truth / feedback authority，也不把 Crazy 提升为 repo-side canonical memory accept 面。

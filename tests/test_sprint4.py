@@ -653,6 +653,9 @@ class TestLoopSurfaceApis:
         body = resp.data.decode('utf-8', errors='replace')
         assert 'loop-surface.js' in body
         assert 'Loop Surface' in body
+        assert 'loop-action-banner' in body
+        assert 'loop-feedback-list' in body
+        assert 'loop-memory-candidate-list' in body
 
     def test_collaboration_page_links_to_loop_surface(self, client):
         resp = client.get('/collaboration')
@@ -716,7 +719,7 @@ class TestLoopSurfaceApis:
         assert loop['roundNumber'] == 1
         assert loop['stage'] == 'awaiting_feedback'
         assert loop['feedbackStatus'] == 'follow-up-pending'
-        assert loop['memoryCandidateStatus'] == 'not-started'
+        assert loop['memoryCandidateStatus'] == 'awaiting-confirmation'
         assert loop['sourcePaths']['state'] == 'promises/reviews/daily-promise-review-state.json'
 
         detail = client.get(f"/api/collaboration/loops/{loop['loopId']}")
@@ -724,6 +727,247 @@ class TestLoopSurfaceApis:
         payload = detail.get_json()
         assert payload['loopId'] == loop['loopId']
         assert payload['classifiedCounts']['blocked'] == 1
+        assert len(payload['memoryCandidates']) == 1
+        assert len(payload['feedbackInputs']) == 1
+
+        mem_resp = client.get('/api/collaboration/memory-candidates')
+        assert mem_resp.status_code == 200
+        mem_data = mem_resp.get_json()
+        assert len(mem_data) == 1
+        assert mem_data[0]['candidateType'] == 'reflection_learning'
+        assert mem_data[0]['proposedTarget'] == 'MEMORY.md'
+
+        fb_resp = client.get('/api/collaboration/feedback-inputs')
+        assert fb_resp.status_code == 200
+        fb_data = fb_resp.get_json()
+        assert len(fb_data) == 1
+        assert fb_data[0]['status'] == 'pending-input'
+        assert fb_data[0]['nextActor'] == 'operator'
+        assert fb_data[0]['inputMode'] == 'explicit_event'
+
+    def test_collaboration_loops_api_includes_morning_intel_cycle_when_data_exists(self, client, monkeypatch, tmp_path):
+        intel_dir = tmp_path / 'intel'
+        intel_dir.mkdir(parents=True, exist_ok=True)
+        (intel_dir / 'summary-20260522-v2.md').write_text('# summary\n', encoding='utf-8')
+        (intel_dir / 'intel-data-20260522-v2.json').write_text(
+            json.dumps(
+                {
+                    'papers': [{'id': 'a1'}, {'id': 'a2'}],
+                    'rss_items': [{'title': 'x'}, {'title': 'y'}, {'title': 'z'}],
+                    'timestamp': '2026-05-22T08:30:00+08:00',
+                },
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+        monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+        webui_api._hermes_home = None
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/collaboration/loops')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert len(data) == 1
+        loop = data[0]
+        assert loop['cycleType'] == 'morning-intel-cycle'
+        assert loop['sourceJobId'] == 'morning-intel'
+        assert loop['objectCount'] == 5
+        assert loop['followUpCount'] == 0
+
+    def test_collaboration_loops_api_can_return_multiple_loops(self, client, monkeypatch, tmp_path):
+        reviews_dir = tmp_path / 'promises' / 'reviews'
+        reviews_dir.mkdir(parents=True, exist_ok=True)
+        (reviews_dir / 'review-20260522.md').write_text('# review\n', encoding='utf-8')
+        (reviews_dir / 'daily-promise-review-state.json').write_text(
+            json.dumps(
+                {
+                    'digest': 'abc123def456',
+                    'checked_at': '2026-05-22T09:00:00+08:00',
+                    'snapshot': {
+                        'promise_count': 1,
+                        'classified_counts': {'total': 1, 'overdue': 0, 'due_today': 0, 'due_soon': 0, 'in_progress': 0, 'completed': 0, 'blocked': 0, 'pending_count': 1},
+                        'promises': [{'promise_id': 'promise-1', 'title': 'P1', 'needs_follow_up': 'false'}],
+                    },
+                },
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+        intel_dir = tmp_path / 'intel'
+        intel_dir.mkdir(parents=True, exist_ok=True)
+        (intel_dir / 'summary-20260522-v2.md').write_text('# summary\n', encoding='utf-8')
+        (intel_dir / 'intel-data-20260522-v2.json').write_text(
+            json.dumps(
+                {
+                    'papers': [{'id': 'a1'}],
+                    'rss_items': [{'title': 'x'}],
+                    'timestamp': '2026-05-22T08:30:00+08:00',
+                },
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+        monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+        webui_api._hermes_home = None
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/collaboration/loops')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        cycle_types = sorted(item['cycleType'] for item in data)
+        assert cycle_types == ['morning-intel-cycle', 'promise-review-cycle']
+
+    def test_memory_candidate_decision_persists_and_updates_loop_status(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        reviews_dir = tmp_path / 'promises' / 'reviews'
+        reviews_dir.mkdir(parents=True, exist_ok=True)
+        (reviews_dir / 'review-20260522.md').write_text('# review\n', encoding='utf-8')
+        (reviews_dir / 'daily-promise-review-state.json').write_text(
+            json.dumps(
+                {
+                    'digest': 'abc123def456',
+                    'checked_at': '2026-05-22T09:00:00+08:00',
+                    'snapshot': {
+                        'promise_count': 1,
+                        'classified_counts': {
+                            'total': 1,
+                            'overdue': 0,
+                            'due_today': 0,
+                            'due_soon': 0,
+                            'in_progress': 0,
+                            'completed': 0,
+                            'blocked': 1,
+                            'pending_count': 0,
+                        },
+                        'promises': [
+                            {
+                                'promise_id': 'promise-1',
+                                'title': 'P1',
+                                'needs_follow_up': 'true',
+                                'flowmind_candidate_id': 'cand-1',
+                                'instance_id': 'inst-1',
+                                'follow_up_kind': 'blocked',
+                                'next_actor': 'local_operator',
+                                'latest_feedback_type': 'blocked',
+                                'latest_feedback_summary': 'Need operator follow-up',
+                            },
+                        ],
+                    },
+                },
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+        monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        webui_api._hermes_home = None
+        webui_api._remote_config = {}
+
+        resp = client.post(
+            '/api/collaboration/memory-candidates/memory-candidate%3Apromise-1/decision',
+            json={
+                'action': 'confirm',
+                'note': 'Promote this reflection into host memory candidate acceptance.',
+                'evidenceRefs': ['promise:promise-1', 'report:review-20260522.md'],
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.get_json()
+        assert data['status'] == 'accepted'
+        assert data['lastAction'] == 'confirm'
+        assert data['targetMemoryPlane'] == 'host-memory'
+
+        decisions_file = repo_root / 'shared-context' / 'loop-surface' / 'memory-candidate-decisions.jsonl'
+        assert decisions_file.exists()
+        lines = [line for line in decisions_file.read_text(encoding='utf-8').splitlines() if line.strip()]
+        assert len(lines) == 1
+        record = json.loads(lines[0])
+        assert record['candidateId'] == 'memory-candidate:promise-1'
+        assert record['status'] == 'accepted'
+
+        loop_resp = client.get('/api/collaboration/loops')
+        assert loop_resp.status_code == 200
+        loops = loop_resp.get_json()
+        assert loops[0]['memoryCandidateStatus'] == 'decision-recorded'
+        assert loops[0]['memoryCandidates'][0]['status'] == 'accepted'
+
+    def test_feedback_input_submit_persists_local_queue_record(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        reviews_dir = tmp_path / 'promises' / 'reviews'
+        reviews_dir.mkdir(parents=True, exist_ok=True)
+        (reviews_dir / 'review-20260522.md').write_text('# review\n', encoding='utf-8')
+        (reviews_dir / 'daily-promise-review-state.json').write_text(
+            json.dumps(
+                {
+                    'digest': 'abc123def456',
+                    'checked_at': '2026-05-22T09:00:00+08:00',
+                    'snapshot': {
+                        'promise_count': 1,
+                        'classified_counts': {
+                            'total': 1,
+                            'overdue': 0,
+                            'due_today': 0,
+                            'due_soon': 0,
+                            'in_progress': 0,
+                            'completed': 0,
+                            'blocked': 1,
+                            'pending_count': 0,
+                        },
+                        'promises': [
+                            {
+                                'promise_id': 'promise-1',
+                                'title': 'P1',
+                                'needs_follow_up': 'true',
+                                'flowmind_candidate_id': 'cand-1',
+                                'instance_id': 'inst-1',
+                                'follow_up_kind': 'blocked',
+                                'next_actor': 'local_operator',
+                                'latest_feedback_type': 'blocked',
+                                'latest_feedback_summary': 'Need operator follow-up',
+                            },
+                        ],
+                    },
+                },
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+        monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        webui_api._hermes_home = None
+        webui_api._remote_config = {}
+
+        resp = client.post(
+            '/api/collaboration/feedback-inputs/feedback-input%3Apromise-1/submit',
+            json={
+                'mode': 'event_annotation',
+                'eventType': 'blocked',
+                'reason': 'Operator needs to annotate why this promise remains blocked.',
+                'note': 'Waiting on a local replay decision.',
+                'evidenceRefs': ['promise:promise-1', 'state:promises/reviews/daily-promise-review-state.json'],
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.get_json()
+        assert data['status'] == 'submitted-local'
+        assert data['lastSubmissionMode'] == 'event_annotation'
+        assert data['lastSubmissionEventType'] == 'blocked'
+        assert data['targetInstanceId'] == 'inst-1'
+
+        submissions_file = repo_root / 'shared-context' / 'loop-surface' / 'feedback-inputs.jsonl'
+        assert submissions_file.exists()
+        lines = [line for line in submissions_file.read_text(encoding='utf-8').splitlines() if line.strip()]
+        assert len(lines) == 1
+        record = json.loads(lines[0])
+        assert record['inputId'] == 'feedback-input:promise-1'
+        assert record['status'] == 'submitted-local'
+        assert record['writeBoundary'] == 'local-operator-queue'
+
+        loop_resp = client.get('/api/collaboration/loops')
+        assert loop_resp.status_code == 200
+        loops = loop_resp.get_json()
+        assert loops[0]['feedbackStatus'] == 'local-submission-recorded'
+        assert loops[0]['feedbackInputs'][0]['lastSubmissionBoundary'] == 'local-operator-queue'
 
 
 class TestV05DashboardAPIs:
