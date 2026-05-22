@@ -255,7 +255,7 @@ scripts/check_cross_repo_prd_sync.sh
 ### Phase 5 之后的当前默认顺序（2026-05-22）
 
 1. Crazy `Sprint 1 Operator Console Real Aggregation`
-   - 当前状态：已在 Crazy lane 以本地提交 `5e88b51`、`cedc03c` 收口
+   - 当前状态：已在 Crazy lane 以已发布提交 `5e88b51`、`cedc03c` 收口
 2. Crazy `Sprint 2 Control Plane Hardening`
    - 默认任务：
      - task bus 产品化

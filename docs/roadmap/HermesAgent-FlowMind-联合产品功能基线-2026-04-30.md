@@ -171,7 +171,7 @@ Crazy 侧直接动作：
 Phase 6 当前活动切片顺序（2026-05-22）：
 
 1. `Sprint 1 Operator Console Real Aggregation`
-   - 当前状态：Crazy lane 已以本地提交 `5e88b51`、`cedc03c` 收口
+   - 当前状态：Crazy lane 已以已发布提交 `5e88b51`、`cedc03c` 收口
 2. `Sprint 2 Control Plane Hardening`
    - 当前默认下一跳：
      - `shared-context/agent-requests/` task bus 产品化
