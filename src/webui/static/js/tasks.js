@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allTasks = [];
 let currentStatusFilter = 'all';
+let requestBus = [];
 
 async function loadTasks() {
   try {
@@ -26,6 +27,19 @@ async function loadTasks() {
     renderTaskList(allTasks);
   } catch (e) {
     console.error('Failed to load tasks:', e);
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch('./api/tasks/request-bus', { signal: controller.signal });
+    clearTimeout(timeoutId);
+    const data = await resp.json();
+    requestBus = data.requests || [];
+    renderRequestBusSummary(data.stats || {});
+    renderRequestBus(requestBus);
+  } catch (e) {
+    console.error('Failed to load request bus:', e);
   }
 }
 
@@ -149,6 +163,44 @@ function renderTaskList(tasks) {
       </div>
       <span class="status-badge status-badge-${task.status || 'pending'}">${st.text}</span>
       <span class="task-row-duration">${task.duration ? formatDuration(task.duration) : '--'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderRequestBusSummary(stats) {
+  const container = document.querySelector('.request-bus-summary');
+  if (!container) return;
+  const chips = [
+    ['总数', stats.total || 0],
+    ['开放', stats.open || 0],
+    ['已完成', stats.completed || 0],
+    ['已送达', stats.delivered || 0],
+    ['失败/超时', (stats.failed || 0) + (stats.timed_out || 0)],
+  ];
+  container.innerHTML = chips.map(([label, value]) =>
+    `<span class="status-badge">${label}: ${value}</span>`
+  ).join('');
+}
+
+function renderRequestBus(requests) {
+  const container = document.querySelector('.request-bus-body');
+  if (!container) return;
+
+  if (!Array.isArray(requests) || requests.length === 0) {
+    container.innerHTML = '<div class="empty-state">暂无 task-bus 请求记录</div>';
+    return;
+  }
+
+  container.innerHTML = requests.slice(0, 20).map(req => {
+    const status = String(req.status || 'queued');
+    const title = req.action || req.request_id || '未命名请求';
+    return `<div class="task-row">
+      <div class="task-row-info">
+        <div class="task-row-name">${escapeHtml(title)}</div>
+        <div class="task-row-meta">${escapeHtml(req.sender || '--')} → ${escapeHtml(req.target || '--')} · ack=${escapeHtml(req.ack_id || '--')}</div>
+      </div>
+      <span class="status-badge status-badge-${status}">${escapeHtml(status)}</span>
+      <span class="task-row-duration">${escapeHtml(req.updated_at || req.created_at || '--')}</span>
     </div>`;
   }).join('');
 }

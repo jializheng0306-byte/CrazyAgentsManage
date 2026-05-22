@@ -313,6 +313,61 @@ def _read_optional_json(path):
         return {}
 
 
+def _get_remote_repo_root():
+    cfg = _get_remote_config()
+    return cfg.get('repo_root') or os.environ.get('CRAZY_REMOTE_REPO_ROOT') or '/root/CrazyAgentsManage'
+
+
+def _read_shared_context_lines(rel_path):
+    if _is_remote_mode():
+        remote_repo_root = _get_remote_repo_root()
+        out = _run_remote_command(f"cat '{remote_repo_root}/{rel_path}' 2>/dev/null", timeout=15)
+        if not out.strip():
+            return []
+        return [line for line in out.splitlines() if line.strip()]
+
+    full_path = _get_repo_root() / rel_path
+    if not full_path.exists():
+        return []
+    return [line for line in full_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+
+
+def _load_task_bus_requests():
+    rows = []
+    for line in _read_shared_context_lines('shared-context/agent-requests/requests.jsonl'):
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        rows.append(payload)
+    rows.sort(key=lambda item: item.get('updated_at') or item.get('created_at') or '', reverse=True)
+    return rows
+
+
+def _task_bus_stats(requests):
+    counts = {
+        'total': len(requests),
+        'accepted': 0,
+        'routed': 0,
+        'queued': 0,
+        'started': 0,
+        'completed': 0,
+        'delivered': 0,
+        'timed_out': 0,
+        'failed': 0,
+        'open': 0,
+    }
+    for item in requests:
+        status = str(item.get('status') or '').lower()
+        if status in counts:
+            counts[status] += 1
+        if status not in ('delivered', 'timed_out', 'failed'):
+            counts['open'] += 1
+    return counts
+
+
 def _list_review_report_files():
     home = _get_hermes_home()
     rel_path = 'promises/reviews'
@@ -3048,6 +3103,15 @@ def tasks_list():
     }
 
     return jsonify({'tasks': tasks, 'stats': stats})
+
+
+@api.route('/tasks/request-bus')
+def tasks_request_bus():
+    requests = _load_task_bus_requests()
+    return jsonify({
+        'requests': requests,
+        'stats': _task_bus_stats(requests),
+    })
 
 
 # ═══════════════════════════════════════════

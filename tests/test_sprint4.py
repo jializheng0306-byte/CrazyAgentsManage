@@ -258,6 +258,32 @@ class TestSprint3CapabilityRegression:
         data = resp.get_json()
         assert isinstance(data, list)
 
+    def test_tasks_page_exposes_request_bus_panel(self, client):
+        resp = client.get('/tasks')
+        assert resp.status_code == 200
+        body = resp.data.decode('utf-8', errors='replace')
+        assert '三态请求总线' in body
+        assert 'request-bus-body' in body
+
+    def test_tasks_request_bus_api_reads_requests_jsonl(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        req_dir = repo_root / 'shared-context' / 'agent-requests'
+        req_dir.mkdir(parents=True, exist_ok=True)
+        (req_dir / 'requests.jsonl').write_text(
+            '{"request_id":"req-1","ack_id":"ack-1","sender":"hermes","target":"codex","action":"test request","status":"delivered","created_at":"2026-05-22T09:00:00Z","updated_at":"2026-05-22T09:01:00Z"}\n',
+            encoding='utf-8',
+        )
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/tasks/request-bus')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['stats']['total'] == 1
+        assert data['stats']['delivered'] == 1
+        assert data['stats']['open'] == 0
+        assert data['requests'][0]['ack_id'] == 'ack-1'
+
 
 class TestV04ContextManagementAPIs:
     """Regression: current runtime/handoff/harness endpoints remain reachable."""

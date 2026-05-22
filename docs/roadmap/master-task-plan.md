@@ -218,7 +218,7 @@
 
 | 子项 | Owner | 状态 | 当前口径 |
 |---|---|---|---|
-| Task Bus Productization | Crazy 主 | `planned` | 将 `shared-context/agent-requests/` 从 `requests.jsonl + three_state_protocol.py` 的 prototype/skeleton 推进为结构化 task bus |
+| Task Bus Productization | Crazy 主 | `in-progress` | 已落 `/api/tasks/request-bus` 与 `/tasks` 请求总线面板；下一步再决定是否把 `Tasks` 主工作面进一步切到 bus 对象模型 |
 | Automation Promotion Gate | Crazy 主 | `planned` | 固定 prototype → rehearsed → approved-for-automation → automated 的晋升链 |
 | Executor Capability Plane Integration | Crazy 主 | `planned` | 将 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面 |
 | Role / Credential / Memory Isolation | Crazy 主 | `planned` | 让角色边界、凭证归属、记忆边界、runbook 在控制面可见且可审计 |
