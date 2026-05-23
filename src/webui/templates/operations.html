@@ -117,7 +117,27 @@
       <aside class="ops-left-tree" id="ops-tree">
         <div class="ops-tree-group-label">运营对象</div>
 
-        <div class="ops-tree-item active" data-family="cron" onclick="switchFamily('cron')">
+        <div class="ops-tree-item active" data-family="task-registry" onclick="switchFamily('task-registry')">
+          <span class="ops-tree-item-icon">📋</span>
+          <span>Task Registry</span>
+          <span class="ops-tree-item-count" data-count="task-registry">--</span>
+        </div>
+        <div class="ops-tree-item" data-family="automation" onclick="switchFamily('automation')">
+          <span class="ops-tree-item-icon">🤖</span>
+          <span>Automation Maturity</span>
+          <span class="ops-tree-item-count" data-count="automation">--</span>
+        </div>
+        <div class="ops-tree-item" data-family="host-health" onclick="switchFamily('host-health')">
+          <span class="ops-tree-item-icon">🖥️</span>
+          <span>Host Health</span>
+          <span class="ops-tree-item-count" data-count="host-health">--</span>
+        </div>
+        <div class="ops-tree-item" data-family="runbooks" onclick="switchFamily('runbooks')">
+          <span class="ops-tree-item-icon">📚</span>
+          <span>Runbooks</span>
+          <span class="ops-tree-item-count" data-count="runbooks">--</span>
+        </div>
+        <div class="ops-tree-item" data-family="cron" onclick="switchFamily('cron')">
           <span class="ops-tree-item-icon">⏰</span>
           <span>Cron Jobs</span>
           <span class="ops-tree-item-count" data-count="cron">--</span>
@@ -177,7 +197,7 @@
       <section class="ops-center" id="ops-center">
         <div class="ops-workspace-header">
           <h2 class="ops-workspace-title" id="ops-workspace-title">
-            <span>⏰</span> Cron Jobs
+            <span>📋</span> Task Registry
           </h2>
           <div class="ops-workspace-actions" id="ops-workspace-actions"></div>
         </div>

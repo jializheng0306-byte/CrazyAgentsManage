@@ -9,7 +9,7 @@ var OPS = {
     var p = window.location.pathname || '';
     return (p === '/manage' || p.indexOf('/manage/') === 0) ? '/manage' : '';
   })(),
-  currentFamily: 'cron',
+  currentFamily: 'task-registry',
   selectedItemId: null,
   cache: {},
   summary: null,
@@ -58,6 +58,10 @@ function _familyFromHash() {
 // ============================================================
 
 var FAMILIES = {
+  'task-registry': { icon: '📋', label: 'Task Registry', api: '/api/operations/task-registry', filterBy: null },
+  automation:  { icon: '🤖', label: 'Automation Maturity', api: '/api/operations/automation-maturity', filterBy: null },
+  'host-health': { icon: '🖥️', label: 'Host Health', api: '/api/operations/host-health', filterBy: null },
+  runbooks:    { icon: '📚', label: 'Runbooks', api: '/api/operations/runbooks', filterBy: null },
   cron:        { icon: '⏰', label: 'Cron Jobs',        api: '/api/cron/list',                    filterBy: 'status' },
   alerts:      { icon: '🔔', label: 'Alerts',           api: '/api/alerts/list',                  filterBy: 'level' },
   skills:      { icon: '⚡', label: 'Skills',           api: '/api/skills/list',                  filterBy: 'category' },
@@ -112,6 +116,10 @@ function applySummaryCounts(summary) {
   _updateTreeCount('skills', metrics.skillsCount || 0);
   _updateTreeCount('cron', metrics.cronCount || 0);
   _updateTreeCount('memory', metrics.memoryCount || 0);
+  _updateTreeCount('task-registry', metrics.taskRegistryCount || 0);
+  _updateTreeCount('automation', metrics.automationCount || 0);
+  _updateTreeCount('host-health', metrics.hostHealthCount || 0);
+  _updateTreeCount('runbooks', metrics.runbookCount || 0);
   _updateTreeCount('isolation', metrics.isolationCount || 0);
   _updateTreeCount('alerts', (summary.alerts && summary.alerts.total) || 0);
   _updateTreeCount('sources', metrics.integrationCount || 0);
@@ -233,6 +241,10 @@ function renderWorkspace(family, data) {
     case 'alerts':    renderFilterableAlerts(content, data); break;
     case 'skills':    renderFilterableSkills(content, data); break;
     case 'memory':    renderMemory(content, data); break;
+    case 'task-registry': renderTaskRegistry(content, data); break;
+    case 'automation': renderAutomationMaturity(content, data); break;
+    case 'host-health': renderHostHealth(content, data); break;
+    case 'runbooks':  renderRunbooks(content, data); break;
     case 'isolation': renderIsolation(content, data); break;
     case 'sources':   renderFilterableSources(content, data); break;
     case 'tools':     renderFilterableTools(content, data); break;
@@ -910,6 +922,148 @@ function renderIsolation(container, data) {
     '</div>';
 
   _showDetail(buildIsolationDetail(data));
+}
+
+// ============================================================
+// Render: Task Registry / Automation / Host / Runbooks
+// ============================================================
+
+function renderTaskRegistry(container, data) {
+  if (!data || typeof data !== 'object') {
+    container.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">📋</div><p>暂无 task registry 数据</p></div>';
+    return;
+  }
+  var counts = data.counts || {};
+  var owners = data.owners || [];
+  var lanes = data.lanes || {};
+  container.innerHTML =
+    '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
+      boundaryCard('Open', '📥', counts.open || 0, data.status || 'unknown') +
+      boundaryCard('Working', '🧰', counts.working || 0, data.status || 'unknown') +
+      boundaryCard('Failed', '⚠️', counts.failed || 0, (counts.failed || counts.timedOut ? 'degraded' : 'healthy')) +
+      boundaryCard('Timed Out', '⏱️', counts.timedOut || 0, counts.timedOut ? 'degraded' : 'healthy') +
+    '</div>' +
+    '<div class="ops-detail-section">' +
+      '<div class="ops-detail-section-title">Task Registry Summary</div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Total</span><span class="ops-detail-row-value">' + (counts.total || 0) + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Lanes</span><span class="ops-detail-row-value">inbox=' + ((lanes.inbox || []).length) + ' · working=' + ((lanes.working || []).length) + ' · outbox=' + ((lanes.outbox || []).length) + ' · archive=' + ((lanes.archive || []).length) + '</span></div>' +
+    '</div>' +
+    isolationSection('Open Owners', owners.slice(0, 8), function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.owner + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">open=' + item.open + ' · pending=' + item.pending + ' · failed=' + item.failed + '</div>' +
+      '</div>';
+    }) +
+    isolationSection('Recent Requests', (data.items || []).slice(0, 12), function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + (item.action || item.request_id || '--') + ' <span class="ops-chip ' + (item.status || 'unknown') + '">' + statusLabel(item.status || 'unknown') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">owner=' + (item.owner || '--') + ' · lane=' + (item.lane || '--') + ' · auto=' + (item.automation_state || 'prototype') + '</div>' +
+      '</div>';
+    });
+
+  _showDetail(
+    '<div class="ops-detail-header"><h3 class="ops-detail-name">Task Registry</h3><div class="ops-detail-sub">request bus object flow</div></div>' +
+    '<div class="ops-detail-section"><div class="ops-detail-section-title">Linked Runbooks</div>' +
+      (data.runbooks || []).map(function(path) {
+        return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + path + '</span></div>';
+      }).join('') +
+    '</div>' +
+    isolationSection('Lane Details', ['inbox', 'working', 'outbox', 'archive'].map(function(name) {
+      return { name: name, count: (lanes[name] || []).length };
+    }), function(item) {
+      return '<div class="ops-detail-row"><span class="ops-detail-row-label">' + item.name + '</span><span class="ops-detail-row-value">' + item.count + '</span></div>';
+    })
+  );
+}
+
+function renderAutomationMaturity(container, data) {
+  if (!data || typeof data !== 'object') {
+    container.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">🤖</div><p>暂无 automation 数据</p></div>';
+    return;
+  }
+  var counts = data.counts || {};
+  container.innerHTML =
+    '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
+      boundaryCard('Prototype', '🧪', counts.prototype || 0, counts.prototype ? 'degraded' : 'unknown') +
+      boundaryCard('Rehearsed', '🛠️', counts.rehearsed || 0, data.status || 'unknown') +
+      boundaryCard('Approved', '✅', counts.approved || 0, data.status || 'unknown') +
+      boundaryCard('Automated', '⚙️', counts.automated || 0, data.status || 'unknown') +
+    '</div>' +
+    isolationSection('Promoted Workflows', data.items || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + (item.action || item.request_id || '--') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">state=' + (item.automation_state || 'prototype') + ' · owner=' + (item.owner || '--') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">rollback=' + (item.rollback_rule || '--') + ' · evidence=' + ((item.evidence_refs || []).join(' | ') || '--') + '</div>' +
+      '</div>';
+    });
+
+  _showDetail(
+    '<div class="ops-detail-header"><h3 class="ops-detail-name">Automation Maturity</h3><div class="ops-detail-sub">promotion state and rollback discipline</div></div>' +
+    '<div class="ops-detail-section"><div class="ops-detail-section-title">Linked Runbooks</div>' +
+      (data.runbooks || []).map(function(path) { return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + path + '</span></div>'; }).join('') +
+    '</div>'
+  );
+}
+
+function renderHostHealth(container, data) {
+  if (!data || typeof data !== 'object') {
+    container.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">🖥️</div><p>暂无 host health 数据</p></div>';
+    return;
+  }
+  var counts = data.counts || {};
+  container.innerHTML =
+    '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
+      boundaryCard('Disk', '💽', (data.host && data.host.disk && data.host.disk.used_percent != null) ? data.host.disk.used_percent + '%' : '--', data.diskStatus || 'unknown') +
+      boundaryCard('Memory', '🧠', (data.host && data.host.memory && data.host.memory.used_percent != null) ? data.host.memory.used_percent + '%' : '--', data.memoryStatus || 'unknown') +
+      boundaryCard('Gateway', '📡', counts.platforms || 0, data.gatewayState === 'running' ? 'healthy' : 'degraded') +
+      boundaryCard('Alerts', '🔔', counts.alerts || 0, counts.alerts ? 'degraded' : 'healthy') +
+    '</div>' +
+    '<div class="ops-detail-section">' +
+      '<div class="ops-detail-section-title">Host Evidence</div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Gateway</span><span class="ops-detail-row-value">' + (data.gatewayState || '--') + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Active Agents</span><span class="ops-detail-row-value">' + (counts.activeAgents || 0) + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Platforms</span><span class="ops-detail-row-value">' + (counts.platforms || 0) + '</span></div>' +
+    '</div>' +
+    isolationSection('Recent Alerts', data.alerts || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + (item.source || '--') + ' <span class="ops-chip ' + (item.level === 'critical' ? 'failed' : item.level === 'warning' ? 'degraded' : 'healthy') + '">' + (item.level || '--') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">' + (item.message || '') + '</div>' +
+      '</div>';
+    });
+
+  _showDetail(
+    '<div class="ops-detail-header"><h3 class="ops-detail-name">Host Health Evidence</h3><div class="ops-detail-sub">disk / memory / gateway / alerts</div></div>' +
+    '<div class="ops-detail-section"><div class="ops-detail-section-title">Linked Runbooks</div>' +
+      (data.runbooks || []).map(function(path) { return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + path + '</span></div>'; }).join('') +
+    '</div>'
+  );
+}
+
+function renderRunbooks(container, data) {
+  if (!data || typeof data !== 'object') {
+    container.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">📚</div><p>暂无 runbook 数据</p></div>';
+    return;
+  }
+  var counts = data.counts || {};
+  container.innerHTML =
+    '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
+      boundaryCard('Visible', '📘', counts.visibleCount || 0, data.status || 'unknown') +
+      boundaryCard('Missing', '⚠️', counts.missingCount || 0, counts.missingCount ? 'degraded' : 'healthy') +
+      boundaryCard('Total', '🗂️', counts.runbookCount || 0, data.status || 'unknown') +
+    '</div>' +
+    isolationSection('Runbooks', data.items || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.name + ' <span class="ops-chip ' + (item.status === 'visible' ? 'healthy' : 'degraded') + '">' + (item.status === 'visible' ? '可见' : '缺失') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">' + (item.path || '--') + '</div>' +
+      '</div>';
+    });
+
+  _showDetail(
+    '<div class="ops-detail-header"><h3 class="ops-detail-name">Runbook Visibility</h3><div class="ops-detail-sub">next-hop operator guides</div></div>' +
+    isolationSection('Runbook List', data.items || [], function(item) {
+      return '<div class="ops-detail-row"><span class="ops-detail-row-label">' + item.name + '</span><span class="ops-detail-row-value">' + item.path + '</span></div>';
+    })
+  );
 }
 
 function buildIsolationDetail(data) {

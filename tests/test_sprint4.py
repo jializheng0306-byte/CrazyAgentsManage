@@ -181,9 +181,17 @@ class TestOperationsCapabilityPlane:
         resp = client.get('/operations')
         assert resp.status_code == 200
         body = resp.data.decode('utf-8', errors='replace')
+        assert 'Task Registry' in body
+        assert 'Automation Maturity' in body
+        assert 'Host Health' in body
+        assert 'Runbooks' in body
         assert 'Readonly Boundary' in body
         assert 'data-family="boundary"' in body
         assert 'data-family="isolation"' in body
+        assert 'data-family="task-registry"' in body
+        assert 'data-family="automation"' in body
+        assert 'data-family="host-health"' in body
+        assert 'data-family="runbooks"' in body
 
     def test_operations_integrations_boundary_api_returns_policy_projection(self, client, monkeypatch):
         class StubProvider:
@@ -478,6 +486,136 @@ class TestOperationsCapabilityPlane:
         keys = [item['key'] for item in data['families']]
         assert 'isolation' in keys
         assert data['metrics']['isolationCount'] == 4
+
+    def test_operations_control_room_summary_aggregates_new_families(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'docs' / '02-engineering' / 'harness').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / 'design' / 'executor-integration').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / '06-agent-ops').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs').mkdir(exist_ok=True)
+        (repo_root / 'docs' / 'codex-hermes-role-design.md').write_text('# roles\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'HARNESS-ENTRY.md').write_text('# harness\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'HERMESAGENT-ENTRY.md').write_text('# hermes\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'hermes-flowmind-compatibility-matrix-2026-04-30.md').write_text('# compat\n', encoding='utf-8')
+        (repo_root / 'docs' / 'design' / 'executor-integration' / 'README.md').write_text('# executor\n', encoding='utf-8')
+        (repo_root / 'docs' / '06-agent-ops' / 'three-state-protocol.md').write_text('# protocol\n', encoding='utf-8')
+        (repo_root / 'scripts' / 'governance').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'scripts' / 'governance' / 'live-deploy-sync.manifest.json').write_text('{}', encoding='utf-8')
+        (repo_root / 'shared-context' / 'agent-requests').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'shared-context' / 'agent-requests' / 'requests.jsonl').write_text(
+            '\n'.join([
+                json.dumps({'request_id': 'req-1', 'ack_id': 'ack-1', 'sender': 'hermes', 'target': 'codex', 'owner': 'codex', 'action': 'host verify', 'status': 'started', 'created_at': '2026-05-23T10:00:00Z', 'updated_at': '2026-05-23T10:05:00Z', 'automation_state': 'rehearsed', 'evidence_refs': ['closeout:1'], 'rollback_rule': 'disable cron'}),
+                json.dumps({'request_id': 'req-2', 'ack_id': 'ack-2', 'sender': 'hermes', 'target': 'ops', 'owner': 'ops', 'action': 'nightly digest', 'status': 'delivered', 'created_at': '2026-05-23T09:00:00Z', 'updated_at': '2026-05-23T09:10:00Z', 'automation_state': 'automated', 'evidence_refs': ['closeout:2'], 'rollback_rule': 'pause routine'}),
+            ]) + '\n',
+            encoding='utf-8',
+        )
+        (repo_root / 'shared-context' / 'agent-requests' / 'events.jsonl').write_text(
+            json.dumps({'ack_id': 'ack-1', 'event_type': 'automation_promotion', 'actor': 'operator', 'timestamp': '2026-05-23T10:05:00Z', 'payload': {'to_state': 'rehearsed'}}) + '\n',
+            encoding='utf-8',
+        )
+        (repo_root / 'shared-context').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness').mkdir(parents=True, exist_ok=True)
+        (repo_root / '.omx').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'soul' / 'agents').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'soul' / 'SOUL.md').write_text('# soul\n', encoding='utf-8')
+        (repo_root / 'soul' / 'MEMORY.md').write_text('# memory\n', encoding='utf-8')
+        (repo_root / 'soul' / 'agents' / 'ops-guardian.md').write_text('# agent\n', encoding='utf-8')
+
+        hermes_home = tmp_path / 'hermes-home'
+        (hermes_home / 'memories').mkdir(parents=True, exist_ok=True)
+        (hermes_home / 'SOUL.md').write_text('# host soul\n', encoding='utf-8')
+        (hermes_home / 'memories' / 'daily.md').write_text('# host memory\n', encoding='utf-8')
+        (hermes_home / 'gateway_state.json').write_text(
+            json.dumps(
+                {
+                    'gateway_state': 'running',
+                    'active_agents': 2,
+                    'platforms': {
+                        'cli': {'state': 'connected', 'updated_at': '2026-05-23T10:00:00Z'},
+                    },
+                },
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+
+        class StubProvider:
+            def get_capabilities(self):
+                return {
+                    'sourceCreate': True,
+                    'sourceRefresh': True,
+                    'sourceStatusToggle': False,
+                    'sourceDelete': True,
+                    'credentialBind': True,
+                    'credentialUnbind': True,
+                    'modeLabel': 'http',
+                    'scopeId': 'scope-123',
+                }
+
+            def get_credentials(self):
+                return [{'id': 'cred-1', 'provider': 'github', 'targetType': 'source', 'targetId': 'src-github', 'status': 'healthy', 'impactCount': 12, 'valueKind': 'secret'}]
+
+            def get_summary(self):
+                return {
+                    'sourceCount': 2,
+                    'healthySourceCount': 2,
+                    'degradedSourceCount': 0,
+                    'toolCount': 4,
+                    'missingCredentialCount': 0,
+                    'providerCount': 2,
+                    'failedProviderCount': 0,
+                }
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        monkeypatch.setenv('HERMES_HOME', str(hermes_home))
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: StubProvider())
+        monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
+        monkeypatch.setattr(
+            webui_api,
+            '_read_shared_context_json',
+            lambda *args, **kwargs: {
+                'version': 'v1',
+                'date': '2026-05-19',
+                'host': 'ALI-HERMES',
+                'mode': 'readonly',
+                'owners': {'productShell': 'CrazyAgentsManage'},
+                'preconditions': ['executor-sidecar active'],
+                'wave1_allowed': [{'taskType': 'intel.morning', 'repoEntrypoints': ['scripts/morning-intel-v2.py'], 'delegationUnit': 'external-read-step'}],
+                'wave2_completed': [],
+                'forbidden_now': [{'taskType': 'promise.review', 'repoEntrypoints': ['scripts/daily-promise-review.py'], 'reason': 'governance output'}],
+            },
+        )
+        webui_api._hermes_home = None
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/operations/control-room-summary')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['taskRegistry']['counts']['total'] == 2
+        assert data['automationMaturity']['counts']['rehearsed'] == 1
+        assert data['automationMaturity']['counts']['automated'] == 1
+        assert data['hostHealth']['counts']['platforms'] == 1
+        assert data['runbooks']['counts']['runbookCount'] == 5
+
+    def test_operations_runbooks_api_returns_visible_items(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'docs' / '02-engineering' / 'harness').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / 'design' / 'executor-integration').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / '06-agent-ops').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs').mkdir(exist_ok=True)
+        (repo_root / 'docs' / 'codex-hermes-role-design.md').write_text('# roles\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'HARNESS-ENTRY.md').write_text('# harness\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'HERMESAGENT-ENTRY.md').write_text('# hermes\n', encoding='utf-8')
+        (repo_root / 'docs' / 'design' / 'executor-integration' / 'README.md').write_text('# executor\n', encoding='utf-8')
+        (repo_root / 'docs' / '06-agent-ops' / 'three-state-protocol.md').write_text('# protocol\n', encoding='utf-8')
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/operations/runbooks')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['counts']['runbookCount'] == 5
+        assert data['counts']['visibleCount'] == 5
 
 
 class TestArchitecturePagesReachable:

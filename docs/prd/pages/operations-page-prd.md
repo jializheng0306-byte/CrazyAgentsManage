@@ -72,7 +72,16 @@
 - Hermes、FlowMind、外部平台、输入端连接状态
 - 在线 / 异常 / 未配置区分
 
-### 5. Executor Integrations
+### 5. Task Registry / Automation Maturity
+
+内容：
+
+- task registry
+- bus lanes
+- automation promotion state
+- evidence / approval / rollback visibility
+
+### 6. Executor Integrations
 
 内容：
 
@@ -82,7 +91,24 @@
 - Provider Health
 - readonly capability / delegation boundary
 
-### 6. Summary Shell / Next Hop
+### 7. Role / Credential / Memory Isolation
+
+内容：
+
+- role registry
+- credential ownership
+- memory boundaries
+- runbook visibility
+
+### 8. Host Health / Runbooks
+
+内容：
+
+- disk / memory / gateway / alert evidence
+- linked runbooks
+- next-hop operator guides
+
+### 9. Summary Shell / Next Hop
 
 内容：
 
@@ -103,8 +129,11 @@
 2. cron / routines 区
 3. team memory / shared context 区
 4. platform connectivity 区
-5. executor integrations 区
-6. summary shell / next hop 区
+5. task registry / automation maturity 区
+6. executor integrations 区
+7. role / credential / memory isolation 区
+8. host health / runbooks 区
+9. summary shell / next hop 区
 
 ## 页面模块树
 
@@ -114,10 +143,15 @@
   - TeamMemoryPanel
   - SharedContextPanel
   - PlatformConnectivityPanel
+  - TaskRegistryPanel
+  - AutomationMaturityPanel
   - SourcesPanel
   - ToolCatalogPanel
   - CredentialHealthPanel
   - ProviderHealthPanel
+  - IsolationPanel
+  - HostHealthPanel
+  - RunbooksPanel
   - SummaryBriefingPanel
   - NextHopPanel
 

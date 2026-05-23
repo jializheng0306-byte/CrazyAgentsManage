@@ -222,6 +222,7 @@
 | Automation Promotion Gate | Crazy 主 | `completed-in-lane` | `Tasks` 已支持 `prototype → rehearsed → approved-for-automation → automated` 晋升链，并对 `evidence / approval / rollback rule` 执行最小门槛校验 |
 | Executor Capability Plane Integration | Crazy 主 | `completed-in-lane` | `Operations` 已承接 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 五类 capability objects，并将 repo-tracked readonly delegation policy 投影为正式产品对象 |
 | Role / Credential / Memory Isolation | Crazy 主 | `completed-in-lane` | `Operations` 已承接 role registry、credential ownership、memory boundaries 与 runbook visibility，并能在部署副本回退读取运行仓库事实 |
+| Operations Control Room Consolidation | Crazy 主 | `completed-in-lane` | `Operations` 已补齐 `task registry / automation maturity / host health / runbooks` 四组 control-room 对象，并通过同一聚合层输出 next-hop 巡检面 |
 | Loop Surface PRD | Crazy 主 | `completed-in-lane` | `loop-surface-page-prd.md` 已落地，且 `/collaboration/loops` 已接入最小 vertical slice 模板与 API |
 | Cycle Upgrade First Batch | Crazy 主 | `completed-in-lane` | 已落 `promise-review-cycle` 与 `morning-intel-cycle` 两条首批 cycle 对象，并由 `/collaboration/loops` 统一消费 |
 | Memory Candidate Confirmation | Crazy 主 | `completed-in-lane` | `Loop Surface` 已支持 `confirm / reject / defer` 本地留痕，并持久化到 `shared-context/loop-surface/memory-candidate-decisions.jsonl`；该动作只作用于 host-memory 候选，不等于 repo-side canonical accept |
@@ -230,10 +231,10 @@
 
 ### 后续任务
 
-1. 让 `Operations` 承载 task registry、promotion state、host/provider/cron/alert evidence 与 next-hop runbook
-2. 继续保持 `task bus / promotion gate` 与 harness closeout / runtime snapshot 的证据耦合，而不是退回聊天流
-3. 保持 `FlowMind` 只作为 contract/truth authority，不在 Crazy 本地重写主治理状态
-4. 将 `Loop Surface` 做成 `Collaboration` 子表面，而不是新一级 IA
+1. 继续保持 `task bus / promotion gate` 与 harness closeout / runtime snapshot 的证据耦合，而不是退回聊天流
+2. 保持 `FlowMind` 只作为 contract/truth authority，不在 Crazy 本地重写主治理状态
+3. 将 `Loop Surface` 做成 `Collaboration` 子表面，而不是新一级 IA
+4. 如需继续扩 `Operations`，优先进入第二批 `env map / backup-recovery / recovery path` 对象，而不是重新打开 Sprint 2 主边界
 
 ### 验收标准
 

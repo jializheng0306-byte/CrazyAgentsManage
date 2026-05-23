@@ -4194,18 +4194,30 @@ def _ops_pick_status(*statuses):
     return picked
 
 
-def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, isolation_status, cron_status, skills_status, memory_status):
+def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, isolation_status, task_registry_status, host_health_status, runbook_status, cron_status, skills_status, memory_status):
     if alert_status == 'failed' or connectivity_status == 'failed':
         return {
             'href': '/operations/alerts',
             'label': '先处理告警与连接异常',
             'reason': '当前异常优先级高于对象库存巡检。',
         }
+    if host_health_status == 'failed' or host_health_status == 'degraded':
+        return {
+            'href': '/operations#host-health',
+            'label': '检查 Host Health',
+            'reason': '当前宿主磁盘/内存或 gateway 证据存在异常，需要先确认运行宿主是否稳定。',
+        }
     if integrations_status == 'failed':
         return {
             'href': '/operations#providers',
             'label': '先处理 Provider Health',
             'reason': '集成能力面存在 provider 失败，需要先恢复外部能力。',
+        }
+    if task_registry_status == 'degraded':
+        return {
+            'href': '/operations#task-registry',
+            'label': '检查 Task Registry',
+            'reason': '当前 request bus 内存在失败、超时或卡住对象，需要先清理 task registry。',
         }
     if integrations_status == 'degraded':
         return {
@@ -4218,6 +4230,12 @@ def _build_operations_next_hop(alert_status, connectivity_status, integrations_s
             'href': '/operations#isolation',
             'label': '检查角色与记忆隔离',
             'reason': '当前需要先确认 role registry、credential ownership、memory boundary 或 runbook visibility 是否存在缺口。',
+        }
+    if runbook_status == 'degraded':
+        return {
+            'href': '/operations#runbooks',
+            'label': '补齐 Runbooks',
+            'reason': '当前控制面对象已可见，但仍有缺失 runbook，需要先补齐 operator 的下一跳指引。',
         }
     if cron_status == 'degraded':
         return {
@@ -4253,6 +4271,10 @@ def _build_operations_summary():
     integrations = get_executor_provider().get_summary() or {}
     boundary = _build_executor_boundary_view()
     isolation = _build_operations_isolation_view()
+    task_registry = _build_operations_task_registry_view()
+    automation = _build_operations_automation_maturity_view()
+    host_health = _build_operations_host_health_view()
+    runbooks = _build_operations_runbooks_view()
 
     skill_total = skills_payload.get('total', 0) or 0
     skill_categories = skills_payload.get('categories', []) or []
@@ -4319,6 +4341,10 @@ def _build_operations_summary():
         connectivity_status,
         integrations_status,
         isolation.get('status'),
+        task_registry.get('status'),
+        automation.get('status'),
+        host_health.get('status'),
+        runbooks.get('status'),
         cron_status,
         skills_status,
         memory_status,
@@ -4329,6 +4355,9 @@ def _build_operations_summary():
         connectivity_status,
         integrations_status,
         isolation.get('status'),
+        task_registry.get('status'),
+        host_health.get('status'),
+        runbooks.get('status'),
         cron_status,
         skills_status,
         memory_status,
@@ -4363,6 +4392,24 @@ def _build_operations_summary():
             'href': '/operations/team-memory',
         },
         {
+            'key': 'task-registry',
+            'title': 'Task Registry',
+            'icon': '📋',
+            'status': task_registry.get('status', 'unknown'),
+            'count': task_registry.get('counts', {}).get('total', 0),
+            'summary': f'{task_registry.get("counts", {}).get("open", 0)} open · {task_registry.get("counts", {}).get("failed", 0)} failed · {task_registry.get("counts", {}).get("timedOut", 0)} timed out',
+            'href': '/operations#task-registry',
+        },
+        {
+            'key': 'automation',
+            'title': 'Automation Maturity',
+            'icon': '🤖',
+            'status': automation.get('status', 'unknown'),
+            'count': automation.get('counts', {}).get('tracked', 0),
+            'summary': f'{automation.get("counts", {}).get("approved", 0)} approved · {automation.get("counts", {}).get("automated", 0)} automated · {automation.get("counts", {}).get("prototype", 0)} prototype',
+            'href': '/operations#automation',
+        },
+        {
             'key': 'connectivity',
             'title': 'Platform Connectivity',
             'icon': '📡',
@@ -4379,6 +4426,15 @@ def _build_operations_summary():
             'count': integration_source_count,
             'summary': f'{integration_tool_count} tools · {integration_provider_count} providers · {integration_missing_credentials} credential gaps',
             'href': '/operations#sources',
+        },
+        {
+            'key': 'host-health',
+            'title': 'Host Health',
+            'icon': '🖥️',
+            'status': host_health.get('status', 'unknown'),
+            'count': host_health.get('counts', {}).get('evidenceSignals', 0),
+            'summary': f'disk {host_health.get("diskStatus", "unknown")} · memory {host_health.get("memoryStatus", "unknown")} · alerts {host_health.get("counts", {}).get("alerts", 0)}',
+            'href': '/operations#host-health',
         },
         {
             'key': 'isolation',
@@ -4398,6 +4454,15 @@ def _build_operations_summary():
             'summary': f'mode={boundary.get("providerMode", "unknown")} · {boundary.get("allowedTaskTypeCount", 0)} allowed · {boundary.get("forbiddenTaskTypeCount", 0)} forbidden',
             'href': '/operations#boundary',
         },
+        {
+            'key': 'runbooks',
+            'title': 'Runbooks',
+            'icon': '📚',
+            'status': runbooks.get('status', 'unknown'),
+            'count': runbooks.get('counts', {}).get('runbookCount', 0),
+            'summary': f'{runbooks.get("counts", {}).get("visibleCount", 0)} visible · {runbooks.get("counts", {}).get("missingCount", 0)} missing',
+            'href': '/operations#runbooks',
+        },
     ]
 
     return {
@@ -4415,11 +4480,15 @@ def _build_operations_summary():
             'memoryCount': memory_total,
             'integrationCount': integration_source_count,
             'alertCount': len(alerts),
+            'taskRegistryCount': task_registry.get('counts', {}).get('total', 0),
+            'automationCount': automation.get('counts', {}).get('tracked', 0),
             'toolCount': integration_tool_count,
             'credentialCount': integration_credential_count,
             'providerCount': integration_provider_count,
+            'hostHealthCount': host_health.get('counts', {}).get('evidenceSignals', 0),
             'isolationCount': isolation.get('counts', {}).get('roleCount', 0),
             'boundaryCount': 1,
+            'runbookCount': runbooks.get('counts', {}).get('runbookCount', 0),
         },
         'alerts': {
             'status': alert_status,
@@ -4743,6 +4812,175 @@ def _build_operations_isolation_view():
 @api.route('/operations/isolation')
 def operations_isolation():
     return jsonify(_build_operations_isolation_view())
+
+
+def _build_operations_task_registry_view():
+    requests = _load_task_bus_requests()
+    lanes = _task_bus_lane_groups(requests)
+    open_items = [item for item in requests if str(item.get('status') or '') not in ('delivered', 'failed', 'timed_out')]
+    failed_items = [item for item in requests if str(item.get('status') or '') == 'failed']
+    timed_out_items = [item for item in requests if str(item.get('status') or '') == 'timed_out']
+    started_items = [item for item in requests if str(item.get('status') or '') == 'started']
+    owners = {}
+    for item in requests:
+        owner = str(item.get('owner') or item.get('target') or 'unassigned')
+        bucket = owners.setdefault(owner, {'owner': owner, 'total': 0, 'open': 0, 'pending': 0, 'failed': 0})
+        bucket['total'] += 1
+        if item in open_items:
+            bucket['open'] += 1
+        if str(item.get('status') or '') in ('accepted', 'routed', 'queued', 'started'):
+            bucket['pending'] += 1
+        if item in failed_items or item in timed_out_items:
+            bucket['failed'] += 1
+    status = 'unknown'
+    if requests:
+        status = 'healthy'
+        if failed_items or timed_out_items:
+            status = 'degraded'
+    return {
+        'status': status,
+        'counts': {
+            'total': len(requests),
+            'open': len(open_items),
+            'failed': len(failed_items),
+            'timedOut': len(timed_out_items),
+            'working': len(started_items),
+        },
+        'lanes': lanes,
+        'owners': sorted(owners.values(), key=lambda item: (-item['open'], item['owner'])),
+        'items': requests[:20],
+        'runbooks': [
+            'docs/06-agent-ops/three-state-protocol.md',
+            'shared-context/agent-requests/requests.jsonl',
+            'shared-context/agent-requests/events.jsonl',
+        ],
+    }
+
+
+def _build_operations_automation_maturity_view():
+    requests = _load_task_bus_requests()
+    stats = _task_bus_automation_stats(requests)
+    promoted = [
+        item for item in requests
+        if str(item.get('automation_state') or 'prototype') in ('rehearsed', 'approved-for-automation', 'automated')
+    ]
+    status = 'unknown'
+    if requests:
+        status = 'healthy' if promoted else 'degraded'
+    return {
+        'status': status,
+        'counts': {
+            'tracked': len(requests),
+            'prototype': stats.get('prototype', 0),
+            'rehearsed': stats.get('rehearsed', 0),
+            'approved': stats.get('approved-for-automation', 0),
+            'automated': stats.get('automated', 0),
+        },
+        'items': promoted[:20],
+        'runbooks': [
+            'docs/02-engineering/external-analysis/shann-holmberg-hermes-control-room-and-crazy-adaptation-2026-05-21.md',
+            'shared-context/agent-requests/events.jsonl',
+        ],
+    }
+
+
+def _build_operations_host_health_view():
+    host = _load_host_health() or {}
+    gateway = _load_gateway_status() or {}
+    alerts = _load_alerts() or []
+    disk_status = host.get('disk', {}).get('status', 'unknown')
+    memory_status = host.get('memory', {}).get('status', 'unknown')
+    gateway_state = gateway.get('gateway_state', 'unknown')
+    alert_count = len(alerts)
+    status = _ops_pick_status(host.get('status'), 'degraded' if gateway_state != 'running' else 'healthy')
+    return {
+        'status': status,
+        'diskStatus': disk_status,
+        'memoryStatus': memory_status,
+        'gatewayState': gateway_state,
+        'counts': {
+            'alerts': alert_count,
+            'platforms': len(gateway.get('platforms', {}) or {}),
+            'activeAgents': gateway.get('active_agents', 0) or 0,
+            'evidenceSignals': 4,
+        },
+        'host': host,
+        'gateway': gateway,
+        'alerts': alerts[:20],
+        'runbooks': [
+            'docs/02-engineering/harness/HARNESS-ENTRY.md',
+            'scripts/governance/live-deploy-sync.manifest.json',
+            'scripts/runtime/sync_hermes_script_mirror.py',
+        ],
+    }
+
+
+def _build_operations_runbooks_view():
+    runbook_defs = [
+        ('task-registry', 'Task Registry Runbook', 'docs/06-agent-ops/three-state-protocol.md'),
+        ('runtime-host', 'Harness Entry', 'docs/02-engineering/harness/HARNESS-ENTRY.md'),
+        ('hermes-ops', 'HermesAgent Entry', 'docs/02-engineering/harness/HERMESAGENT-ENTRY.md'),
+        ('executor-boundary', 'Executor Integration', 'docs/design/executor-integration/README.md'),
+        ('role-design', 'Role Design', 'docs/codex-hermes-role-design.md'),
+    ]
+    items = []
+    visible = 0
+    for runbook_id, name, rel_path in runbook_defs:
+        resolved = _resolve_repo_artifact_path(rel_path)
+        exists = _safe_exists(resolved)
+        if exists:
+            visible += 1
+        items.append({
+            'id': runbook_id,
+            'name': name,
+            'path': rel_path,
+            'exists': exists,
+            'status': 'visible' if exists else 'missing',
+        })
+    status = 'healthy' if visible == len(items) else 'degraded'
+    return {
+        'status': status,
+        'counts': {
+            'runbookCount': len(items),
+            'visibleCount': visible,
+            'missingCount': len(items) - visible,
+        },
+        'items': items,
+    }
+
+
+def _build_operations_control_room_summary():
+    return {
+        'taskRegistry': _build_operations_task_registry_view(),
+        'automationMaturity': _build_operations_automation_maturity_view(),
+        'hostHealth': _build_operations_host_health_view(),
+        'runbooks': _build_operations_runbooks_view(),
+    }
+
+
+@api.route('/operations/task-registry')
+def operations_task_registry():
+    return jsonify(_build_operations_task_registry_view())
+
+
+@api.route('/operations/automation-maturity')
+def operations_automation_maturity():
+    return jsonify(_build_operations_automation_maturity_view())
+
+
+@api.route('/operations/host-health')
+def operations_host_health():
+    return jsonify(_build_operations_host_health_view())
+
+
+@api.route('/operations/runbooks')
+def operations_runbooks():
+    return jsonify(_build_operations_runbooks_view())
+
+
+@api.route('/operations/control-room-summary')
+def operations_control_room_summary():
+    return jsonify(_build_operations_control_room_summary())
 
 
 # ═══════════════════════════════════════════
