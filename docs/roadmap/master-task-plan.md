@@ -229,12 +229,12 @@
 | Feedback Input Surface | Crazy 主 | `completed-in-lane` | `Loop Surface` 已支持 manual-form-first 本地 operator queue，并持久化到 `shared-context/loop-surface/feedback-inputs.jsonl`；当前仍不直接写入 FlowMind feedback authority |
 | FlowMind Contract Gate | Shared | `standing-gate` | 继续只在 Crazy 明确上报新的 contract/read-surface gap 时切回 FlowMind 开发执行 |
 
-### 后续任务
+### Sprint 2 后续深化
 
 1. 继续保持 `task bus / promotion gate` 与 harness closeout / runtime snapshot 的证据耦合，而不是退回聊天流
 2. 保持 `FlowMind` 只作为 contract/truth authority，不在 Crazy 本地重写主治理状态
 3. 将 `Loop Surface` 做成 `Collaboration` 子表面，而不是新一级 IA
-4. `Sprint 2` 已形成 published baseline；如需继续扩 `Operations`，优先进入 `recovery path / env drift / backup coverage` 深化，而不是重新打开 Sprint 2 主边界
+4. 如继续扩 `Operations`，下一批只进入 `recovery path / env drift / backup coverage` 深化，而不是重新打开 Sprint 2 主边界
 
 ### 验收标准
 
