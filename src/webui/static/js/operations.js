@@ -62,6 +62,7 @@ var FAMILIES = {
   alerts:      { icon: '🔔', label: 'Alerts',           api: '/api/alerts/list',                  filterBy: 'level' },
   skills:      { icon: '⚡', label: 'Skills',           api: '/api/skills/list',                  filterBy: 'category' },
   memory:      { icon: '📝', label: 'Team Memory',      api: '/api/overview/memories',            filterBy: null },
+  isolation:   { icon: '🧱', label: 'Role / Memory Isolation', api: '/api/operations/isolation',   filterBy: null },
   sources:     { icon: '🔌', label: 'Sources',          api: '/api/operations/integrations/sources',     filterBy: 'type' },
   tools:       { icon: '🧰', label: 'Tool Catalog',     api: '/api/operations/integrations/tools',       filterBy: 'status' },
   credentials: { icon: '🔑', label: 'Credential Health',api: '/api/operations/integrations/credentials', filterBy: 'status' },
@@ -111,6 +112,7 @@ function applySummaryCounts(summary) {
   _updateTreeCount('skills', metrics.skillsCount || 0);
   _updateTreeCount('cron', metrics.cronCount || 0);
   _updateTreeCount('memory', metrics.memoryCount || 0);
+  _updateTreeCount('isolation', metrics.isolationCount || 0);
   _updateTreeCount('alerts', (summary.alerts && summary.alerts.total) || 0);
   _updateTreeCount('sources', metrics.integrationCount || 0);
   _updateTreeCount('tools', metrics.toolCount || 0);
@@ -231,6 +233,7 @@ function renderWorkspace(family, data) {
     case 'alerts':    renderFilterableAlerts(content, data); break;
     case 'skills':    renderFilterableSkills(content, data); break;
     case 'memory':    renderMemory(content, data); break;
+    case 'isolation': renderIsolation(content, data); break;
     case 'sources':   renderFilterableSources(content, data); break;
     case 'tools':     renderFilterableTools(content, data); break;
     case 'credentials': renderFilterableCredentials(content, data); break;
@@ -879,6 +882,78 @@ function renderBoundary(container, boundary) {
     '</div>';
 
   _showDetail(buildBoundaryDetail(boundary, allowed, completed, forbidden));
+}
+
+// ============================================================
+// Render: Role / Credential / Memory Isolation
+// ============================================================
+
+function renderIsolation(container, data) {
+  if (!data || typeof data !== 'object') {
+    container.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">🧱</div><p>暂无 isolation 数据</p></div>';
+    return;
+  }
+
+  var counts = data.counts || {};
+  container.innerHTML =
+    '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
+      boundaryCard('Roles', '👥', counts.roleCount || 0, data.roleStatus || 'unknown') +
+      boundaryCard('Credentials', '🔑', counts.credentialCount || 0, data.credentialStatus || 'unknown') +
+      boundaryCard('Memory Planes', '📝', counts.memoryBoundaryCount || 0, data.memoryStatus || 'unknown') +
+      boundaryCard('Runbooks', '📚', counts.runbookCount || 0, data.runbookStatus || 'unknown') +
+    '</div>' +
+    '<div class="ops-detail-section">' +
+      '<div class="ops-detail-section-title">Isolation Summary</div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Overall</span><span class="ops-detail-row-value"><span class="ops-chip ' + (data.status || 'unknown') + '">' + statusLabel(data.status || 'unknown') + '</span></span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Missing Credentials</span><span class="ops-detail-row-value">' + (counts.missingCredentialCount || 0) + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Missing Runbooks</span><span class="ops-detail-row-value">' + (counts.missingRunbookCount || 0) + '</span></div>' +
+    '</div>';
+
+  _showDetail(buildIsolationDetail(data));
+}
+
+function buildIsolationDetail(data) {
+  return '<div class="ops-detail-header">' +
+      '<h3 class="ops-detail-name">Role / Credential / Memory Isolation</h3>' +
+      '<div class="ops-detail-sub">control-room isolation registry</div>' +
+    '</div>' +
+    isolationSection('Role Registry', data.roleRegistry || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.name + ' <span class="ops-chip ' + (item.status || 'unknown') + '">' + statusLabel(item.status || 'unknown') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">lane=' + (item.lane || '--') + ' · memory=' + (item.memoryBoundary || '--') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">scope=' + (item.primaryScopes || []).join(' | ') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">credentials=' + (item.credentialBoundary || '--') + '</div>' +
+      '</div>';
+    }) +
+    isolationSection('Credential Ownership', data.credentialOwnership || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + (item.provider || '--') + ' → ' + (item.targetId || '--') + ' <span class="ops-chip ' + (item.status || 'unknown') + '">' + statusLabel(item.status || 'unknown') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">owner=' + (item.ownerRole || item.owner || '--') + ' · impact=' + (item.impactCount || 0) + ' · kind=' + (item.valueKind || '--') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">' + (item.notes || '') + '</div>' +
+      '</div>';
+    }) +
+    isolationSection('Memory Boundaries', data.memoryBoundaries || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.name + ' <span class="ops-chip ' + (item.status || 'unknown') + '">' + statusLabel(item.status || 'unknown') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">owner=' + (item.owner || '--') + ' · files=' + (item.fileCount || 0) + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">write=' + (item.writeBoundary || '--') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">roots=' + (item.roots || []).join(' | ') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">' + (item.notes || '') + '</div>' +
+      '</div>';
+    }) +
+    isolationSection('Runbook Visibility', data.runbooks || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.name + ' <span class="ops-chip ' + (item.status === 'visible' ? 'healthy' : 'degraded') + '">' + (item.status === 'visible' ? '可见' : '缺失') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">' + (item.path || '--') + '</div>' +
+      '</div>';
+    });
+}
+
+function isolationSection(title, items, renderer) {
+  return '<div class="ops-detail-section">' +
+    '<div class="ops-detail-section-title">' + title + '</div>' +
+    (items.length ? items.map(renderer).join('') : '<div class="ops-empty"><div class="ops-empty-icon">—</div><p>当前为空</p></div>') +
+  '</div>';
 }
 
 function boundaryCard(title, icon, count, status) {

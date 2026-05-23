@@ -63,7 +63,7 @@ def _get_runtime_repo_root():
     return Path('/root/CrazyAgentsManage')
 
 
-def _resolve_shared_context_read_path(rel_path):
+def _resolve_repo_artifact_path(rel_path):
     primary = _get_repo_root() / rel_path
     if primary.exists():
         return primary
@@ -75,6 +75,10 @@ def _resolve_shared_context_read_path(rel_path):
         except PermissionError:
             pass
     return primary
+
+
+def _resolve_shared_context_read_path(rel_path):
+    return _resolve_repo_artifact_path(rel_path)
 
 
 def _resolve_shared_context_write_path(rel_path):
@@ -460,6 +464,22 @@ def _normalize_evidence_refs(raw_value):
     if isinstance(raw_value, str):
         return [part.strip() for part in raw_value.split(',') if part.strip()]
     return []
+
+
+def _safe_exists(path):
+    try:
+        return path.exists()
+    except PermissionError:
+        return False
+
+
+def _safe_glob_count(path, pattern='*'):
+    try:
+        if not path.exists():
+            return 0
+        return len(list(path.glob(pattern)))
+    except PermissionError:
+        return 0
 
 
 def _read_shared_context_json(rel_path, default=None):
@@ -4174,7 +4194,7 @@ def _ops_pick_status(*statuses):
     return picked
 
 
-def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, cron_status, skills_status, memory_status):
+def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, isolation_status, cron_status, skills_status, memory_status):
     if alert_status == 'failed' or connectivity_status == 'failed':
         return {
             'href': '/operations/alerts',
@@ -4192,6 +4212,12 @@ def _build_operations_next_hop(alert_status, connectivity_status, integrations_s
             'href': '/operations#credentials',
             'label': '检查凭证与 Source 绑定',
             'reason': '集成能力面已降级，优先确认凭证缺失或 source 覆盖不足。',
+        }
+    if isolation_status == 'degraded':
+        return {
+            'href': '/operations#isolation',
+            'label': '检查角色与记忆隔离',
+            'reason': '当前需要先确认 role registry、credential ownership、memory boundary 或 runbook visibility 是否存在缺口。',
         }
     if cron_status == 'degraded':
         return {
@@ -4226,6 +4252,7 @@ def _build_operations_summary():
     gateway = _load_gateway_status() or {'gateway_state': 'unknown', 'platforms': {}, 'running': False, 'active_agents': 0}
     integrations = get_executor_provider().get_summary() or {}
     boundary = _build_executor_boundary_view()
+    isolation = _build_operations_isolation_view()
 
     skill_total = skills_payload.get('total', 0) or 0
     skill_categories = skills_payload.get('categories', []) or []
@@ -4291,6 +4318,7 @@ def _build_operations_summary():
         alert_status,
         connectivity_status,
         integrations_status,
+        isolation.get('status'),
         cron_status,
         skills_status,
         memory_status,
@@ -4300,6 +4328,7 @@ def _build_operations_summary():
         alert_status,
         connectivity_status,
         integrations_status,
+        isolation.get('status'),
         cron_status,
         skills_status,
         memory_status,
@@ -4352,6 +4381,15 @@ def _build_operations_summary():
             'href': '/operations#sources',
         },
         {
+            'key': 'isolation',
+            'title': 'Role / Memory Isolation',
+            'icon': '🧱',
+            'status': isolation.get('status', 'unknown'),
+            'count': isolation.get('counts', {}).get('roleCount', 0),
+            'summary': f'{isolation.get("counts", {}).get("credentialCount", 0)} credentials · {isolation.get("counts", {}).get("memoryBoundaryCount", 0)} memory planes · {isolation.get("counts", {}).get("missingRunbookCount", 0)} runbook gaps',
+            'href': '/operations#isolation',
+        },
+        {
             'key': 'boundary',
             'title': 'Readonly Boundary',
             'icon': '🧭',
@@ -4380,6 +4418,7 @@ def _build_operations_summary():
             'toolCount': integration_tool_count,
             'credentialCount': integration_credential_count,
             'providerCount': integration_provider_count,
+            'isolationCount': isolation.get('counts', {}).get('roleCount', 0),
             'boundaryCount': 1,
         },
         'alerts': {
@@ -4511,6 +4550,199 @@ def _build_executor_boundary_view():
 @api.route('/operations/integrations/boundary')
 def ops_integrations_boundary():
     return jsonify(_build_executor_boundary_view())
+
+
+def _build_operations_isolation_view():
+    provider = get_executor_provider()
+    credentials = provider.get_credentials() or []
+
+    runbook_paths = [
+        'docs/codex-hermes-role-design.md',
+        'docs/02-engineering/harness/HARNESS-ENTRY.md',
+        'docs/02-engineering/harness/HERMESAGENT-ENTRY.md',
+        'docs/design/executor-integration/README.md',
+    ]
+    runbooks = []
+    missing_runbooks = 0
+    for rel_path in runbook_paths:
+        resolved = _resolve_repo_artifact_path(rel_path)
+        exists = _safe_exists(resolved)
+        if not exists:
+            missing_runbooks += 1
+        runbooks.append({
+            'id': rel_path,
+            'name': Path(rel_path).name,
+            'path': rel_path,
+            'exists': exists,
+            'sourceRoot': str(resolved.parent if exists else resolved.parent),
+            'status': 'visible' if exists else 'missing',
+        })
+
+    hermes_home = _get_hermes_home()
+    repo_soul_root = _resolve_repo_artifact_path('soul')
+    repo_harness_root = _resolve_repo_artifact_path('harness')
+    repo_shared_context_root = _resolve_repo_artifact_path('shared-context')
+    repo_omx_root = _resolve_repo_artifact_path('.omx')
+
+    memory_boundaries = [
+        {
+            'id': 'host-runtime-memory',
+            'name': 'Host Runtime Memory',
+            'owner': 'HermesAgent',
+            'boundary': 'host-memory-plane',
+            'status': 'healthy' if _safe_exists(hermes_home / 'SOUL.md') else 'degraded',
+            'writeBoundary': 'Hermes runtime / memory maintenance',
+            'roots': [str(hermes_home / 'SOUL.md'), str(hermes_home / 'memories')],
+            'fileCount': (1 if _safe_exists(hermes_home / 'SOUL.md') else 0) + _safe_glob_count(hermes_home / 'memories', '*.md'),
+            'notes': 'Host-side memory remains outside repo truth and should not be treated as canonical governance memory.',
+        },
+        {
+            'id': 'repo-soul-mirror',
+            'name': 'Repo Soul Mirror',
+            'owner': 'CrazyAgentsManage',
+            'boundary': 'repo-tracked-operator-memory',
+            'status': 'healthy' if _safe_exists(repo_soul_root) else 'degraded',
+            'writeBoundary': 'repo-tracked soul files only',
+            'roots': [str(repo_soul_root)],
+            'fileCount': _safe_glob_count(repo_soul_root, '*.md') + _safe_glob_count(repo_soul_root / 'agents', '*.md'),
+            'notes': 'Tracked soul artifacts support operator semantics, but they do not replace host runtime memory.',
+        },
+        {
+            'id': 'shared-context-plane',
+            'name': 'Shared Context Plane',
+            'owner': 'Crazy Operations',
+            'boundary': 'repo-tracked-shared-operator-state',
+            'status': 'healthy' if _safe_exists(repo_shared_context_root) else 'degraded',
+            'writeBoundary': 'task bus / loop surface / monitored runtime outputs',
+            'roots': [str(repo_shared_context_root)],
+            'fileCount': _safe_glob_count(repo_shared_context_root, '*') + _safe_glob_count(repo_shared_context_root / 'agent-requests', '*.jsonl'),
+            'notes': 'shared-context is repo-tracked shared operator state, not FlowMind truth and not host-local OMX state.',
+        },
+        {
+            'id': 'repo-harness-facts',
+            'name': 'Repo Harness Facts',
+            'owner': 'Codex',
+            'boundary': 'durable-repo-learning-layer',
+            'status': 'healthy' if _safe_exists(repo_harness_root) else 'degraded',
+            'writeBoundary': 'harness closeout / repo facts only',
+            'roots': [str(repo_harness_root)],
+            'fileCount': _safe_glob_count(repo_harness_root, '*.md') + _safe_glob_count(repo_harness_root / 'trace', '*.json'),
+            'notes': 'harness/ and docs/ stay canonical repository facts; do not collapse them into .omx or host memory.',
+        },
+        {
+            'id': 'omx-runtime-local',
+            'name': 'OMX Runtime Local',
+            'owner': 'OMX runtime',
+            'boundary': 'runtime-local-state',
+            'status': 'healthy' if _safe_exists(repo_omx_root) else 'unknown',
+            'writeBoundary': '.omx is session-local only',
+            'roots': [str(repo_omx_root)],
+            'fileCount': _safe_glob_count(repo_omx_root, '*'),
+            'notes': '.omx is runtime-local substrate and must not be promoted into shared project truth.',
+        },
+    ]
+
+    missing_credentials = [item for item in credentials if str(item.get('status') or '') in ('missing', 'expired', 'invalid')]
+    credential_ownership = []
+    for item in credentials:
+        status = str(item.get('status') or 'unknown')
+        owner = 'executor capability plane'
+        owner_role = 'Crazy / Operations'
+        if item.get('targetId') == 'flowmind':
+            owner = 'FlowMind bridge'
+            owner_role = 'FlowMind'
+        credential_ownership.append({
+            'id': item.get('id', ''),
+            'provider': item.get('provider', ''),
+            'targetId': item.get('targetId', ''),
+            'targetType': item.get('targetType', ''),
+            'status': status,
+            'owner': owner,
+            'ownerRole': owner_role,
+            'valueKind': item.get('valueKind', ''),
+            'slot': item.get('slot', ''),
+            'impactCount': item.get('impactCount', 0) or 0,
+            'lastCheckedAt': item.get('lastCheckedAt'),
+            'notes': 'Executor-bound credentials stay inside the capability plane and must not be mistaken for FlowMind truth authority.',
+        })
+
+    roles = [
+        {
+            'id': 'codex',
+            'name': 'Codex',
+            'lane': 'development',
+            'status': 'healthy',
+            'primaryScopes': ['repo code', 'docs', 'harness', 'tests'],
+            'memoryBoundary': 'repo facts + runtime-local OMX',
+            'credentialBoundary': 'developer-local tooling only',
+            'runbooks': ['docs/codex-hermes-role-design.md', 'docs/02-engineering/harness/HARNESS-ENTRY.md'],
+        },
+        {
+            'id': 'hermesagent',
+            'name': 'HermesAgent',
+            'lane': 'operations',
+            'status': 'healthy',
+            'primaryScopes': ['runtime host', 'cron', 'session operations', 'operator acceptance'],
+            'memoryBoundary': 'host runtime memory plane',
+            'credentialBoundary': 'host runtime / platform credentials',
+            'runbooks': ['docs/codex-hermes-role-design.md', 'docs/02-engineering/harness/HERMESAGENT-ENTRY.md'],
+        },
+        {
+            'id': 'flowmind',
+            'name': 'FlowMind',
+            'lane': 'governance truth',
+            'status': 'healthy',
+            'primaryScopes': ['candidate', 'truth', 'review', 'provenance'],
+            'memoryBoundary': 'upstream governance memory only',
+            'credentialBoundary': 'bridge / governance service auth',
+            'runbooks': ['docs/02-engineering/harness/hermes-flowmind-compatibility-matrix-2026-04-30.md'],
+        },
+        {
+            'id': 'executor',
+            'name': 'executor',
+            'lane': 'capability plane',
+            'status': 'healthy' if get_provider_mode() == 'http' else 'degraded',
+            'primaryScopes': ['external read capability', 'source catalog', 'tool catalog', 'bindings'],
+            'memoryBoundary': 'no governance memory ownership',
+            'credentialBoundary': 'source bindings / secrets only',
+            'runbooks': ['docs/design/executor-integration/README.md'],
+        },
+    ]
+
+    credential_status = 'healthy' if credentials and not missing_credentials else ('degraded' if missing_credentials else 'unknown')
+    memory_status = 'healthy'
+    if any(item.get('status') == 'degraded' for item in memory_boundaries):
+        memory_status = 'degraded'
+    elif not any(item.get('fileCount', 0) for item in memory_boundaries):
+        memory_status = 'unknown'
+    runbook_status = 'healthy' if missing_runbooks == 0 else 'degraded'
+    role_status = 'healthy' if len(roles) >= 4 else 'degraded'
+    status = _ops_pick_status(role_status, credential_status, memory_status, runbook_status)
+
+    return {
+        'status': status,
+        'roleStatus': role_status,
+        'credentialStatus': credential_status,
+        'memoryStatus': memory_status,
+        'runbookStatus': runbook_status,
+        'roleRegistry': roles,
+        'credentialOwnership': credential_ownership,
+        'memoryBoundaries': memory_boundaries,
+        'runbooks': runbooks,
+        'counts': {
+            'roleCount': len(roles),
+            'credentialCount': len(credential_ownership),
+            'missingCredentialCount': len(missing_credentials),
+            'memoryBoundaryCount': len(memory_boundaries),
+            'runbookCount': len(runbooks),
+            'missingRunbookCount': missing_runbooks,
+        },
+    }
+
+
+@api.route('/operations/isolation')
+def operations_isolation():
+    return jsonify(_build_operations_isolation_view())
 
 
 # ═══════════════════════════════════════════

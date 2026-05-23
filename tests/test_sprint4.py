@@ -183,6 +183,7 @@ class TestOperationsCapabilityPlane:
         body = resp.data.decode('utf-8', errors='replace')
         assert 'Readonly Boundary' in body
         assert 'data-family="boundary"' in body
+        assert 'data-family="isolation"' in body
 
     def test_operations_integrations_boundary_api_returns_policy_projection(self, client, monkeypatch):
         class StubProvider:
@@ -197,6 +198,9 @@ class TestOperationsCapabilityPlane:
                     'modeLabel': 'http',
                     'scopeId': 'scope-123',
                 }
+
+            def get_credentials(self):
+                return []
 
             def get_summary(self):
                 return {
@@ -257,6 +261,9 @@ class TestOperationsCapabilityPlane:
                     'modeLabel': 'http',
                     'scopeId': 'scope-123',
                 }
+
+            def get_credentials(self):
+                return []
 
             def get_summary(self):
                 return {
@@ -342,6 +349,135 @@ class TestOperationsCapabilityPlane:
         data = resp.get_json()
         assert data['allowedTaskTypeCount'] == 1
         assert data['forbiddenTaskTypeCount'] == 1
+
+    def test_operations_isolation_api_returns_role_credential_memory_projection(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'docs' / '02-engineering' / 'harness').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / 'design' / 'executor-integration').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs').mkdir(exist_ok=True)
+        (repo_root / 'docs' / 'codex-hermes-role-design.md').write_text('# roles\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'HARNESS-ENTRY.md').write_text('# harness\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'HERMESAGENT-ENTRY.md').write_text('# hermes\n', encoding='utf-8')
+        (repo_root / 'docs' / 'design' / 'executor-integration' / 'README.md').write_text('# executor\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'hermes-flowmind-compatibility-matrix-2026-04-30.md').write_text('# compat\n', encoding='utf-8')
+        (repo_root / 'shared-context').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness').mkdir(parents=True, exist_ok=True)
+        (repo_root / '.omx').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'soul' / 'agents').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'soul' / 'SOUL.md').write_text('# soul\n', encoding='utf-8')
+        (repo_root / 'soul' / 'MEMORY.md').write_text('# memory\n', encoding='utf-8')
+        (repo_root / 'soul' / 'agents' / 'ops-guardian.md').write_text('# agent\n', encoding='utf-8')
+
+        hermes_home = tmp_path / 'hermes-home'
+        (hermes_home / 'memories').mkdir(parents=True, exist_ok=True)
+        (hermes_home / 'SOUL.md').write_text('# host soul\n', encoding='utf-8')
+        (hermes_home / 'memories' / 'daily.md').write_text('# host memory\n', encoding='utf-8')
+
+        class StubProvider:
+            def get_credentials(self):
+                return [
+                    {'id': 'cred-1', 'provider': 'github', 'targetType': 'source', 'targetId': 'src-github', 'status': 'healthy', 'impactCount': 12, 'valueKind': 'secret'},
+                    {'id': 'cred-2', 'provider': 'google', 'targetType': 'source', 'targetId': 'src-gmail', 'status': 'expired', 'impactCount': 1, 'valueKind': 'secret'},
+                ]
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        monkeypatch.setenv('HERMES_HOME', str(hermes_home))
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: StubProvider())
+        monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
+        webui_api._hermes_home = None
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/operations/isolation')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['counts']['roleCount'] == 4
+        assert data['counts']['credentialCount'] == 2
+        assert data['counts']['missingCredentialCount'] == 1
+        assert data['counts']['memoryBoundaryCount'] >= 4
+        assert data['counts']['runbookCount'] == 4
+        assert data['credentialStatus'] == 'degraded'
+        assert data['memoryStatus'] == 'healthy'
+        assert any(item['id'] == 'host-runtime-memory' for item in data['memoryBoundaries'])
+        assert any(item['name'] == 'Codex' for item in data['roleRegistry'])
+
+    def test_operations_summary_includes_isolation_family(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'docs' / '02-engineering' / 'harness').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / 'design' / 'executor-integration').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs').mkdir(exist_ok=True)
+        (repo_root / 'docs' / 'codex-hermes-role-design.md').write_text('# roles\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'HARNESS-ENTRY.md').write_text('# harness\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'HERMESAGENT-ENTRY.md').write_text('# hermes\n', encoding='utf-8')
+        (repo_root / 'docs' / 'design' / 'executor-integration' / 'README.md').write_text('# executor\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'hermes-flowmind-compatibility-matrix-2026-04-30.md').write_text('# compat\n', encoding='utf-8')
+        (repo_root / 'shared-context').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness').mkdir(parents=True, exist_ok=True)
+        (repo_root / '.omx').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'soul' / 'agents').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'soul' / 'SOUL.md').write_text('# soul\n', encoding='utf-8')
+        (repo_root / 'soul' / 'MEMORY.md').write_text('# memory\n', encoding='utf-8')
+        (repo_root / 'soul' / 'agents' / 'ops-guardian.md').write_text('# agent\n', encoding='utf-8')
+
+        hermes_home = tmp_path / 'hermes-home'
+        (hermes_home / 'memories').mkdir(parents=True, exist_ok=True)
+        (hermes_home / 'SOUL.md').write_text('# host soul\n', encoding='utf-8')
+        (hermes_home / 'memories' / 'daily.md').write_text('# host memory\n', encoding='utf-8')
+
+        class StubProvider:
+            def get_capabilities(self):
+                return {
+                    'sourceCreate': True,
+                    'sourceRefresh': True,
+                    'sourceStatusToggle': False,
+                    'sourceDelete': True,
+                    'credentialBind': True,
+                    'credentialUnbind': True,
+                    'modeLabel': 'http',
+                    'scopeId': 'scope-123',
+                }
+
+            def get_credentials(self):
+                return [{'id': 'cred-1', 'provider': 'github', 'targetType': 'source', 'targetId': 'src-github', 'status': 'healthy', 'impactCount': 12, 'valueKind': 'secret'}]
+
+            def get_summary(self):
+                return {
+                    'sourceCount': 2,
+                    'healthySourceCount': 2,
+                    'degradedSourceCount': 0,
+                    'toolCount': 4,
+                    'missingCredentialCount': 0,
+                    'providerCount': 2,
+                    'failedProviderCount': 0,
+                }
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        monkeypatch.setenv('HERMES_HOME', str(hermes_home))
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: StubProvider())
+        monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
+        monkeypatch.setattr(
+            webui_api,
+            '_read_shared_context_json',
+            lambda *args, **kwargs: {
+                'version': 'v1',
+                'date': '2026-05-19',
+                'host': 'ALI-HERMES',
+                'mode': 'readonly',
+                'owners': {'productShell': 'CrazyAgentsManage'},
+                'preconditions': ['executor-sidecar active'],
+                'wave1_allowed': [{'taskType': 'intel.morning', 'repoEntrypoints': ['scripts/morning-intel-v2.py'], 'delegationUnit': 'external-read-step'}],
+                'wave2_completed': [],
+                'forbidden_now': [{'taskType': 'promise.review', 'repoEntrypoints': ['scripts/daily-promise-review.py'], 'reason': 'governance output'}],
+            },
+        )
+        webui_api._hermes_home = None
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/operations/summary')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        keys = [item['key'] for item in data['families']]
+        assert 'isolation' in keys
+        assert data['metrics']['isolationCount'] == 4
 
 
 class TestArchitecturePagesReachable:
