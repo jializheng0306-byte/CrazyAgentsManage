@@ -4224,7 +4224,7 @@ def _ops_pick_status(*statuses):
     return picked
 
 
-def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, isolation_status, task_registry_status, host_health_status, runbook_status, env_map_status, backup_recovery_status, recovery_path_status, cron_status, skills_status, memory_status):
+def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, isolation_status, task_registry_status, host_health_status, harness_status, runbook_status, env_map_status, backup_recovery_status, recovery_path_status, cron_status, skills_status, memory_status):
     if alert_status == 'failed' or connectivity_status == 'failed':
         return {
             'href': '/operations/alerts',
@@ -4236,6 +4236,12 @@ def _build_operations_next_hop(alert_status, connectivity_status, integrations_s
             'href': '/operations#host-health',
             'label': '检查 Host Health',
             'reason': '当前宿主磁盘/内存或 gateway 证据存在异常，需要先确认运行宿主是否稳定。',
+        }
+    if harness_status == 'degraded':
+        return {
+            'href': '/operations#harness',
+            'label': '检查 Harness Readiness',
+            'reason': '当前 Harness 的 trace / critic / closeout / worktree 使用链仍存在缺口，需要先确认基础执行治理是否成立。',
         }
     if env_map_status == 'degraded':
         return {
@@ -4322,6 +4328,7 @@ def _build_operations_summary():
     task_registry = _build_operations_task_registry_view()
     automation = _build_operations_automation_maturity_view()
     host_health = _build_operations_host_health_view()
+    harness = _build_operations_harness_view()
     runbooks = _build_operations_runbooks_view()
     env_map = _build_operations_env_map_view()
     backup_recovery = _build_operations_backup_recovery_view()
@@ -4395,6 +4402,7 @@ def _build_operations_summary():
         task_registry.get('status'),
         automation.get('status'),
         host_health.get('status'),
+        harness.get('status'),
         runbooks.get('status'),
         env_map.get('status'),
         backup_recovery.get('status'),
@@ -4411,6 +4419,7 @@ def _build_operations_summary():
         isolation.get('status'),
         task_registry.get('status'),
         host_health.get('status'),
+        harness.get('status'),
         runbooks.get('status'),
         env_map.get('status'),
         backup_recovery.get('status'),
@@ -4494,6 +4503,15 @@ def _build_operations_summary():
             'href': '/operations#host-health',
         },
         {
+            'key': 'harness',
+            'title': 'Harness Readiness',
+            'icon': '🧪',
+            'status': harness.get('status', 'unknown'),
+            'count': harness.get('counts', {}).get('totalTraces', 0),
+            'summary': f'{harness.get("counts", {}).get("successCount", 0)} success · {harness.get("counts", {}).get("failureCount", 0)} failure · {harness.get("counts", {}).get("readinessHealthyCount", 0)} readiness green',
+            'href': '/operations#harness',
+        },
+        {
             'key': 'env-map',
             'title': 'Env Map',
             'icon': '🗺️',
@@ -4570,6 +4588,7 @@ def _build_operations_summary():
             'credentialCount': integration_credential_count,
             'providerCount': integration_provider_count,
             'hostHealthCount': host_health.get('counts', {}).get('evidenceSignals', 0),
+            'harnessCount': harness.get('counts', {}).get('totalTraces', 0),
             'envMapCount': env_map.get('counts', {}).get('entryCount', 0),
             'isolationCount': isolation.get('counts', {}).get('roleCount', 0),
             'boundaryCount': 1,
@@ -5002,6 +5021,105 @@ def _build_operations_host_health_view():
     }
 
 
+def _build_operations_harness_view():
+    repo_harness_root = _resolve_repo_artifact_path('harness')
+    success_dir = repo_harness_root / 'trace' / 'successes'
+    failure_dir = repo_harness_root / 'trace' / 'failures'
+    memory_root = repo_harness_root / 'memory'
+    docs_root = _resolve_repo_artifact_path('docs/02-engineering/harness')
+
+    success_files = [p for p in _safe_sorted_paths(success_dir, '*.json') if p.name != 'TEMPLATE.json']
+    failure_files = [p for p in _safe_sorted_paths(failure_dir, '*.json') if p.name != 'TEMPLATE.json']
+    latest_success_path = success_files[-1] if success_files else None
+    latest_failure_path = failure_files[-1] if failure_files else None
+    latest_success = _read_optional_json(latest_success_path) if latest_success_path else None
+    latest_failure = _read_optional_json(latest_failure_path) if latest_failure_path else None
+    latest_success_mtime = latest_success_path.stat().st_mtime if latest_success_path else 0
+    latest_failure_mtime = latest_failure_path.stat().st_mtime if latest_failure_path else 0
+
+    readiness = [
+        {
+            'id': 'trace-layer',
+            'name': 'Trace Layer',
+            'status': 'healthy' if _safe_exists(success_dir) and _safe_exists(failure_dir) else 'degraded',
+            'evidence': [str(success_dir), str(failure_dir)],
+            'notes': 'Structured success/failure traces should always land in harness/trace.',
+        },
+        {
+            'id': 'critic-layer',
+            'name': 'Critic Layer',
+            'status': 'healthy' if _safe_exists(_resolve_repo_artifact_path('scripts/harness-critic.cjs')) and _safe_exists(memory_root / 'failure-patterns.md') and _safe_exists(memory_root / 'procedural.md') else 'degraded',
+            'evidence': [
+                'scripts/harness-critic.cjs',
+                'harness/memory/failure-patterns.md',
+                'harness/memory/procedural.md',
+            ],
+            'notes': 'Critic must be able to analyze failures and write back durable memory.',
+        },
+        {
+            'id': 'closeout-layer',
+            'name': 'Closeout Layer',
+            'status': 'healthy' if _safe_exists(_resolve_repo_artifact_path('scripts/harness-closeout-writeback.cjs')) and _safe_exists(docs_root / 'HARNESS-ENTRY.md') and _safe_exists(docs_root / 'harness-governance-report.md') else 'degraded',
+            'evidence': [
+                'scripts/harness-closeout-writeback.cjs',
+                'docs/02-engineering/harness/HARNESS-ENTRY.md',
+                'docs/02-engineering/harness/harness-governance-report.md',
+            ],
+            'notes': 'Success rounds should pass governance before closeout writeback completes.',
+        },
+        {
+            'id': 'worktree-layer',
+            'name': 'Worktree Bootstrap',
+            'status': 'healthy' if _safe_exists(_resolve_repo_artifact_path('scripts/worktree/create-agent-worktree.sh')) and _safe_exists(docs_root / 'WORKTREE-BOOTSTRAP.md') else 'degraded',
+            'evidence': [
+                'scripts/worktree/create-agent-worktree.sh',
+                'docs/02-engineering/harness/WORKTREE-BOOTSTRAP.md',
+            ],
+            'notes': 'Independent worktree bootstrap remains part of the shared harness contract.',
+        },
+    ]
+
+    healthy_readiness = len([item for item in readiness if item.get('status') == 'healthy'])
+    failure_newer_than_success = latest_failure_mtime > latest_success_mtime if latest_failure_mtime and latest_success_mtime else False
+
+    status = 'healthy'
+    if healthy_readiness < len(readiness):
+        status = 'degraded'
+    elif failure_newer_than_success:
+        status = 'degraded'
+    elif not success_files:
+        status = 'unknown'
+
+    return {
+        'status': status,
+        'counts': {
+            'successCount': len(success_files),
+            'failureCount': len(failure_files),
+            'totalTraces': len(success_files) + len(failure_files),
+            'readinessHealthyCount': healthy_readiness,
+        },
+        'latestSuccess': latest_success,
+        'latestFailure': latest_failure,
+        'latestSuccessPath': str(latest_success_path) if latest_success_path else '',
+        'latestFailurePath': str(latest_failure_path) if latest_failure_path else '',
+        'failureNewerThanSuccess': failure_newer_than_success,
+        'readiness': readiness,
+        'runbooks': [
+            'docs/02-engineering/harness/HARNESS-ENTRY.md',
+            'docs/02-engineering/harness/CROSS-REVIEW-PROCESS.md',
+            'docs/02-engineering/harness/WORKTREE-BOOTSTRAP.md',
+            'docs/02-engineering/harness/HARNESS-CAPABILITY-MAPPING.md',
+        ],
+        'commands': [
+            'node scripts/record-success.cjs',
+            'node scripts/record-failure.cjs',
+            'node scripts/harness-critic.cjs --json',
+            'node scripts/harness-closeout-writeback.cjs --status success --message \"Round completed\" --critic-write-back --json',
+            'scripts/worktree/create-agent-worktree.sh --agent codex --lane shared --topic <topic>',
+        ],
+    }
+
+
 def _build_operations_runbooks_view():
     runbook_defs = [
         ('task-registry', 'Task Registry Runbook', 'docs/06-agent-ops/three-state-protocol.md'),
@@ -5337,6 +5455,7 @@ def _build_operations_control_room_summary():
         'taskRegistry': _build_operations_task_registry_view(),
         'automationMaturity': _build_operations_automation_maturity_view(),
         'hostHealth': _build_operations_host_health_view(),
+        'harness': _build_operations_harness_view(),
         'envMap': _build_operations_env_map_view(),
         'backupRecovery': _build_operations_backup_recovery_view(),
         'recoveryPaths': _build_operations_recovery_paths_view(),
@@ -5357,6 +5476,11 @@ def operations_automation_maturity():
 @api.route('/operations/host-health')
 def operations_host_health():
     return jsonify(_build_operations_host_health_view())
+
+
+@api.route('/operations/harness')
+def operations_harness():
+    return jsonify(_build_operations_harness_view())
 
 
 @api.route('/operations/env-map')

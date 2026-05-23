@@ -184,6 +184,7 @@ class TestOperationsCapabilityPlane:
         assert 'Task Registry' in body
         assert 'Automation Maturity' in body
         assert 'Host Health' in body
+        assert 'Harness' in body
         assert 'Env Map' in body
         assert 'Backup / Recovery' in body
         assert 'Recovery Paths' in body
@@ -194,6 +195,7 @@ class TestOperationsCapabilityPlane:
         assert 'data-family="task-registry"' in body
         assert 'data-family="automation"' in body
         assert 'data-family="host-health"' in body
+        assert 'data-family="harness"' in body
         assert 'data-family="env-map"' in body
         assert 'data-family="backup-recovery"' in body
         assert 'data-family="recovery-paths"' in body
@@ -315,6 +317,7 @@ class TestOperationsCapabilityPlane:
         assert 'boundary' in keys
         assert data['metrics']['boundaryCount'] == 1
         assert 'recovery-paths' in keys
+        assert 'harness' in keys
 
     def test_operations_boundary_falls_back_to_runtime_repo_root(self, client, monkeypatch, tmp_path):
         deploy_root = tmp_path / 'deploy-copy'
@@ -431,6 +434,38 @@ class TestOperationsCapabilityPlane:
         assert data['memoryStatus'] == 'healthy'
         assert any(item['id'] == 'host-runtime-memory' for item in data['memoryBoundaries'])
         assert any(item['name'] == 'Codex' for item in data['roleRegistry'])
+
+    def test_operations_harness_api_returns_trace_and_readiness_projection(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'harness' / 'trace' / 'successes').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness' / 'trace' / 'failures').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness' / 'memory').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / '02-engineering' / 'harness').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'scripts' / 'worktree').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'scripts').mkdir(exist_ok=True)
+        (repo_root / 'harness' / 'trace' / 'successes' / 'S-20260523-001.json').write_text(json.dumps({'id': 'S-20260523-001', 'message': 'round ok'}), encoding='utf-8')
+        (repo_root / 'harness' / 'trace' / 'failures' / 'F-20260522-001.json').write_text(json.dumps({'id': 'F-20260522-001', 'message': 'old failure'}), encoding='utf-8')
+        (repo_root / 'harness' / 'memory' / 'failure-patterns.md').write_text('# failures\n', encoding='utf-8')
+        (repo_root / 'harness' / 'memory' / 'procedural.md').write_text('# procedural\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'HARNESS-ENTRY.md').write_text('# harness\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'CROSS-REVIEW-PROCESS.md').write_text('# cross review\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'WORKTREE-BOOTSTRAP.md').write_text('# worktree\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'HARNESS-CAPABILITY-MAPPING.md').write_text('# mapping\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'harness-governance-report.md').write_text('# governance\n', encoding='utf-8')
+        (repo_root / 'scripts' / 'harness-critic.cjs').write_text('// critic\n', encoding='utf-8')
+        (repo_root / 'scripts' / 'harness-closeout-writeback.cjs').write_text('// closeout\n', encoding='utf-8')
+        (repo_root / 'scripts' / 'worktree' / 'create-agent-worktree.sh').write_text('#!/usr/bin/env bash\n', encoding='utf-8')
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/operations/harness')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['counts']['successCount'] == 1
+        assert data['counts']['failureCount'] == 1
+        assert data['counts']['readinessHealthyCount'] == 4
+        assert data['latestSuccess']['id'] == 'S-20260523-001'
+        assert data['latestFailure']['id'] == 'F-20260522-001'
 
     def test_operations_summary_includes_isolation_family(self, client, monkeypatch, tmp_path):
         repo_root = tmp_path / 'repo'
@@ -619,6 +654,7 @@ class TestOperationsCapabilityPlane:
         assert data['automationMaturity']['counts']['rehearsed'] == 1
         assert data['automationMaturity']['counts']['automated'] == 1
         assert data['hostHealth']['counts']['platforms'] == 1
+        assert data['harness']['counts']['totalTraces'] >= 0
         assert data['envMap']['counts']['entryCount'] >= 8
         assert data['backupRecovery']['counts']['surfaceCount'] == 5
         assert data['recoveryPaths']['counts']['pathCount'] == 4

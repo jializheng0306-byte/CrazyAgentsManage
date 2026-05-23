@@ -194,7 +194,7 @@
 
 1. 旧功能页仍然保留原有平铺路由，但一级 IA 路由与主模板已经全部建立
 2. 新增的 IA 页面仍有“聚合深度不足”的问题；当前缺口不再是“有没有模板”，而是“真实数据和行为是否全部接入”
-3. `Loop Surface` 已接入真实路由/模板实现，并已承接 `promise-review-cycle` + `morning-intel-cycle` 两条 cycle 对象，以及本地 `feedback input / memory candidate` 最小写面；`Tasks` 已承接 `task bus + promotion gate` 的最小控制面，`Operations` 已承接 `executor capability plane`、`role / credential / memory isolation`、`task registry / automation / host health / runbooks`，并已把第二批 `env map / backup-recovery / recovery paths` 拉进产品面
+3. `Loop Surface` 已接入真实路由/模板实现，并已承接 `promise-review-cycle` + `morning-intel-cycle` 两条 cycle 对象，以及本地 `feedback input / memory candidate` 最小写面；`Tasks` 已承接 `task bus + promotion gate` 的最小控制面，`Operations` 已承接 `executor capability plane`、`role / credential / memory isolation`、`task registry / automation / host health / runbooks`、`harness readiness`，并已把第二批 `env map / backup-recovery / recovery paths` 拉进产品面
 4. 3 个架构页已接入当前 WebUI 路由体系，但仍是占位性接入，尚未挂载真实 TSX 展示实现
 
 ## 对齐原则

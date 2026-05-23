@@ -108,7 +108,16 @@
 - linked runbooks
 - next-hop operator guides
 
-### 9. Env Map / Backup / Recovery / Recovery Paths
+### 9. Harness Readiness
+
+内容：
+
+- success / failure trace
+- critic readiness
+- closeout writeback readiness
+- worktree bootstrap readiness
+
+### 10. Env Map / Backup / Recovery / Recovery Paths
 
 内容：
 
@@ -117,7 +126,7 @@
 - backup coverage
 - mirror / deploy backup / recovery path visibility
 
-### 10. Summary Shell / Next Hop
+### 11. Summary Shell / Next Hop
 
 内容：
 
@@ -142,8 +151,9 @@
 6. executor integrations 区
 7. role / credential / memory isolation 区
 8. host health / runbooks 区
-9. env map / backup / recovery 区
-10. summary shell / next hop 区
+9. harness readiness 区
+10. env map / backup / recovery 区
+11. summary shell / next hop 区
 
 ## 页面模块树
 
@@ -162,6 +172,7 @@
   - IsolationPanel
   - HostHealthPanel
   - RunbooksPanel
+  - HarnessPanel
   - EnvMapPanel
   - BackupRecoveryPanel
   - SummaryBriefingPanel

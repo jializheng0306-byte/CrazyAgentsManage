@@ -292,7 +292,7 @@
 
 ### Phase B：Harness 机制完整迁入
 
-状态：本轮执行
+状态：进行中
 
 产出：
 
@@ -300,6 +300,17 @@
 - success / failure / critic / closeout 脚本补齐
 - worktree bootstrap 脚本补齐
 - harness README 升级
+
+当前已落最小 starter slice：
+
+- `Operations > Harness`
+  - 暴露 success / failure trace 计数
+  - 暴露 critic / closeout / worktree readiness
+  - 暴露 harness runbooks 与默认命令链
+
+下一步不再是“脚本是否存在”，而是：
+
+- 是否强制在每轮非平凡迭代中真正走 success / failure / critic / closeout / worktree 链
 
 ### Phase C：Harness 与 Hermes 协作层对齐
 

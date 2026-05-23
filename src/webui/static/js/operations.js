@@ -61,6 +61,7 @@ var FAMILIES = {
   'task-registry': { icon: '📋', label: 'Task Registry', api: '/api/operations/task-registry', filterBy: null },
   automation:  { icon: '🤖', label: 'Automation Maturity', api: '/api/operations/automation-maturity', filterBy: null },
   'host-health': { icon: '🖥️', label: 'Host Health', api: '/api/operations/host-health', filterBy: null },
+  harness:     { icon: '🧪', label: 'Harness', api: '/api/operations/harness', filterBy: null },
   'env-map':   { icon: '🗺️', label: 'Env Map', api: '/api/operations/env-map', filterBy: null },
   'backup-recovery': { icon: '🛟', label: 'Backup / Recovery', api: '/api/operations/backup-recovery', filterBy: null },
   'recovery-paths': { icon: '🧭', label: 'Recovery Paths', api: '/api/operations/recovery-paths', filterBy: null },
@@ -122,6 +123,7 @@ function applySummaryCounts(summary) {
   _updateTreeCount('task-registry', metrics.taskRegistryCount || 0);
   _updateTreeCount('automation', metrics.automationCount || 0);
   _updateTreeCount('host-health', metrics.hostHealthCount || 0);
+  _updateTreeCount('harness', metrics.harnessCount || 0);
   _updateTreeCount('env-map', metrics.envMapCount || 0);
   _updateTreeCount('backup-recovery', metrics.backupRecoveryCount || 0);
   _updateTreeCount('recovery-paths', metrics.recoveryPathCount || 0);
@@ -250,6 +252,7 @@ function renderWorkspace(family, data) {
     case 'task-registry': renderTaskRegistry(content, data); break;
     case 'automation': renderAutomationMaturity(content, data); break;
     case 'host-health': renderHostHealth(content, data); break;
+    case 'harness': renderHarness(content, data); break;
     case 'env-map': renderEnvMap(content, data); break;
     case 'backup-recovery': renderBackupRecovery(content, data); break;
     case 'recovery-paths': renderRecoveryPaths(content, data); break;
@@ -1043,6 +1046,43 @@ function renderHostHealth(container, data) {
   _showDetail(
     '<div class="ops-detail-header"><h3 class="ops-detail-name">Host Health Evidence</h3><div class="ops-detail-sub">disk / memory / gateway / alerts</div></div>' +
     '<div class="ops-detail-section"><div class="ops-detail-section-title">Linked Runbooks</div>' +
+      (data.runbooks || []).map(function(path) { return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + path + '</span></div>'; }).join('') +
+    '</div>'
+  );
+}
+
+function renderHarness(container, data) {
+  if (!data || typeof data !== 'object') {
+    container.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">🧪</div><p>暂无 harness 数据</p></div>';
+    return;
+  }
+  var counts = data.counts || {};
+  container.innerHTML =
+    '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
+      boundaryCard('Success', '✅', counts.successCount || 0, data.status || 'unknown') +
+      boundaryCard('Failure', '⚠️', counts.failureCount || 0, counts.failureCount ? 'degraded' : 'healthy') +
+      boundaryCard('Readiness', '🧪', counts.readinessHealthyCount || 0, data.status || 'unknown') +
+      boundaryCard('Traces', '🗂️', counts.totalTraces || 0, data.status || 'unknown') +
+    '</div>' +
+    '<div class="ops-detail-section">' +
+      '<div class="ops-detail-section-title">Harness Summary</div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Failure newer than success</span><span class="ops-detail-row-value">' + (data.failureNewerThanSuccess ? 'yes' : 'no') + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Latest success</span><span class="ops-detail-row-value">' + ((data.latestSuccess && data.latestSuccess.id) || '--') + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Latest failure</span><span class="ops-detail-row-value">' + ((data.latestFailure && data.latestFailure.id) || '--') + '</span></div>' +
+    '</div>' +
+    isolationSection('Readiness Layers', data.readiness || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.name + ' <span class="ops-chip ' + (item.status || 'unknown') + '">' + statusLabel(item.status || 'unknown') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">' + (item.notes || '') + '</div>' +
+      '</div>';
+    });
+
+  _showDetail(
+    '<div class="ops-detail-header"><h3 class="ops-detail-name">Harness Readiness</h3><div class="ops-detail-sub">success / failure / critic / closeout / worktree</div></div>' +
+    '<div class="ops-detail-section"><div class="ops-detail-section-title">Required Commands</div>' +
+      (data.commands || []).map(function(cmd) { return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + cmd + '</span></div>'; }).join('') +
+    '</div>' +
+    '<div class="ops-detail-section"><div class="ops-detail-section-title">Runbooks</div>' +
       (data.runbooks || []).map(function(path) { return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + path + '</span></div>'; }).join('') +
     '</div>'
   );
