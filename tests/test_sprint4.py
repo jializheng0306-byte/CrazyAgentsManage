@@ -186,6 +186,7 @@ class TestOperationsCapabilityPlane:
         assert 'Host Health' in body
         assert 'Env Map' in body
         assert 'Backup / Recovery' in body
+        assert 'Recovery Paths' in body
         assert 'Runbooks' in body
         assert 'Readonly Boundary' in body
         assert 'data-family="boundary"' in body
@@ -195,6 +196,7 @@ class TestOperationsCapabilityPlane:
         assert 'data-family="host-health"' in body
         assert 'data-family="env-map"' in body
         assert 'data-family="backup-recovery"' in body
+        assert 'data-family="recovery-paths"' in body
         assert 'data-family="runbooks"' in body
 
     def test_operations_integrations_boundary_api_returns_policy_projection(self, client, monkeypatch):
@@ -312,6 +314,7 @@ class TestOperationsCapabilityPlane:
         keys = [item['key'] for item in data['families']]
         assert 'boundary' in keys
         assert data['metrics']['boundaryCount'] == 1
+        assert 'recovery-paths' in keys
 
     def test_operations_boundary_falls_back_to_runtime_repo_root(self, client, monkeypatch, tmp_path):
         deploy_root = tmp_path / 'deploy-copy'
@@ -366,6 +369,7 @@ class TestOperationsCapabilityPlane:
         repo_root = tmp_path / 'repo'
         (repo_root / 'docs' / '02-engineering' / 'harness').mkdir(parents=True, exist_ok=True)
         (repo_root / 'docs' / 'design' / 'executor-integration').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / '06-agent-ops').mkdir(parents=True, exist_ok=True)
         (repo_root / 'docs').mkdir(exist_ok=True)
         (repo_root / 'docs' / 'codex-hermes-role-design.md').write_text('# roles\n', encoding='utf-8')
         (repo_root / 'docs' / '02-engineering' / 'harness' / 'HARNESS-ENTRY.md').write_text('# harness\n', encoding='utf-8')
@@ -382,8 +386,19 @@ class TestOperationsCapabilityPlane:
 
         hermes_home = tmp_path / 'hermes-home'
         (hermes_home / 'memories').mkdir(parents=True, exist_ok=True)
+        (hermes_home / 'memory').mkdir(parents=True, exist_ok=True)
         (hermes_home / 'SOUL.md').write_text('# host soul\n', encoding='utf-8')
         (hermes_home / 'memories' / 'daily.md').write_text('# host memory\n', encoding='utf-8')
+        (hermes_home / 'memory' / 'foo.md.bak').write_text('backup\n', encoding='utf-8')
+        mirror_dir = hermes_home / 'scripts'
+        mirror_dir.mkdir(parents=True, exist_ok=True)
+        (mirror_dir / '.mirror-manifest.json').write_text('{}\n', encoding='utf-8')
+        backup_root = tmp_path / 'backups'
+        (backup_root / '20260523').mkdir(parents=True, exist_ok=True)
+        deploy_root = tmp_path / 'deploy-copy'
+        (deploy_root / '.deploy-backups' / 'run-1').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / '06-agent-ops' / 'operations-manual.md').write_text('# manual\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'crazy-live-webui-sync-closeout-2026-05-03.md').write_text('# sync closeout\n', encoding='utf-8')
 
         class StubProvider:
             def get_credentials(self):
@@ -394,6 +409,11 @@ class TestOperationsCapabilityPlane:
 
         monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
         monkeypatch.setenv('HERMES_HOME', str(hermes_home))
+        monkeypatch.setenv('HERMES_SCRIPT_MIRROR_DIR', str(mirror_dir))
+        monkeypatch.setenv('HERMES_BACKUP_ROOT', str(backup_root))
+        monkeypatch.setenv('CRAZY_DEPLOY_COPY_ROOT', str(deploy_root))
+        monkeypatch.setenv('EXECUTOR_API_BASE_URL', 'http://127.0.0.1:4788')
+        monkeypatch.setenv('FLOWMIND_API_BASE_URL', 'http://127.0.0.1:3001')
         monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: StubProvider())
         monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
         webui_api._hermes_home = None
@@ -599,6 +619,9 @@ class TestOperationsCapabilityPlane:
         assert data['automationMaturity']['counts']['rehearsed'] == 1
         assert data['automationMaturity']['counts']['automated'] == 1
         assert data['hostHealth']['counts']['platforms'] == 1
+        assert data['envMap']['counts']['entryCount'] >= 8
+        assert data['backupRecovery']['counts']['surfaceCount'] == 5
+        assert data['recoveryPaths']['counts']['pathCount'] == 4
         assert data['runbooks']['counts']['runbookCount'] == 5
 
     def test_operations_runbooks_api_returns_visible_items(self, client, monkeypatch, tmp_path):
@@ -681,8 +704,47 @@ class TestOperationsCapabilityPlane:
         data = resp.get_json()
         assert data['counts']['surfaceCount'] == 5
         assert data['counts']['healthyCount'] >= 4
+        assert data['coverage']['deployCopyBackups'] == 1
         assert any(item['id'] == 'deploy-copy-backups' for item in data['surfaces'])
         assert any(item['id'] == 'script-mirror-manifest' for item in data['surfaces'])
+
+    def test_operations_recovery_paths_api_returns_explicit_paths(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'docs' / '06-agent-ops').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / '02-engineering' / 'harness').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / '06-agent-ops' / 'operations-manual.md').write_text('# manual\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'crazy-live-webui-sync-closeout-2026-05-03.md').write_text('# sync closeout\n', encoding='utf-8')
+        deploy_root = tmp_path / 'deploy-copy'
+        (deploy_root / '.deploy-backups' / 'run-1').mkdir(parents=True, exist_ok=True)
+        backup_root = tmp_path / 'backups'
+        (backup_root / '20260523').mkdir(parents=True, exist_ok=True)
+        hermes_home = tmp_path / 'hermes-home'
+        (hermes_home / 'memory').mkdir(parents=True, exist_ok=True)
+        (hermes_home / 'memory' / 'foo.md.bak').write_text('backup\n', encoding='utf-8')
+        mirror_dir = hermes_home / 'scripts'
+        mirror_dir.mkdir(parents=True, exist_ok=True)
+        (mirror_dir / '.mirror-manifest.json').write_text('{}\n', encoding='utf-8')
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        monkeypatch.setenv('CRAZY_DEPLOY_COPY_ROOT', str(deploy_root))
+        monkeypatch.setenv('HERMES_BACKUP_ROOT', str(backup_root))
+        monkeypatch.setenv('HERMES_HOME', str(hermes_home))
+        monkeypatch.setenv('HERMES_SCRIPT_MIRROR_DIR', str(mirror_dir))
+        monkeypatch.setenv('EXECUTOR_API_BASE_URL', 'http://127.0.0.1:4788')
+        monkeypatch.setenv('FLOWMIND_API_BASE_URL', 'http://127.0.0.1:3001')
+        monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
+        webui_api._hermes_home = None
+        webui_api._remote_config = {'host': '47.99.217.1'}
+
+        resp = client.get('/api/operations/recovery-paths')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['counts']['pathCount'] == 4
+        assert data['counts']['readyCount'] >= 3
+        assert data['counts']['envDriftCount'] <= 1
+        assert data['backupCoverage']['deployCopyBackups'] == 1
+        assert any(item['id'] == 'deploy-copy-rollback' for item in data['paths'])
+        assert any(item['id'] == 'hermes-script-mirror-restore' for item in data['paths'])
 
 
 class TestArchitecturePagesReachable:

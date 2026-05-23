@@ -63,6 +63,7 @@ var FAMILIES = {
   'host-health': { icon: '🖥️', label: 'Host Health', api: '/api/operations/host-health', filterBy: null },
   'env-map':   { icon: '🗺️', label: 'Env Map', api: '/api/operations/env-map', filterBy: null },
   'backup-recovery': { icon: '🛟', label: 'Backup / Recovery', api: '/api/operations/backup-recovery', filterBy: null },
+  'recovery-paths': { icon: '🧭', label: 'Recovery Paths', api: '/api/operations/recovery-paths', filterBy: null },
   runbooks:    { icon: '📚', label: 'Runbooks', api: '/api/operations/runbooks', filterBy: null },
   cron:        { icon: '⏰', label: 'Cron Jobs',        api: '/api/cron/list',                    filterBy: 'status' },
   alerts:      { icon: '🔔', label: 'Alerts',           api: '/api/alerts/list',                  filterBy: 'level' },
@@ -123,6 +124,7 @@ function applySummaryCounts(summary) {
   _updateTreeCount('host-health', metrics.hostHealthCount || 0);
   _updateTreeCount('env-map', metrics.envMapCount || 0);
   _updateTreeCount('backup-recovery', metrics.backupRecoveryCount || 0);
+  _updateTreeCount('recovery-paths', metrics.recoveryPathCount || 0);
   _updateTreeCount('runbooks', metrics.runbookCount || 0);
   _updateTreeCount('isolation', metrics.isolationCount || 0);
   _updateTreeCount('alerts', (summary.alerts && summary.alerts.total) || 0);
@@ -250,6 +252,7 @@ function renderWorkspace(family, data) {
     case 'host-health': renderHostHealth(content, data); break;
     case 'env-map': renderEnvMap(content, data); break;
     case 'backup-recovery': renderBackupRecovery(content, data); break;
+    case 'recovery-paths': renderRecoveryPaths(content, data); break;
     case 'runbooks':  renderRunbooks(content, data); break;
     case 'isolation': renderIsolation(content, data); break;
     case 'sources':   renderFilterableSources(content, data); break;
@@ -1054,7 +1057,7 @@ function renderEnvMap(container, data) {
   container.innerHTML =
     '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
       boundaryCard('Configured', '✅', counts.configuredCount || 0, data.status || 'unknown') +
-      boundaryCard('Missing', '⚠️', counts.missingCount || 0, counts.missingCount ? 'degraded' : 'healthy') +
+      boundaryCard('Drift', '⚠️', counts.driftCount || 0, counts.driftCount ? 'degraded' : 'healthy') +
       boundaryCard('Entries', '🗂️', counts.entryCount || 0, data.status || 'unknown') +
     '</div>' +
     isolationSection('Env Entries', data.entries || [], function(item) {
@@ -1062,6 +1065,13 @@ function renderEnvMap(container, data) {
         '<div style="font-weight:600;">' + item.name + ' <span class="ops-chip ' + (item.status || 'unknown') + '">' + statusLabel(item.status || 'unknown') + '</span></div>' +
         '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">' + (item.value || '--') + '</div>' +
         '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">owner=' + (item.owner || '--') + ' · ' + (item.notes || '') + '</div>' +
+      '</div>';
+    }) +
+    isolationSection('Drift Signals', data.driftEntries || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.name + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">' + (item.value || '--') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">' + (item.reason || '') + '</div>' +
       '</div>';
     });
 
@@ -1091,12 +1101,58 @@ function renderBackupRecovery(container, data) {
         '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">' + (item.location || '--') + ' · count=' + (item.count || 0) + '</div>' +
         '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">' + (item.recoveryPath || '') + '</div>' +
       '</div>';
-    });
+    }) +
+    '<div class="ops-detail-section">' +
+      '<div class="ops-detail-section-title">Backup Coverage</div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Deploy Copy Backups</span><span class="ops-detail-row-value">' + ((data.coverage || {}).deployCopyBackups || 0) + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Host Backup Snapshots</span><span class="ops-detail-row-value">' + ((data.coverage || {}).hostBackupSnapshots || 0) + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Memory Edit Backups</span><span class="ops-detail-row-value">' + ((data.coverage || {}).memoryEditBackups || 0) + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Mirror Manifest</span><span class="ops-detail-row-value">' + (((data.coverage || {}).mirrorManifestPresent) ? 'present' : 'missing') + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Runbook Coverage</span><span class="ops-detail-row-value">' + ((data.coverage || {}).runbookCoverage || 0) + '</span></div>' +
+    '</div>';
 
   _showDetail(
     '<div class="ops-detail-header"><h3 class="ops-detail-name">Backup / Recovery</h3><div class="ops-detail-sub">backup coverage and recovery path visibility</div></div>' +
     '<div class="ops-detail-section"><div class="ops-detail-section-title">Linked Runbooks</div>' +
       (data.runbooks || []).map(function(path) { return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + path + '</span></div>'; }).join('') +
+    '</div>'
+  );
+}
+
+function renderRecoveryPaths(container, data) {
+  if (!data || typeof data !== 'object') {
+    container.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">🧭</div><p>暂无 recovery path 数据</p></div>';
+    return;
+  }
+  var counts = data.counts || {};
+  container.innerHTML =
+    '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
+      boundaryCard('Ready', '✅', counts.readyCount || 0, data.status || 'unknown') +
+      boundaryCard('Degraded', '⚠️', counts.degradedCount || 0, counts.degradedCount ? 'degraded' : 'healthy') +
+      boundaryCard('Env Drift', '🗺️', counts.envDriftCount || 0, counts.envDriftCount ? 'degraded' : 'healthy') +
+      boundaryCard('Paths', '🧭', counts.pathCount || 0, data.status || 'unknown') +
+    '</div>' +
+    isolationSection('Recovery Paths', data.paths || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.name + ' <span class="ops-chip ' + (item.status === 'ready' ? 'healthy' : 'degraded') + '">' + (item.status === 'ready' ? 'ready' : 'degraded') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">trigger=' + (item.trigger || '--') + ' · owner=' + (item.owner || '--') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">' + (item.recoveryPath || []).join(' → ') + '</div>' +
+      '</div>';
+    }) +
+    isolationSection('Env Drift Signals', data.envDrift || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.name + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">' + (item.value || '--') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">' + (item.reason || '') + '</div>' +
+      '</div>';
+    });
+
+  _showDetail(
+    '<div class="ops-detail-header"><h3 class="ops-detail-name">Recovery Paths</h3><div class="ops-detail-sub">explicit restoration paths and env-drift linkage</div></div>' +
+    '<div class="ops-detail-section"><div class="ops-detail-section-title">Backup Coverage Snapshot</div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Deploy Backups</span><span class="ops-detail-row-value">' + ((data.backupCoverage || {}).deployCopyBackups || 0) + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Host Backups</span><span class="ops-detail-row-value">' + ((data.backupCoverage || {}).hostBackupSnapshots || 0) + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Mirror Manifest</span><span class="ops-detail-row-value">' + (((data.backupCoverage || {}).mirrorManifestPresent) ? 'present' : 'missing') + '</span></div>' +
     '</div>'
   );
 }

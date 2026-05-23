@@ -4224,7 +4224,7 @@ def _ops_pick_status(*statuses):
     return picked
 
 
-def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, isolation_status, task_registry_status, host_health_status, runbook_status, env_map_status, backup_recovery_status, cron_status, skills_status, memory_status):
+def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, isolation_status, task_registry_status, host_health_status, runbook_status, env_map_status, backup_recovery_status, recovery_path_status, cron_status, skills_status, memory_status):
     if alert_status == 'failed' or connectivity_status == 'failed':
         return {
             'href': '/operations/alerts',
@@ -4279,6 +4279,12 @@ def _build_operations_next_hop(alert_status, connectivity_status, integrations_s
             'label': '检查 Backup / Recovery',
             'reason': '当前备份覆盖或恢复路径存在缺口，需要先确认 deploy backups、mirror manifest 与恢复 runbook 是否齐全。',
         }
+    if recovery_path_status == 'degraded':
+        return {
+            'href': '/operations#recovery-paths',
+            'label': '检查 Recovery Paths',
+            'reason': '当前恢复路径对象存在未就绪项，需要先确认触发条件、步骤与回退前置证据是否完整。',
+        }
     if cron_status == 'degraded':
         return {
             'href': '/operations/cron',
@@ -4319,6 +4325,7 @@ def _build_operations_summary():
     runbooks = _build_operations_runbooks_view()
     env_map = _build_operations_env_map_view()
     backup_recovery = _build_operations_backup_recovery_view()
+    recovery_paths = _build_operations_recovery_paths_view(env_map=env_map, backup_recovery=backup_recovery)
 
     skill_total = skills_payload.get('total', 0) or 0
     skill_categories = skills_payload.get('categories', []) or []
@@ -4391,6 +4398,7 @@ def _build_operations_summary():
         runbooks.get('status'),
         env_map.get('status'),
         backup_recovery.get('status'),
+        recovery_paths.get('status'),
         cron_status,
         skills_status,
         memory_status,
@@ -4406,6 +4414,7 @@ def _build_operations_summary():
         runbooks.get('status'),
         env_map.get('status'),
         backup_recovery.get('status'),
+        recovery_paths.get('status'),
         cron_status,
         skills_status,
         memory_status,
@@ -4521,6 +4530,15 @@ def _build_operations_summary():
             'href': '/operations#backup-recovery',
         },
         {
+            'key': 'recovery-paths',
+            'title': 'Recovery Paths',
+            'icon': '🧭',
+            'status': recovery_paths.get('status', 'unknown'),
+            'count': recovery_paths.get('counts', {}).get('pathCount', 0),
+            'summary': f'{recovery_paths.get("counts", {}).get("readyCount", 0)} ready · {recovery_paths.get("counts", {}).get("degradedCount", 0)} degraded',
+            'href': '/operations#recovery-paths',
+        },
+        {
             'key': 'runbooks',
             'title': 'Runbooks',
             'icon': '📚',
@@ -4556,6 +4574,7 @@ def _build_operations_summary():
             'isolationCount': isolation.get('counts', {}).get('roleCount', 0),
             'boundaryCount': 1,
             'backupRecoveryCount': backup_recovery.get('counts', {}).get('surfaceCount', 0),
+            'recoveryPathCount': recovery_paths.get('counts', {}).get('pathCount', 0),
             'runbookCount': runbooks.get('counts', {}).get('runbookCount', 0),
         },
         'alerts': {
@@ -5102,16 +5121,27 @@ def _build_operations_env_map_view():
             'notes': 'If blank, BASE path is inferred from request path / forwarded prefix.',
         },
     ]
+    drift_entries = []
+    for item in entries:
+        if item.get('status') == 'degraded':
+            drift_entries.append({
+                'id': item.get('id'),
+                'name': item.get('name'),
+                'value': item.get('value'),
+                'reason': item.get('notes') or 'env entry degraded',
+            })
     configured = len([item for item in entries if item.get('status') == 'healthy'])
-    degraded = len([item for item in entries if item.get('status') == 'degraded'])
+    degraded = len(drift_entries)
     status = 'healthy' if degraded == 0 else 'degraded'
     return {
         'status': status,
         'entries': entries,
+        'driftEntries': drift_entries,
         'counts': {
             'entryCount': len(entries),
             'configuredCount': configured,
             'missingCount': degraded,
+            'driftCount': degraded,
         },
     }
 
@@ -5172,9 +5202,17 @@ def _build_operations_backup_recovery_view():
     healthy = len([item for item in surfaces if item.get('status') == 'healthy'])
     degraded = len([item for item in surfaces if item.get('status') == 'degraded'])
     status = 'healthy' if degraded == 0 else 'degraded'
+    coverage = {
+        'deployCopyBackups': len(deploy_backup_dirs),
+        'hostBackupSnapshots': len(backup_snapshots),
+        'memoryEditBackups': memory_backup_count,
+        'mirrorManifestPresent': _safe_exists(mirror_manifest),
+        'runbookCoverage': int(_safe_exists(operations_manual)) + int(_safe_exists(live_sync_closeout)),
+    }
     return {
         'status': status,
         'surfaces': surfaces,
+        'coverage': coverage,
         'counts': {
             'surfaceCount': len(surfaces),
             'healthyCount': healthy,
@@ -5188,6 +5226,112 @@ def _build_operations_backup_recovery_view():
     }
 
 
+def _build_operations_recovery_paths_view(env_map=None, backup_recovery=None):
+    env_map = env_map or _build_operations_env_map_view()
+    backup_recovery = backup_recovery or _build_operations_backup_recovery_view()
+    surfaces = backup_recovery.get('surfaces') or []
+    deploy_backup = next((item for item in surfaces if item.get('id') == 'deploy-copy-backups'), None)
+    mirror_surface = next((item for item in surfaces if item.get('id') == 'script-mirror-manifest'), None)
+    host_backup = next((item for item in surfaces if item.get('id') == 'backup-root'), None)
+    memory_backup = next((item for item in surfaces if item.get('id') == 'memory-edit-backups'), None)
+
+    paths = [
+        {
+            'id': 'deploy-copy-rollback',
+            'name': 'Deploy Copy Rollback',
+            'status': 'ready' if deploy_backup and deploy_backup.get('status') == 'healthy' else 'degraded',
+            'trigger': 'public manage surface drift or static/template regression',
+            'owner': 'Crazy webui deploy shell',
+            'preconditions': [
+                'deploy copy backup exists',
+                'repo baseline can be re-synced',
+            ],
+            'recoveryPath': [
+                'inspect /opt/crazyagentsmanage/.deploy-backups',
+                'restore backup or rerun sync_live_deploy_copy',
+                're-check public /manage surface and local 5002 route',
+            ],
+            'runbooks': [
+                'docs/02-engineering/harness/crazy-live-webui-sync-closeout-2026-05-03.md',
+                'scripts/governance/live-deploy-sync.manifest.json',
+            ],
+        },
+        {
+            'id': 'hermes-script-mirror-restore',
+            'name': 'Hermes Script Mirror Restore',
+            'status': 'ready' if mirror_surface and mirror_surface.get('status') == 'healthy' else 'degraded',
+            'trigger': '~/.hermes/scripts drift or missing tracked mirror scripts',
+            'owner': 'HermesAgent runtime',
+            'preconditions': [
+                '.mirror-manifest.json present',
+                'repo-tracked script sources available under runtime repo root',
+            ],
+            'recoveryPath': [
+                'inspect ~/.hermes/scripts/.mirror-manifest.json',
+                'rerun scripts/runtime/sync_hermes_script_mirror.py',
+                're-check mirrored script hashes and cron references',
+            ],
+            'runbooks': [
+                'scripts/runtime/sync_hermes_script_mirror.py',
+                'shared-context/hermes-script-mirror-manifest.json',
+            ],
+        },
+        {
+            'id': 'host-backup-restore',
+            'name': 'Host Backup Restore',
+            'status': 'ready' if host_backup and host_backup.get('status') == 'healthy' else 'degraded',
+            'trigger': 'host-side state loss, corrupted Hermes data, or repo/runtime recovery',
+            'owner': 'HermesAgent operations',
+            'preconditions': [
+                'dated host backup root exists',
+                'operations manual backup commands remain visible',
+            ],
+            'recoveryPath': [
+                'locate dated backup under backup root',
+                'restore promises / learnings / memory assets',
+                're-run operations smoke checks',
+            ],
+            'runbooks': [
+                'docs/06-agent-ops/operations-manual.md',
+            ],
+        },
+        {
+            'id': 'memory-edit-rollback',
+            'name': 'Memory Edit Rollback',
+            'status': 'ready' if memory_backup and memory_backup.get('count', 0) > 0 else 'degraded',
+            'trigger': 'local team-memory edit introduced incorrect content',
+            'owner': 'Crazy operator',
+            'preconditions': [
+                '*.md.bak file exists under host memory plane',
+            ],
+            'recoveryPath': [
+                'locate matching .md.bak artifact',
+                'restore target memory file content',
+                're-open Team Memory and verify preview',
+            ],
+            'runbooks': [
+                'docs/06-agent-ops/operations-manual.md',
+            ],
+        },
+    ]
+    ready = len([item for item in paths if item.get('status') == 'ready'])
+    degraded = len([item for item in paths if item.get('status') == 'degraded'])
+    drift_count = env_map.get('counts', {}).get('driftCount', 0)
+    status = 'healthy' if degraded == 0 and drift_count == 0 else 'degraded'
+    return {
+        'status': status,
+        'paths': paths,
+        'envDrift': env_map.get('driftEntries', []),
+        'backupCoverage': backup_recovery.get('coverage', {}),
+        'counts': {
+            'pathCount': len(paths),
+            'readyCount': ready,
+            'degradedCount': degraded,
+            'envDriftCount': drift_count,
+        },
+    }
+
+
 def _build_operations_control_room_summary():
     return {
         'taskRegistry': _build_operations_task_registry_view(),
@@ -5195,6 +5339,7 @@ def _build_operations_control_room_summary():
         'hostHealth': _build_operations_host_health_view(),
         'envMap': _build_operations_env_map_view(),
         'backupRecovery': _build_operations_backup_recovery_view(),
+        'recoveryPaths': _build_operations_recovery_paths_view(),
         'runbooks': _build_operations_runbooks_view(),
     }
 
@@ -5222,6 +5367,11 @@ def operations_env_map():
 @api.route('/operations/backup-recovery')
 def operations_backup_recovery():
     return jsonify(_build_operations_backup_recovery_view())
+
+
+@api.route('/operations/recovery-paths')
+def operations_recovery_paths():
+    return jsonify(_build_operations_recovery_paths_view())
 
 
 @api.route('/operations/runbooks')
