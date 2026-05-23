@@ -66,6 +66,7 @@ var FAMILIES = {
   tools:       { icon: '🧰', label: 'Tool Catalog',     api: '/api/operations/integrations/tools',       filterBy: 'status' },
   credentials: { icon: '🔑', label: 'Credential Health',api: '/api/operations/integrations/credentials', filterBy: 'status' },
   providers:   { icon: '📡', label: 'Provider Health',  api: '/api/operations/integrations/providers',   filterBy: 'status' },
+  boundary:    { icon: '🧭', label: 'Readonly Boundary',api: '/api/operations/integrations/boundary',    filterBy: null },
 };
 
 // ============================================================
@@ -115,6 +116,7 @@ function applySummaryCounts(summary) {
   _updateTreeCount('tools', metrics.toolCount || 0);
   _updateTreeCount('credentials', metrics.credentialCount || 0);
   _updateTreeCount('providers', metrics.providerCount || 0);
+  _updateTreeCount('boundary', metrics.boundaryCount || 1);
 }
 
 function renderBriefing(summary) {
@@ -233,6 +235,7 @@ function renderWorkspace(family, data) {
     case 'tools':     renderFilterableTools(content, data); break;
     case 'credentials': renderFilterableCredentials(content, data); break;
     case 'providers': renderFilterableProviders(content, data); break;
+    case 'boundary':  renderBoundary(content, data); break;
   }
 }
 
@@ -836,6 +839,108 @@ function selectProvider(idx) {
 }
 
 // ============================================================
+// Render: Readonly Boundary
+// ============================================================
+
+function renderBoundary(container, boundary) {
+  if (!boundary || typeof boundary !== 'object') {
+    container.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">🧭</div><p>暂无 boundary 数据</p></div>';
+    return;
+  }
+
+  var allowed = boundary.allowedTaskTypes || [];
+  var completed = boundary.completedTaskTypes || [];
+  var forbidden = boundary.forbiddenTaskTypes || [];
+
+  container.innerHTML =
+    '<div class="ops-detail-section">' +
+      '<div class="ops-detail-section-title">Capability Plane Boundary</div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Provider Mode</span><span class="ops-detail-row-value"><span class="ops-chip ' + (boundary.providerMode === 'http' ? 'healthy' : 'degraded') + '">' + (boundary.providerMode || 'unknown') + '</span></span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Policy</span><span class="ops-detail-row-value">' + (boundary.version || '--') + ' · ' + (boundary.policyPath || '--') + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Owners</span><span class="ops-detail-row-value">' + ((boundary.owners && Object.keys(boundary.owners).length) ? Object.keys(boundary.owners).length + ' lanes' : '—') + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Task Types</span><span class="ops-detail-row-value">' + (boundary.totalTaskTypeCount || 0) + '</span></div>' +
+    '</div>' +
+    '<div class="ops-summary-grid" style="margin-top:16px;">' +
+      boundaryCard('Wave 1 Allowed', '🟢', allowed.length, 'healthy') +
+      boundaryCard('Wave 2 Completed', '✅', completed.length, 'healthy') +
+      boundaryCard('Forbidden Now', '⛔', forbidden.length, forbidden.length ? 'degraded' : 'healthy') +
+    '</div>' +
+    '<div class="ops-detail-section" style="margin-top:16px;">' +
+      '<div class="ops-detail-section-title">Preconditions</div>' +
+      '<div style="display:grid;gap:8px;">' + (boundary.preconditions || []).map(function(item) {
+        return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + item + '</span></div>';
+      }).join('') + '</div>' +
+    '</div>' +
+    '<div class="ops-detail-section" style="margin-top:16px;">' +
+      '<div class="ops-detail-section-title">Runbooks</div>' +
+      '<div style="display:grid;gap:8px;">' + (boundary.runbooks || []).map(function(item) {
+        return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + item + '</span></div>';
+      }).join('') + '</div>' +
+    '</div>';
+
+  _showDetail(buildBoundaryDetail(boundary, allowed, completed, forbidden));
+}
+
+function boundaryCard(title, icon, count, status) {
+  return '<div class="ops-summary-card">' +
+    '<div class="ops-summary-icon">' + icon + '</div>' +
+    '<div style="min-width:0;">' +
+      '<div class="ops-summary-header">' +
+        '<div class="ops-summary-title">' + title + '</div>' +
+        '<span class="ops-chip ' + status + '">' + statusLabel(status) + '</span>' +
+      '</div>' +
+      '<div class="ops-summary-value">' + count + '</div>' +
+      '<div class="ops-summary-copy">executor readonly delegation policy</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function buildBoundaryDetail(boundary, allowed, completed, forbidden) {
+  return '<div class="ops-detail-header">' +
+      '<h3 class="ops-detail-name">Readonly Capability Boundary</h3>' +
+      '<div class="ops-detail-sub">' + (boundary.host || 'ALI-HERMES') + ' · mode=' + (boundary.providerMode || 'unknown') + '</div>' +
+    '</div>' +
+    '<div class="ops-detail-section">' +
+      '<div class="ops-detail-section-title">Execution Boundary</div>' +
+      listDetailRows('Canonical Authority', boundary.executionBoundary && boundary.executionBoundary.canonicalAuthority) +
+      listDetailRows('Local Writable Targets', boundary.executionBoundary && boundary.executionBoundary.localWritableTargets) +
+      listDetailRows('Human Gate Actions', boundary.executionBoundary && boundary.executionBoundary.humanGateActions) +
+      listDetailRows('Forbidden Mutations', boundary.executionBoundary && boundary.executionBoundary.forbiddenMutations) +
+    '</div>' +
+    '<div class="ops-detail-section">' +
+      '<div class="ops-detail-section-title">Owners</div>' +
+      Object.keys(boundary.owners || {}).map(function(key) {
+        return '<div class="ops-detail-row"><span class="ops-detail-row-label">' + key + '</span><span class="ops-detail-row-value">' + boundary.owners[key] + '</span></div>';
+      }).join('') +
+    '</div>' +
+    boundaryTaskSection('Wave 1 Allowed', allowed, 'healthy') +
+    boundaryTaskSection('Wave 2 Completed', completed, 'healthy') +
+    boundaryTaskSection('Forbidden Now', forbidden, 'degraded');
+}
+
+function listDetailRows(label, values) {
+  if (!Array.isArray(values) || !values.length) {
+    return '<div class="ops-detail-row"><span class="ops-detail-row-label">' + label + '</span><span class="ops-detail-row-value">—</span></div>';
+  }
+  return '<div class="ops-detail-row"><span class="ops-detail-row-label">' + label + '</span><span class="ops-detail-row-value">' + values.join(' | ') + '</span></div>';
+}
+
+function boundaryTaskSection(title, items, status) {
+  return '<div class="ops-detail-section">' +
+    '<div class="ops-detail-section-title">' + title + ' <span class="ops-chip ' + status + '">' + statusLabel(status) + '</span></div>' +
+    ((items && items.length) ? items.map(function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + (item.taskType || '--') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">' + ((item.repoEntrypoints || []).join(' | ') || '—') + '</div>' +
+        (item.delegationUnit ? '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">delegation=' + item.delegationUnit + '</div>' : '') +
+        (item.resolution ? '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">' + item.resolution + '</div>' : '') +
+        (item.reason ? '<div style="font-size:12px;color:var(--ops-color-red);margin-top:4px;">' + item.reason + '</div>' : '') +
+      '</div>';
+    }).join('') : '<div class="ops-empty"><div class="ops-empty-icon">—</div><p>当前为空</p></div>') +
+  '</div>';
+}
+
+// ============================================================
 // Utility
 // ============================================================
 
@@ -847,6 +952,8 @@ function statusLabel(status) {
     disabled: '已禁用',
     failed: '失败', 'invalid-schema': 'Schema 无效',
     missing: '缺失', expired: '已过期',
+    sample: '样例',
+    http: '实连',
     unknown: '未知',
   };
   return map[status] || status;

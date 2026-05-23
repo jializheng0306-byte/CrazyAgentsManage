@@ -38,6 +38,7 @@ _LOOP_SURFACE_MEMORY_DECISIONS = 'shared-context/loop-surface/memory-candidate-d
 _LOOP_SURFACE_FEEDBACK_INPUTS = 'shared-context/loop-surface/feedback-inputs.jsonl'
 _TASK_BUS_REQUESTS = 'shared-context/agent-requests/requests.jsonl'
 _TASK_BUS_EVENTS = 'shared-context/agent-requests/events.jsonl'
+_EXECUTOR_READONLY_POLICY = 'shared-context/hermes-executor-readonly-delegation-policy.v1.json'
 _TASK_BUS_AUTOMATION_ORDER = ['prototype', 'rehearsed', 'approved-for-automation', 'automated']
 _TASK_BUS_STATUS_TRANSITIONS = {
     'accepted': ['routed', 'queued', 'started', 'failed', 'timed_out'],
@@ -53,6 +54,39 @@ _TASK_BUS_STATUS_TRANSITIONS = {
 
 def _get_repo_root():
     return Path(__file__).resolve().parents[2]
+
+
+def _get_runtime_repo_root():
+    env_root = os.environ.get('CRAZY_RUNTIME_REPO_ROOT', '').strip()
+    if env_root:
+        return Path(env_root)
+    return Path('/root/CrazyAgentsManage')
+
+
+def _resolve_shared_context_read_path(rel_path):
+    primary = _get_repo_root() / rel_path
+    if primary.exists():
+        return primary
+    runtime_path = _get_runtime_repo_root() / rel_path
+    if runtime_path != primary:
+        try:
+            if runtime_path.exists():
+                return runtime_path
+        except PermissionError:
+            pass
+    return primary
+
+
+def _resolve_shared_context_write_path(rel_path):
+    primary = _get_repo_root() / rel_path
+    runtime_path = _get_runtime_repo_root() / rel_path
+    if runtime_path != primary:
+        try:
+            if runtime_path.parent.exists() and not primary.exists():
+                return runtime_path
+        except PermissionError:
+            pass
+    return primary
 
 
 def _now_iso():
@@ -347,7 +381,7 @@ def _read_shared_context_lines(rel_path):
             return []
         return [line for line in out.splitlines() if line.strip()]
 
-    full_path = _get_repo_root() / rel_path
+    full_path = _resolve_shared_context_read_path(rel_path)
     if not full_path.exists():
         return []
     return [line for line in full_path.read_text(encoding='utf-8').splitlines() if line.strip()]
@@ -387,7 +421,7 @@ def _append_shared_context_row(rel_path, payload):
         )
         return _run_remote_command(command, timeout=15).strip() == 'ok'
 
-    full_path = _get_repo_root() / rel_path
+    full_path = _resolve_shared_context_write_path(rel_path)
     full_path.parent.mkdir(parents=True, exist_ok=True)
     with open(full_path, 'a', encoding='utf-8') as handle:
         handle.write(line + '\n')
@@ -414,7 +448,7 @@ def _write_shared_context_lines(rel_path, lines):
         )
         return _run_remote_command(command, timeout=20).strip() == 'ok'
 
-    full_path = _get_repo_root() / rel_path
+    full_path = _resolve_shared_context_write_path(rel_path)
     full_path.parent.mkdir(parents=True, exist_ok=True)
     full_path.write_text(content, encoding='utf-8')
     return True
@@ -426,6 +460,26 @@ def _normalize_evidence_refs(raw_value):
     if isinstance(raw_value, str):
         return [part.strip() for part in raw_value.split(',') if part.strip()]
     return []
+
+
+def _read_shared_context_json(rel_path, default=None):
+    if _is_remote_mode():
+        remote_repo_root = _get_remote_repo_root()
+        out = _run_remote_command(f"cat '{remote_repo_root}/{rel_path}' 2>/dev/null", timeout=15)
+        if not out.strip():
+            return default if default is not None else {}
+        try:
+            return json.loads(out)
+        except json.JSONDecodeError:
+            return default if default is not None else {}
+
+    full_path = _resolve_shared_context_read_path(rel_path)
+    if not full_path.exists():
+        return default if default is not None else {}
+    try:
+        return json.loads(full_path.read_text(encoding='utf-8'))
+    except json.JSONDecodeError:
+        return default if default is not None else {}
 
 
 def _task_bus_lane(status):
@@ -4171,6 +4225,7 @@ def _build_operations_summary():
     alerts = _load_alerts() or []
     gateway = _load_gateway_status() or {'gateway_state': 'unknown', 'platforms': {}, 'running': False, 'active_agents': 0}
     integrations = get_executor_provider().get_summary() or {}
+    boundary = _build_executor_boundary_view()
 
     skill_total = skills_payload.get('total', 0) or 0
     skill_categories = skills_payload.get('categories', []) or []
@@ -4230,6 +4285,7 @@ def _build_operations_summary():
         integrations_status = 'failed'
     elif integration_missing_credentials > 0 or integration_source_count == 0:
         integrations_status = 'degraded'
+    integrations_status = _ops_pick_status(integrations_status, boundary.get('status'))
 
     overall_status = _ops_pick_status(
         alert_status,
@@ -4295,6 +4351,15 @@ def _build_operations_summary():
             'summary': f'{integration_tool_count} tools · {integration_provider_count} providers · {integration_missing_credentials} credential gaps',
             'href': '/operations#sources',
         },
+        {
+            'key': 'boundary',
+            'title': 'Readonly Boundary',
+            'icon': '🧭',
+            'status': boundary.get('status', 'unknown'),
+            'count': boundary.get('totalTaskTypeCount', 0),
+            'summary': f'mode={boundary.get("providerMode", "unknown")} · {boundary.get("allowedTaskTypeCount", 0)} allowed · {boundary.get("forbiddenTaskTypeCount", 0)} forbidden',
+            'href': '/operations#boundary',
+        },
     ]
 
     return {
@@ -4315,6 +4380,7 @@ def _build_operations_summary():
             'toolCount': integration_tool_count,
             'credentialCount': integration_credential_count,
             'providerCount': integration_provider_count,
+            'boundaryCount': 1,
         },
         'alerts': {
             'status': alert_status,
@@ -4372,6 +4438,79 @@ def ops_integrations_provider_mode():
         'executor_url': os.environ.get('EXECUTOR_API_BASE_URL', ''),
         'capabilities': provider.get_capabilities(),
     })
+
+
+def _build_executor_boundary_view():
+    provider = get_executor_provider()
+    mode = get_provider_mode()
+    capabilities = provider.get_capabilities() or {}
+    policy = _read_shared_context_json(_EXECUTOR_READONLY_POLICY, default={}) or {}
+
+    owners = policy.get('owners') if isinstance(policy.get('owners'), dict) else {}
+    preconditions = policy.get('preconditions') if isinstance(policy.get('preconditions'), list) else []
+    wave1_allowed = policy.get('wave1_allowed') if isinstance(policy.get('wave1_allowed'), list) else []
+    wave2_completed = policy.get('wave2_completed') if isinstance(policy.get('wave2_completed'), list) else []
+    forbidden_now = policy.get('forbidden_now') if isinstance(policy.get('forbidden_now'), list) else []
+    status = 'healthy' if policy else 'unknown'
+    if mode != 'http':
+        status = _ops_pick_status(status, 'degraded')
+
+    return {
+        'status': status,
+        'providerMode': mode,
+        'modeLabel': capabilities.get('modeLabel', mode),
+        'scopeId': capabilities.get('scopeId', ''),
+        'policyPath': _EXECUTOR_READONLY_POLICY,
+        'version': policy.get('version', ''),
+        'date': policy.get('date', ''),
+        'host': policy.get('host', ''),
+        'readonlyMode': policy.get('mode', ''),
+        'owners': owners,
+        'preconditions': preconditions,
+        'allowedTaskTypes': wave1_allowed,
+        'completedTaskTypes': wave2_completed,
+        'forbiddenTaskTypes': forbidden_now,
+        'allowedTaskTypeCount': len(wave1_allowed),
+        'completedTaskTypeCount': len(wave2_completed),
+        'forbiddenTaskTypeCount': len(forbidden_now),
+        'totalTaskTypeCount': len(wave1_allowed) + len(wave2_completed) + len(forbidden_now),
+        'capabilities': capabilities,
+        'executionBoundary': {
+            'canonicalAuthority': [
+                'CrazyAgentsManage owns operator-facing source onboarding and capability visibility.',
+                'HermesAgent owns runtime lifecycle, trace, and task state.',
+                'FlowMind owns candidate / truth / review / provenance authority.',
+                'executor owns external capability execution only.',
+            ],
+            'localWritableTargets': [
+                'Operations source / provider / credential inventory',
+                'Executor capability visibility and refresh actions',
+                'Repo-tracked readonly delegation policy projection',
+            ],
+            'humanGateActions': [
+                'source onboarding',
+                'credential bind / unbind',
+                'readonly delegation lane selection',
+                'provider health review',
+            ],
+            'forbiddenMutations': [
+                'Do not let executor overwrite repo truth.',
+                'Do not let executor overwrite Hermes runtime truth.',
+                'Do not let executor overwrite FlowMind governance truth.',
+                'Do not let executor directly mutate shared-context/tech-radar.json.',
+            ],
+        },
+        'runbooks': [
+            'docs/design/executor-integration/README.md',
+            'docs/design/executor-integration/hermes-executor-readonly-delegation-spec-v1-2026-05-19.md',
+            'docs/02-engineering/harness/hermes-executor-readonly-delegation-spec-freeze-closeout-2026-05-19.md',
+        ],
+    }
+
+
+@api.route('/operations/integrations/boundary')
+def ops_integrations_boundary():
+    return jsonify(_build_executor_boundary_view())
 
 
 # ═══════════════════════════════════════════

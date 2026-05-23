@@ -176,6 +176,174 @@ class TestOverviewEntrypointHardening:
         assert 'ov-briefing-label' in data or 'ov-briefing-title' in data
 
 
+class TestOperationsCapabilityPlane:
+    def test_operations_page_exposes_boundary_family(self, client):
+        resp = client.get('/operations')
+        assert resp.status_code == 200
+        body = resp.data.decode('utf-8', errors='replace')
+        assert 'Readonly Boundary' in body
+        assert 'data-family="boundary"' in body
+
+    def test_operations_integrations_boundary_api_returns_policy_projection(self, client, monkeypatch):
+        class StubProvider:
+            def get_capabilities(self):
+                return {
+                    'sourceCreate': True,
+                    'sourceRefresh': True,
+                    'sourceStatusToggle': False,
+                    'sourceDelete': True,
+                    'credentialBind': True,
+                    'credentialUnbind': True,
+                    'modeLabel': 'http',
+                    'scopeId': 'scope-123',
+                }
+
+            def get_summary(self):
+                return {
+                    'sourceCount': 2,
+                    'healthySourceCount': 2,
+                    'degradedSourceCount': 0,
+                    'toolCount': 4,
+                    'missingCredentialCount': 0,
+                    'providerCount': 2,
+                    'failedProviderCount': 0,
+                }
+
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: StubProvider())
+        monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
+        monkeypatch.setattr(
+            webui_api,
+            '_read_shared_context_json',
+            lambda *args, **kwargs: {
+                'version': 'v1',
+                'date': '2026-05-19',
+                'host': 'ALI-HERMES',
+                'mode': 'readonly',
+                'owners': {
+                    'productShell': 'CrazyAgentsManage',
+                    'runtimeLifecycle': 'HermesAgent',
+                    'governanceTruth': 'FlowMind',
+                    'capabilityPlane': 'executor',
+                },
+                'preconditions': ['executor-sidecar active'],
+                'wave1_allowed': [{'taskType': 'intel.morning', 'repoEntrypoints': ['scripts/morning-intel-v2.py'], 'delegationUnit': 'external-read-step'}],
+                'wave2_completed': [{'taskType': 'tech-radar.review', 'repoEntrypoints': ['scripts/tech-radar-review.sh'], 'resolution': 'landed'}],
+                'forbidden_now': [{'taskType': 'promise.review', 'repoEntrypoints': ['scripts/daily-promise-review.py'], 'reason': 'governance output'}],
+            },
+        )
+
+        resp = client.get('/api/operations/integrations/boundary')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['status'] == 'healthy'
+        assert data['providerMode'] == 'http'
+        assert data['scopeId'] == 'scope-123'
+        assert data['allowedTaskTypeCount'] == 1
+        assert data['completedTaskTypeCount'] == 1
+        assert data['forbiddenTaskTypeCount'] == 1
+        assert data['owners']['governanceTruth'] == 'FlowMind'
+        assert 'Do not let executor overwrite FlowMind governance truth.' in data['executionBoundary']['forbiddenMutations']
+
+    def test_operations_summary_includes_boundary_family(self, client, monkeypatch):
+        class StubProvider:
+            def get_capabilities(self):
+                return {
+                    'sourceCreate': True,
+                    'sourceRefresh': True,
+                    'sourceStatusToggle': False,
+                    'sourceDelete': True,
+                    'credentialBind': True,
+                    'credentialUnbind': True,
+                    'modeLabel': 'http',
+                    'scopeId': 'scope-123',
+                }
+
+            def get_summary(self):
+                return {
+                    'sourceCount': 2,
+                    'healthySourceCount': 2,
+                    'degradedSourceCount': 0,
+                    'toolCount': 4,
+                    'missingCredentialCount': 0,
+                    'providerCount': 2,
+                    'failedProviderCount': 0,
+                }
+
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: StubProvider())
+        monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
+        monkeypatch.setattr(
+            webui_api,
+            '_read_shared_context_json',
+            lambda *args, **kwargs: {
+                'version': 'v1',
+                'date': '2026-05-19',
+                'host': 'ALI-HERMES',
+                'mode': 'readonly',
+                'owners': {'productShell': 'CrazyAgentsManage'},
+                'preconditions': ['executor-sidecar active'],
+                'wave1_allowed': [{'taskType': 'intel.morning', 'repoEntrypoints': ['scripts/morning-intel-v2.py'], 'delegationUnit': 'external-read-step'}],
+                'wave2_completed': [],
+                'forbidden_now': [{'taskType': 'promise.review', 'repoEntrypoints': ['scripts/daily-promise-review.py'], 'reason': 'governance output'}],
+            },
+        )
+
+        resp = client.get('/api/operations/summary')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        keys = [item['key'] for item in data['families']]
+        assert 'boundary' in keys
+        assert data['metrics']['boundaryCount'] == 1
+
+    def test_operations_boundary_falls_back_to_runtime_repo_root(self, client, monkeypatch, tmp_path):
+        deploy_root = tmp_path / 'deploy-copy'
+        runtime_root = tmp_path / 'runtime-repo'
+        (runtime_root / 'shared-context').mkdir(parents=True, exist_ok=True)
+        (runtime_root / 'shared-context' / 'hermes-executor-readonly-delegation-policy.v1.json').write_text(
+            json.dumps(
+                {
+                    'version': 'v1',
+                    'date': '2026-05-19',
+                    'host': 'ALI-HERMES',
+                    'mode': 'readonly',
+                    'owners': {'productShell': 'CrazyAgentsManage'},
+                    'preconditions': ['executor-sidecar active'],
+                    'wave1_allowed': [{'taskType': 'intel.morning', 'repoEntrypoints': ['scripts/morning-intel-v2.py']}],
+                    'wave2_completed': [],
+                    'forbidden_now': [{'taskType': 'promise.review', 'repoEntrypoints': ['scripts/daily-promise-review.py'], 'reason': 'governance output'}],
+                },
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+
+        class StubProvider:
+            def get_capabilities(self):
+                return {'modeLabel': 'http', 'scopeId': 'scope-123'}
+
+            def get_summary(self):
+                return {
+                    'sourceCount': 1,
+                    'healthySourceCount': 1,
+                    'degradedSourceCount': 0,
+                    'toolCount': 1,
+                    'missingCredentialCount': 0,
+                    'providerCount': 1,
+                    'failedProviderCount': 0,
+                }
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: deploy_root)
+        monkeypatch.setenv('CRAZY_RUNTIME_REPO_ROOT', str(runtime_root))
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: StubProvider())
+        monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/operations/integrations/boundary')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['allowedTaskTypeCount'] == 1
+        assert data['forbiddenTaskTypeCount'] == 1
+
+
 class TestArchitecturePagesReachable:
     """Regression: architecture pages are template-backed placeholders tied to TSX preview artifacts."""
 

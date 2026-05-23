@@ -45,6 +45,8 @@
         "shared-context/executor-sources/github-repo-readonly-openapi.v1.json",
         "shared-context/executor-sources/hn-algolia-search-openapi.v1.json",
         "shared-context/executor-sources/x-publish-readonly-openapi.v1.json",
+        "shared-context/hermes-executor-readonly-delegation-policy.v1.json",
+        "shared-context/hermes-executor-wave2-evaluation.v1.json",
         "shared-context/loop-surface/feedback-inputs.jsonl",
         "shared-context/loop-surface/memory-candidate-decisions.jsonl",
         "shared-context/hermes-script-mirror-manifest.json",
