@@ -264,13 +264,18 @@ class TestSprint3CapabilityRegression:
         body = resp.data.decode('utf-8', errors='replace')
         assert '三态请求总线' in body
         assert 'request-bus-body' in body
+        assert 'request-bus-lanes' in body
 
     def test_tasks_request_bus_api_reads_requests_jsonl(self, client, monkeypatch, tmp_path):
         repo_root = tmp_path / 'repo'
         req_dir = repo_root / 'shared-context' / 'agent-requests'
         req_dir.mkdir(parents=True, exist_ok=True)
         (req_dir / 'requests.jsonl').write_text(
-            '{"request_id":"req-1","ack_id":"ack-1","sender":"hermes","target":"codex","action":"test request","status":"delivered","created_at":"2026-05-22T09:00:00Z","updated_at":"2026-05-22T09:01:00Z"}\n',
+            '{"request_id":"req-1","ack_id":"ack-1","sender":"hermes","target":"codex","action":"test request","status":"delivered","created_at":"2026-05-22T09:00:00Z","updated_at":"2026-05-22T09:01:00Z","automation_state":"approved-for-automation","evidence_refs":["closeout:1"]}\n',
+            encoding='utf-8',
+        )
+        (req_dir / 'events.jsonl').write_text(
+            '{"ack_id":"ack-1","event_type":"automation_promotion","actor":"operator","timestamp":"2026-05-22T09:01:10Z","payload":{"from_state":"rehearsed","to_state":"approved-for-automation","approval":"closeout-1","rollback_rule":"disable cron","evidence_refs":["closeout:1"]}}\n',
             encoding='utf-8',
         )
         monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
@@ -283,6 +288,78 @@ class TestSprint3CapabilityRegression:
         assert data['stats']['delivered'] == 1
         assert data['stats']['open'] == 0
         assert data['requests'][0]['ack_id'] == 'ack-1'
+        assert data['requests'][0]['lane'] == 'archive'
+        assert data['requests'][0]['automation_state'] == 'approved-for-automation'
+        assert len(data['requests'][0]['events']) == 1
+        assert len(data['lanes']['archive']) == 1
+        assert data['automation']['approved-for-automation'] == 1
+
+    def test_tasks_request_bus_transition_updates_status_and_event_log(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        req_dir = repo_root / 'shared-context' / 'agent-requests'
+        req_dir.mkdir(parents=True, exist_ok=True)
+        (req_dir / 'requests.jsonl').write_text(
+            '{"request_id":"req-1","ack_id":"ack-1","sender":"hermes","target":"codex","action":"test request","status":"accepted","created_at":"2026-05-22T09:00:00Z","updated_at":"2026-05-22T09:01:00Z"}\n',
+            encoding='utf-8',
+        )
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        webui_api._remote_config = {}
+
+        resp = client.post(
+            '/api/tasks/request-bus/ack-1/transition',
+            json={'status': 'started', 'note': 'Operator picked this up.'},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['status'] == 'started'
+        assert data['lane'] == 'working'
+        assert data['last_transition_note'] == 'Operator picked this up.'
+
+        events_file = req_dir / 'events.jsonl'
+        assert events_file.exists()
+        events = [json.loads(line) for line in events_file.read_text(encoding='utf-8').splitlines() if line.strip()]
+        assert events[-1]['event_type'] == 'status_transition'
+        assert events[-1]['payload']['to_status'] == 'started'
+
+    def test_tasks_request_bus_automation_state_requires_gate_fields(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        req_dir = repo_root / 'shared-context' / 'agent-requests'
+        req_dir.mkdir(parents=True, exist_ok=True)
+        (req_dir / 'requests.jsonl').write_text(
+            '{"request_id":"req-1","ack_id":"ack-1","sender":"hermes","target":"codex","action":"test request","status":"completed","created_at":"2026-05-22T09:00:00Z","updated_at":"2026-05-22T09:01:00Z","automation_state":"prototype"}\n',
+            encoding='utf-8',
+        )
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        webui_api._remote_config = {}
+
+        jump = client.post(
+            '/api/tasks/request-bus/ack-1/automation-state',
+            json={'automationState': 'approved-for-automation', 'evidenceRefs': ['closeout:1']},
+        )
+        assert jump.status_code == 400
+        assert 'advance one step at a time' in jump.get_json()['error']
+
+        bad = client.post(
+            '/api/tasks/request-bus/ack-1/automation-state',
+            json={'automationState': 'rehearsed'},
+        )
+        assert bad.status_code == 400
+        assert 'evidenceRefs' in bad.get_json()['error']
+
+        good = client.post(
+            '/api/tasks/request-bus/ack-1/automation-state',
+            json={
+                'automationState': 'rehearsed',
+                'evidenceRefs': ['closeout:1'],
+                'note': 'Verified manually on host.',
+            },
+        )
+        assert good.status_code == 200
+        data = good.get_json()
+        assert data['automation_state'] == 'rehearsed'
+
+        stored = json.loads((req_dir / 'requests.jsonl').read_text(encoding='utf-8').splitlines()[0])
+        assert stored['automation_state'] == 'rehearsed'
 
 
 class TestV04ContextManagementAPIs:

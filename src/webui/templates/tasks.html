@@ -16,8 +16,10 @@
   <main class="container mt-lg">
     <div class="page-header" style="margin-bottom: var(--spacing-lg);">
       <h1 class="page-title">任务编排</h1>
-      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">会话任务执行状态与依赖关系可视化</p>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: var(--spacing-xs);">会话任务执行状态、task bus 流转与 automation promotion gate 的控制面</p>
     </div>
+
+    <div id="task-bus-banner" class="card mb-lg" style="display:none; padding: var(--spacing-md);"></div>
 
     <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--spacing-xl);">
       <div class="stat-card">
@@ -60,8 +62,10 @@
       <div class="section-title" style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm); border-bottom: 1px solid var(--color-border);">
         三态请求总线
       </div>
-      <p style="color: #94a3b8; font-size: 13px; margin-bottom: var(--spacing-md);">这块面板直接消费 `shared-context/agent-requests/requests.jsonl`，用于把 `prototype/skeleton` 提升成 operator 可见的 task-bus 事实面。</p>
+      <p style="color: #94a3b8; font-size: 13px; margin-bottom: var(--spacing-md);">这块面板直接消费 `shared-context/agent-requests/requests.jsonl` + `events.jsonl`，把 request bus 补成显式 `inbox / working / outbox / archive` 对象流，并承载最小 automation promotion gate。</p>
       <div class="request-bus-summary" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:var(--spacing-md);"></div>
+      <div class="request-bus-automation-summary" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:var(--spacing-md);"></div>
+      <div class="request-bus-lanes" style="display:grid;gap:16px;margin-bottom:var(--spacing-md);"></div>
       <div class="request-bus-body" style="min-height: 100px;">
         <div style="padding: 24px; text-align: center; color: #64748b;">加载中...</div>
       </div>

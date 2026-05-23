@@ -63,12 +63,30 @@
 
 ## 在 CrazyAgentsManage 中的实现路径
 
-当前状态：🔴 设计文档，代码未实现
+当前状态：🟡 已有 repo-tracked 最小实现
+
+当前仓库已具备：
+
+1. `scripts/three_state_protocol.py`
+   - `send / confirm / final`
+   - request status transition
+   - automation promotion state update
+2. `shared-context/agent-requests/requests.jsonl`
+   - request bus 主对象流
+3. `shared-context/agent-requests/events.jsonl`
+   - transition / promotion 审计事件流
+4. WebUI `Tasks`
+   - `inbox / working / outbox / archive`
+   - operator 可见的 status transition
+   - prototype → rehearsed → approved-for-automation → automated 晋升门槛
+
+当前仍未完成的，是把它进一步与 role isolation、executor capability plane、Operations control room 做更深耦合，而不是继续停留在“是否有协议脚本”的层面。
 
 实现优先级：
 1. P2: 在飞书群协作中人工遵守三态协议
 2. P3: 在 delegate_task 中加入 ack_id 追踪
-3. P4: 实现文件级状态存储（shared-context/agent-requests/）
+3. P4: 文件级状态存储 + WebUI 控制面已落最小 lane
+4. 后续: role isolation / executor capability plane / Operations control room 深化
 
 ## 参考
 

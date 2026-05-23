@@ -8,9 +8,16 @@ import json
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
+import tempfile
 
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from scripts.three_state_protocol import (
+    AutomationState,
+    RequestStatus,
+    ThreeStateProtocol,
+)
 
 def test_three_state_protocol():
     """
@@ -199,6 +206,44 @@ def test_conflict_resolution():
     print("=" * 60)
     
     return True
+
+
+def test_three_state_protocol_transition_request():
+    temp_dir = Path(tempfile.mkdtemp(prefix='three-state-test-'))
+    protocol = ThreeStateProtocol(
+        requests_dir=temp_dir / 'agent-requests',
+        roundtable_dir=temp_dir / 'roundtable',
+    )
+    protocol.send_request('ack-1', 'hermes', 'codex', 'test request')
+    req = protocol.transition_request('ack-1', RequestStatus.STARTED, actor='operator', note='picked up')
+    assert req is not None
+    assert req.status == RequestStatus.STARTED
+    assert req.last_transition_note == 'picked up'
+
+    events_file = temp_dir / 'agent-requests' / 'events.jsonl'
+    assert events_file.exists()
+    events = [json.loads(line) for line in events_file.read_text(encoding='utf-8').splitlines() if line.strip()]
+    assert events[-1]['event_type'] == 'status_transition'
+    assert events[-1]['payload']['to_status'] == 'started'
+
+
+def test_three_state_protocol_automation_promotion():
+    temp_dir = Path(tempfile.mkdtemp(prefix='three-state-test-'))
+    protocol = ThreeStateProtocol(
+        requests_dir=temp_dir / 'agent-requests',
+        roundtable_dir=temp_dir / 'roundtable',
+    )
+    protocol.send_request('ack-2', 'hermes', 'codex', 'test request')
+    req = protocol.set_automation_state(
+        'ack-2',
+        AutomationState.REHEARSED,
+        actor='operator',
+        evidence_refs=['closeout:1'],
+        note='manual host verification',
+    )
+    assert req is not None
+    assert req.automation_state == AutomationState.REHEARSED
+    assert req.evidence_refs == ['closeout:1']
 
 if __name__ == "__main__":
     print("开始多Agent协作测试...")

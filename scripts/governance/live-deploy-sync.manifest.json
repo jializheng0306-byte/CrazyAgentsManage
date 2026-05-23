@@ -17,6 +17,7 @@
         "src/webui/static/css/timeline.css",
         "src/webui/static/js/loop-surface.js",
         "src/webui/static/js/operations.js",
+        "src/webui/static/js/tasks.js",
         "src/webui/static/js/timeline.js",
         "src/webui/templates/architecture-philosophy.html",
         "src/webui/templates/architecture-product.html",
@@ -25,6 +26,7 @@
         "src/webui/templates/loop-surface.html",
         "src/webui/templates/operations.html",
         "src/webui/templates/overview.html",
+        "src/webui/templates/tasks.html",
         "src/webui/templates/timeline.html"
       ]
     },
@@ -59,6 +61,7 @@
         "scripts/noon-paper-collector.sh",
         "scripts/noon-paper-review.sh",
         "scripts/tech-radar-review.sh",
+        "scripts/three_state_protocol.py",
         "scripts/runtime/enable_crazy_executor_http_mode_on_ali_hermes.sh",
         "scripts/runtime/ensure_crossref_readonly_source.py",
         "scripts/runtime/ensure_flowmind_health_readonly_source.py",

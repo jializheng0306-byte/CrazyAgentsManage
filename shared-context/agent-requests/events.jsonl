@@ -1,0 +1,5 @@
+
+{"ack_id": "ack-1", "event_type": "request_created", "actor": "hermes", "timestamp": "2026-05-23T12:54:37.754371", "payload": {"status": "accepted", "task_type": "task_request", "owner": "codex", "source_plane": "roundtable"}}
+{"ack_id": "ack-1", "event_type": "status_transition", "actor": "operator", "timestamp": "2026-05-23T12:54:37.754617", "payload": {"from_status": "accepted", "to_status": "started", "note": "picked up", "result": null, "error": null}}
+{"ack_id": "ack-2", "event_type": "request_created", "actor": "hermes", "timestamp": "2026-05-23T12:54:37.776027", "payload": {"status": "accepted", "task_type": "task_request", "owner": "codex", "source_plane": "roundtable"}}
+{"ack_id": "ack-2", "event_type": "automation_promotion", "actor": "operator", "timestamp": "2026-05-23T12:54:37.776278", "payload": {"from_state": "prototype", "to_state": "rehearsed", "approval": "", "rollback_rule": "", "evidence_refs": ["closeout:1"], "note": "manual host verification"}}

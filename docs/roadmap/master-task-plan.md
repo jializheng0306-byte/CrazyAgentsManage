@@ -218,8 +218,8 @@
 
 | 子项 | Owner | 状态 | 当前口径 |
 |---|---|---|---|
-| Task Bus Productization | Crazy 主 | `in-progress` | 已落 `/api/tasks/request-bus` 与 `/tasks` 请求总线面板；下一步再决定是否把 `Tasks` 主工作面进一步切到 bus 对象模型 |
-| Automation Promotion Gate | Crazy 主 | `planned` | 固定 prototype → rehearsed → approved-for-automation → automated 的晋升链 |
+| Task Bus Productization | Crazy 主 | `completed-in-lane` | `Tasks` 已承接 `requests.jsonl + events.jsonl`，并显式暴露 `inbox / working / outbox / archive` 四条 lane、status transition 与事件审计 |
+| Automation Promotion Gate | Crazy 主 | `completed-in-lane` | `Tasks` 已支持 `prototype → rehearsed → approved-for-automation → automated` 晋升链，并对 `evidence / approval / rollback rule` 执行最小门槛校验 |
 | Executor Capability Plane Integration | Crazy 主 | `planned` | 将 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面 |
 | Role / Credential / Memory Isolation | Crazy 主 | `planned` | 让角色边界、凭证归属、记忆边界、runbook 在控制面可见且可审计 |
 | Loop Surface PRD | Crazy 主 | `completed-in-lane` | `loop-surface-page-prd.md` 已落地，且 `/collaboration/loops` 已接入最小 vertical slice 模板与 API |
@@ -230,14 +230,12 @@
 
 ### 后续任务
 
-1. 将 `shared-context/agent-requests/` 从 `requests.jsonl + three_state_protocol.py` 的 prototype/skeleton 推进为结构化 task bus
-2. 固定 prototype → rehearsed → approved-for-automation → automated 的 promotion gate
-3. 让 role / credential / memory isolation 在控制面上可见、可审计
-4. 将 executor capability plane 的 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面
-5. 让 `Operations` 承载 task registry、promotion state、host/provider/cron/alert evidence 与 next-hop runbook
-6. 保持 `FlowMind` 只作为 contract/truth authority，不在 Crazy 本地重写主治理状态
-7. 将 `Loop Surface` 做成 `Collaboration` 子表面，而不是新一级 IA
-8. 先把 `daily-promise-review.py` 与 `morning-intel-v2.py` 升级成首批 cycle 对象，再进入 memory candidate / feedback 输入面
+1. 让 role / credential / memory isolation 在控制面上可见、可审计
+2. 将 executor capability plane 的 `Sources / Tool Catalog / Credential Health / Provider Health / readonly delegation boundary` 升格为正式产品能力面
+3. 让 `Operations` 承载 task registry、promotion state、host/provider/cron/alert evidence 与 next-hop runbook
+4. 继续保持 `task bus / promotion gate` 与 harness closeout / runtime snapshot 的证据耦合，而不是退回聊天流
+5. 保持 `FlowMind` 只作为 contract/truth authority，不在 Crazy 本地重写主治理状态
+6. 将 `Loop Surface` 做成 `Collaboration` 子表面，而不是新一级 IA
 
 ### 验收标准
 

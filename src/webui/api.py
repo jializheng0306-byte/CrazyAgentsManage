@@ -4,6 +4,7 @@ Connects to Hermes-Agent's real data sources: state.db, cron/jobs.json, gateway_
 Supports both local and remote (SSH) data access modes
 """
 
+import base64
 import json
 import os
 import shlex
@@ -35,6 +36,19 @@ _local_db_cache = {}
 _local_db_lock = threading.Lock()
 _LOOP_SURFACE_MEMORY_DECISIONS = 'shared-context/loop-surface/memory-candidate-decisions.jsonl'
 _LOOP_SURFACE_FEEDBACK_INPUTS = 'shared-context/loop-surface/feedback-inputs.jsonl'
+_TASK_BUS_REQUESTS = 'shared-context/agent-requests/requests.jsonl'
+_TASK_BUS_EVENTS = 'shared-context/agent-requests/events.jsonl'
+_TASK_BUS_AUTOMATION_ORDER = ['prototype', 'rehearsed', 'approved-for-automation', 'automated']
+_TASK_BUS_STATUS_TRANSITIONS = {
+    'accepted': ['routed', 'queued', 'started', 'failed', 'timed_out'],
+    'routed': ['queued', 'started', 'failed', 'timed_out'],
+    'queued': ['started', 'failed', 'timed_out'],
+    'started': ['completed', 'failed', 'timed_out'],
+    'completed': ['delivered', 'failed'],
+    'delivered': [],
+    'timed_out': [],
+    'failed': [],
+}
 
 
 def _get_repo_root():
@@ -380,6 +394,32 @@ def _append_shared_context_row(rel_path, payload):
     return True
 
 
+def _write_shared_context_lines(rel_path, lines):
+    content = '\n'.join(lines)
+    if content:
+        content += '\n'
+    if _is_remote_mode():
+        remote_repo_root = _get_remote_repo_root()
+        remote_file = str(Path(remote_repo_root) / rel_path)
+        remote_dir = str(Path(remote_file).parent)
+        encoded = base64.b64encode(content.encode('utf-8')).decode('ascii')
+        command = (
+            f"mkdir -p {shlex.quote(remote_dir)} && "
+            "python3 -c "
+            + shlex.quote(
+                "from pathlib import Path; import base64; "
+                f"Path({remote_file!r}).write_text(base64.b64decode({encoded!r}).decode('utf-8'), encoding='utf-8')"
+            )
+            + " && printf ok"
+        )
+        return _run_remote_command(command, timeout=20).strip() == 'ok'
+
+    full_path = _get_repo_root() / rel_path
+    full_path.parent.mkdir(parents=True, exist_ok=True)
+    full_path.write_text(content, encoding='utf-8')
+    return True
+
+
 def _normalize_evidence_refs(raw_value):
     if isinstance(raw_value, list):
         return [str(item).strip() for item in raw_value if str(item).strip()]
@@ -388,10 +428,61 @@ def _normalize_evidence_refs(raw_value):
     return []
 
 
+def _task_bus_lane(status):
+    status = str(status or '').lower()
+    if status in ('accepted', 'routed', 'queued'):
+        return 'inbox'
+    if status in ('started',):
+        return 'working'
+    if status in ('completed',):
+        return 'outbox'
+    if status in ('delivered', 'failed', 'timed_out'):
+        return 'archive'
+    return 'inbox'
+
+
+def _task_bus_allowed_transitions(status):
+    return _TASK_BUS_STATUS_TRANSITIONS.get(str(status or '').lower(), [])
+
+
+def _load_task_bus_events():
+    rows = _read_shared_context_rows(_TASK_BUS_EVENTS)
+    rows.sort(key=lambda item: item.get('timestamp') or '', reverse=True)
+    return rows
+
+
+def _task_bus_events_by_ack_id():
+    grouped = {}
+    for event in _load_task_bus_events():
+        ack_id = str(event.get('ack_id') or '').strip()
+        if not ack_id:
+            continue
+        grouped.setdefault(ack_id, []).append(event)
+    return grouped
+
+
+def _task_bus_enrich_request(payload, events_by_ack_id=None):
+    if not isinstance(payload, dict):
+        return payload
+    item = dict(payload)
+    status = str(item.get('status') or 'accepted').lower()
+    automation_state = str(item.get('automation_state') or 'prototype').lower()
+    item['status'] = status
+    item['lane'] = _task_bus_lane(status)
+    item['allowedTransitions'] = _task_bus_allowed_transitions(status)
+    item['automation_state'] = automation_state
+    item['evidence_refs'] = _normalize_evidence_refs(item.get('evidence_refs'))
+    item['owner'] = str(item.get('owner') or item.get('target') or '')
+    if events_by_ack_id is not None:
+        item['events'] = events_by_ack_id.get(str(item.get('ack_id') or ''), [])
+    return item
+
+
 def _load_task_bus_requests():
+    events_by_ack_id = _task_bus_events_by_ack_id()
     rows = []
-    for payload in _read_shared_context_rows('shared-context/agent-requests/requests.jsonl'):
-        rows.append(payload)
+    for payload in _read_shared_context_rows(_TASK_BUS_REQUESTS):
+        rows.append(_task_bus_enrich_request(payload, events_by_ack_id))
     rows.sort(key=lambda item: item.get('updated_at') or item.get('created_at') or '', reverse=True)
     return rows
 
@@ -416,6 +507,152 @@ def _task_bus_stats(requests):
         if status not in ('delivered', 'timed_out', 'failed'):
             counts['open'] += 1
     return counts
+
+
+def _task_bus_lane_groups(requests):
+    lanes = {'inbox': [], 'working': [], 'outbox': [], 'archive': []}
+    for item in requests:
+        lane = item.get('lane') or _task_bus_lane(item.get('status'))
+        lanes.setdefault(lane, []).append(item)
+    return lanes
+
+
+def _task_bus_automation_stats(requests):
+    counts = {state: 0 for state in _TASK_BUS_AUTOMATION_ORDER}
+    for item in requests:
+        state = str(item.get('automation_state') or 'prototype').lower()
+        counts[state] = counts.get(state, 0) + 1
+    return counts
+
+
+def _save_task_bus_requests(requests):
+    lines = [
+        json.dumps({
+            key: value
+            for key, value in item.items()
+            if key not in ('lane', 'allowedTransitions', 'events')
+        }, ensure_ascii=False)
+        for item in requests
+    ]
+    return _write_shared_context_lines(_TASK_BUS_REQUESTS, lines)
+
+
+def _find_task_bus_request(ack_id):
+    requests = _read_shared_context_rows(_TASK_BUS_REQUESTS)
+    for index, item in enumerate(requests):
+        if str(item.get('ack_id') or '') == ack_id:
+            return requests, index, item
+    return requests, -1, None
+
+
+def _append_task_bus_event(ack_id, event_type, actor, payload):
+    row = {
+        'ack_id': ack_id,
+        'event_type': event_type,
+        'actor': actor,
+        'timestamp': _now_iso(),
+        'payload': payload,
+    }
+    return _append_shared_context_row(_TASK_BUS_EVENTS, row)
+
+
+def _transition_task_bus_request(ack_id, next_status, actor='operator', note='', result=None, error=None):
+    requests, index, item = _find_task_bus_request(ack_id)
+    if index < 0 or not item:
+        return None, 'Request not found'
+    current_status = str(item.get('status') or 'accepted').lower()
+    next_status = str(next_status or '').lower()
+    allowed = _task_bus_allowed_transitions(current_status)
+    if next_status not in allowed:
+        return None, f'invalid transition: {current_status} -> {next_status}'
+
+    item['status'] = next_status
+    item['updated_at'] = _now_iso()
+    item['last_transition_by'] = actor
+    item['last_transition_note'] = note
+    if result is not None:
+        item['result'] = result
+    if error is not None:
+        item['error'] = error
+    requests[index] = item
+    if not _save_task_bus_requests(requests):
+        return None, 'Failed to persist request bus transition'
+    if not _append_task_bus_event(
+        ack_id,
+        'status_transition',
+        actor,
+        {
+            'from_status': current_status,
+            'to_status': next_status,
+            'note': note,
+            'result': result,
+            'error': error,
+        },
+    ):
+        return None, 'Failed to persist request bus event'
+    return _task_bus_enrich_request(item, _task_bus_events_by_ack_id()), None
+
+
+def _promote_task_bus_request(
+    ack_id,
+    next_state,
+    actor='operator',
+    approval='',
+    rollback_rule='',
+    evidence_refs=None,
+    note='',
+):
+    requests, index, item = _find_task_bus_request(ack_id)
+    if index < 0 or not item:
+        return None, 'Request not found'
+    current_state = str(item.get('automation_state') or 'prototype').lower()
+    next_state = str(next_state or '').lower()
+    if next_state not in _TASK_BUS_AUTOMATION_ORDER:
+        return None, 'invalid automation_state'
+
+    current_index = _TASK_BUS_AUTOMATION_ORDER.index(current_state) if current_state in _TASK_BUS_AUTOMATION_ORDER else 0
+    next_index = _TASK_BUS_AUTOMATION_ORDER.index(next_state)
+    moving_backward = next_index < current_index
+    if next_index > current_index + 1:
+        return None, 'automation promotion must advance one step at a time'
+    if moving_backward and not note:
+        return None, 'rollback note is required when moving automation_state backward'
+
+    evidence_refs = _normalize_evidence_refs(evidence_refs)
+    if next_state in ('rehearsed', 'approved-for-automation', 'automated') and not evidence_refs:
+        return None, 'evidenceRefs are required from rehearsed onward'
+    if next_state in ('approved-for-automation', 'automated') and not approval:
+        return None, 'approval is required for approved-for-automation or automated'
+    if next_state in ('approved-for-automation', 'automated') and not rollback_rule:
+        return None, 'rollbackRule is required for approved-for-automation or automated'
+
+    item['automation_state'] = next_state
+    item['updated_at'] = _now_iso()
+    item['owner'] = str(item.get('owner') or item.get('target') or '')
+    item['approval'] = approval or item.get('approval') or ''
+    item['rollback_rule'] = rollback_rule or item.get('rollback_rule') or ''
+    item['evidence_refs'] = evidence_refs or _normalize_evidence_refs(item.get('evidence_refs'))
+    item['note'] = note or item.get('note') or ''
+    item['last_transition_by'] = actor
+    item['last_transition_note'] = note
+    requests[index] = item
+    if not _save_task_bus_requests(requests):
+        return None, 'Failed to persist automation state'
+    if not _append_task_bus_event(
+        ack_id,
+        'automation_promotion',
+        actor,
+        {
+            'from_state': current_state,
+            'to_state': next_state,
+            'approval': approval,
+            'rollback_rule': rollback_rule,
+            'evidence_refs': evidence_refs,
+            'note': note,
+        },
+    ):
+        return None, 'Failed to persist automation event'
+    return _task_bus_enrich_request(item, _task_bus_events_by_ack_id()), None
 
 
 def _list_review_report_files():
@@ -3542,7 +3779,63 @@ def tasks_request_bus():
     return jsonify({
         'requests': requests,
         'stats': _task_bus_stats(requests),
+        'lanes': _task_bus_lane_groups(requests),
+        'automation': _task_bus_automation_stats(requests),
     })
+
+
+@api.route('/tasks/request-bus/<ack_id>/transition', methods=['POST'])
+def tasks_request_bus_transition(ack_id):
+    payload = request.get_json(silent=True) or {}
+    next_status = str(payload.get('status') or '').strip().lower()
+    actor = str(payload.get('actor') or 'operator').strip() or 'operator'
+    note = str(payload.get('note') or '').strip()
+    result = payload.get('result')
+    error = payload.get('error')
+    if not next_status:
+        return jsonify({'error': 'status is required'}), 400
+
+    item, err = _transition_task_bus_request(
+        ack_id,
+        next_status,
+        actor=actor,
+        note=note,
+        result=result,
+        error=error,
+    )
+    if err == 'Request not found':
+        return jsonify({'error': err, 'ack_id': ack_id}), 404
+    if err:
+        return jsonify({'error': err, 'ack_id': ack_id}), 400
+    return jsonify(item), 200
+
+
+@api.route('/tasks/request-bus/<ack_id>/automation-state', methods=['POST'])
+def tasks_request_bus_automation_state(ack_id):
+    payload = request.get_json(silent=True) or {}
+    next_state = str(payload.get('automationState') or '').strip().lower()
+    actor = str(payload.get('actor') or 'operator').strip() or 'operator'
+    approval = str(payload.get('approval') or '').strip()
+    rollback_rule = str(payload.get('rollbackRule') or '').strip()
+    note = str(payload.get('note') or '').strip()
+    evidence_refs = payload.get('evidenceRefs')
+    if not next_state:
+        return jsonify({'error': 'automationState is required'}), 400
+
+    item, err = _promote_task_bus_request(
+        ack_id,
+        next_state,
+        actor=actor,
+        approval=approval,
+        rollback_rule=rollback_rule,
+        evidence_refs=evidence_refs,
+        note=note,
+    )
+    if err == 'Request not found':
+        return jsonify({'error': err, 'ack_id': ack_id}), 404
+    if err:
+        return jsonify({'error': err, 'ack_id': ack_id}), 400
+    return jsonify(item), 200
 
 
 # ═══════════════════════════════════════════
