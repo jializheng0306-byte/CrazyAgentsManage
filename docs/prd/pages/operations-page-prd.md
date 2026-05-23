@@ -108,7 +108,16 @@
 - linked runbooks
 - next-hop operator guides
 
-### 9. Summary Shell / Next Hop
+### 9. Env Map / Backup / Recovery
+
+内容：
+
+- deploy shell / runtime root / Hermes home / provider mode
+- executor / FlowMind base URLs
+- backup coverage
+- mirror / deploy backup / recovery path visibility
+
+### 10. Summary Shell / Next Hop
 
 内容：
 
@@ -133,7 +142,8 @@
 6. executor integrations 区
 7. role / credential / memory isolation 区
 8. host health / runbooks 区
-9. summary shell / next hop 区
+9. env map / backup / recovery 区
+10. summary shell / next hop 区
 
 ## 页面模块树
 
@@ -152,6 +162,8 @@
   - IsolationPanel
   - HostHealthPanel
   - RunbooksPanel
+  - EnvMapPanel
+  - BackupRecoveryPanel
   - SummaryBriefingPanel
   - NextHopPanel
 

@@ -63,6 +63,27 @@ def _get_runtime_repo_root():
     return Path('/root/CrazyAgentsManage')
 
 
+def _get_deploy_copy_root():
+    deploy_root = os.environ.get('CRAZY_DEPLOY_COPY_ROOT', '').strip()
+    if deploy_root:
+        return Path(deploy_root)
+    return Path('/opt/crazyagentsmanage')
+
+
+def _get_hermes_script_mirror_dir():
+    mirror_dir = os.environ.get('HERMES_SCRIPT_MIRROR_DIR', '').strip()
+    if mirror_dir:
+        return Path(mirror_dir)
+    return _get_hermes_home() / 'scripts'
+
+
+def _get_backup_root():
+    backup_root = os.environ.get('HERMES_BACKUP_ROOT', '').strip()
+    if backup_root:
+        return Path(backup_root)
+    return Path('/root/backups')
+
+
 def _resolve_repo_artifact_path(rel_path):
     primary = _get_repo_root() / rel_path
     if primary.exists():
@@ -480,6 +501,15 @@ def _safe_glob_count(path, pattern='*'):
         return len(list(path.glob(pattern)))
     except PermissionError:
         return 0
+
+
+def _safe_sorted_paths(path, pattern='*'):
+    try:
+        if not path.exists():
+            return []
+        return sorted(path.glob(pattern))
+    except PermissionError:
+        return []
 
 
 def _read_shared_context_json(rel_path, default=None):
@@ -4194,7 +4224,7 @@ def _ops_pick_status(*statuses):
     return picked
 
 
-def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, isolation_status, task_registry_status, host_health_status, runbook_status, cron_status, skills_status, memory_status):
+def _build_operations_next_hop(alert_status, connectivity_status, integrations_status, isolation_status, task_registry_status, host_health_status, runbook_status, env_map_status, backup_recovery_status, cron_status, skills_status, memory_status):
     if alert_status == 'failed' or connectivity_status == 'failed':
         return {
             'href': '/operations/alerts',
@@ -4206,6 +4236,12 @@ def _build_operations_next_hop(alert_status, connectivity_status, integrations_s
             'href': '/operations#host-health',
             'label': '检查 Host Health',
             'reason': '当前宿主磁盘/内存或 gateway 证据存在异常，需要先确认运行宿主是否稳定。',
+        }
+    if env_map_status == 'degraded':
+        return {
+            'href': '/operations#env-map',
+            'label': '检查 Env Map',
+            'reason': '当前部署根、runtime 根、API base 或 provider mode 映射存在缺口，先确认控制面的环境地图是否一致。',
         }
     if integrations_status == 'failed':
         return {
@@ -4236,6 +4272,12 @@ def _build_operations_next_hop(alert_status, connectivity_status, integrations_s
             'href': '/operations#runbooks',
             'label': '补齐 Runbooks',
             'reason': '当前控制面对象已可见，但仍有缺失 runbook，需要先补齐 operator 的下一跳指引。',
+        }
+    if backup_recovery_status == 'degraded':
+        return {
+            'href': '/operations#backup-recovery',
+            'label': '检查 Backup / Recovery',
+            'reason': '当前备份覆盖或恢复路径存在缺口，需要先确认 deploy backups、mirror manifest 与恢复 runbook 是否齐全。',
         }
     if cron_status == 'degraded':
         return {
@@ -4275,6 +4317,8 @@ def _build_operations_summary():
     automation = _build_operations_automation_maturity_view()
     host_health = _build_operations_host_health_view()
     runbooks = _build_operations_runbooks_view()
+    env_map = _build_operations_env_map_view()
+    backup_recovery = _build_operations_backup_recovery_view()
 
     skill_total = skills_payload.get('total', 0) or 0
     skill_categories = skills_payload.get('categories', []) or []
@@ -4345,6 +4389,8 @@ def _build_operations_summary():
         automation.get('status'),
         host_health.get('status'),
         runbooks.get('status'),
+        env_map.get('status'),
+        backup_recovery.get('status'),
         cron_status,
         skills_status,
         memory_status,
@@ -4358,6 +4404,8 @@ def _build_operations_summary():
         task_registry.get('status'),
         host_health.get('status'),
         runbooks.get('status'),
+        env_map.get('status'),
+        backup_recovery.get('status'),
         cron_status,
         skills_status,
         memory_status,
@@ -4437,6 +4485,15 @@ def _build_operations_summary():
             'href': '/operations#host-health',
         },
         {
+            'key': 'env-map',
+            'title': 'Env Map',
+            'icon': '🗺️',
+            'status': env_map.get('status', 'unknown'),
+            'count': env_map.get('counts', {}).get('entryCount', 0),
+            'summary': f'{env_map.get("counts", {}).get("configuredCount", 0)} configured · {env_map.get("counts", {}).get("missingCount", 0)} missing',
+            'href': '/operations#env-map',
+        },
+        {
             'key': 'isolation',
             'title': 'Role / Memory Isolation',
             'icon': '🧱',
@@ -4453,6 +4510,15 @@ def _build_operations_summary():
             'count': boundary.get('totalTaskTypeCount', 0),
             'summary': f'mode={boundary.get("providerMode", "unknown")} · {boundary.get("allowedTaskTypeCount", 0)} allowed · {boundary.get("forbiddenTaskTypeCount", 0)} forbidden',
             'href': '/operations#boundary',
+        },
+        {
+            'key': 'backup-recovery',
+            'title': 'Backup / Recovery',
+            'icon': '🛟',
+            'status': backup_recovery.get('status', 'unknown'),
+            'count': backup_recovery.get('counts', {}).get('surfaceCount', 0),
+            'summary': f'{backup_recovery.get("counts", {}).get("healthyCount", 0)} healthy · {backup_recovery.get("counts", {}).get("degradedCount", 0)} degraded',
+            'href': '/operations#backup-recovery',
         },
         {
             'key': 'runbooks',
@@ -4486,8 +4552,10 @@ def _build_operations_summary():
             'credentialCount': integration_credential_count,
             'providerCount': integration_provider_count,
             'hostHealthCount': host_health.get('counts', {}).get('evidenceSignals', 0),
+            'envMapCount': env_map.get('counts', {}).get('entryCount', 0),
             'isolationCount': isolation.get('counts', {}).get('roleCount', 0),
             'boundaryCount': 1,
+            'backupRecoveryCount': backup_recovery.get('counts', {}).get('surfaceCount', 0),
             'runbookCount': runbooks.get('counts', {}).get('runbookCount', 0),
         },
         'alerts': {
@@ -4949,11 +5017,184 @@ def _build_operations_runbooks_view():
     }
 
 
+def _build_operations_env_map_view():
+    provider_mode = get_provider_mode()
+    remote_cfg = _get_remote_config() or {}
+    repo_root = _get_repo_root()
+    runtime_root = _get_runtime_repo_root()
+    deploy_root = _get_deploy_copy_root()
+    hermes_home = _get_hermes_home()
+    executor_url = os.environ.get('EXECUTOR_API_BASE_URL', 'http://127.0.0.1:4788').rstrip('/')
+    flowmind_url = _get_flowmind_base_url()
+    app_base = os.environ.get('APP_BASE_PATH', '').strip()
+
+    entries = [
+        {
+            'id': 'repo-root',
+            'name': 'Repo Root',
+            'value': str(repo_root),
+            'status': 'healthy' if _safe_exists(repo_root) else 'degraded',
+            'owner': 'CrazyAgentsManage',
+            'notes': 'Current shell reads product code from this root.',
+        },
+        {
+            'id': 'runtime-root',
+            'name': 'Runtime Repo Root',
+            'value': str(runtime_root),
+            'status': 'healthy' if _safe_exists(runtime_root) else 'degraded',
+            'owner': 'ALI-HERMES runtime',
+            'notes': 'Fallback root for deployed webui copies when repo-tracked facts live outside /opt shell copy.',
+        },
+        {
+            'id': 'deploy-root',
+            'name': 'Deploy Copy Root',
+            'value': str(deploy_root),
+            'status': 'healthy' if _safe_exists(deploy_root) else 'degraded',
+            'owner': 'Crazy webui deploy shell',
+            'notes': 'Public manage surface serves templates/static assets from this root.',
+        },
+        {
+            'id': 'hermes-home',
+            'name': 'Hermes Home',
+            'value': str(hermes_home),
+            'status': 'healthy' if _safe_exists(hermes_home) else 'degraded',
+            'owner': 'HermesAgent',
+            'notes': 'Host runtime state, memory, cron, and scripts live here.',
+        },
+        {
+            'id': 'provider-mode',
+            'name': 'Provider Mode',
+            'value': provider_mode or 'unknown',
+            'status': 'healthy' if provider_mode == 'http' else 'degraded',
+            'owner': 'executor capability plane',
+            'notes': 'sample mode is valid for local fallback but degraded for live capability-plane verification.',
+        },
+        {
+            'id': 'executor-base-url',
+            'name': 'Executor Base URL',
+            'value': executor_url,
+            'status': 'healthy' if executor_url else 'degraded',
+            'owner': 'executor capability plane',
+            'notes': 'Readonly capability calls route here when provider mode is http.',
+        },
+        {
+            'id': 'flowmind-base-url',
+            'name': 'FlowMind API Base URL',
+            'value': flowmind_url,
+            'status': 'healthy' if flowmind_url else 'degraded',
+            'owner': 'FlowMind',
+            'notes': 'Governance truth / trace / feedback bridge reads route here.',
+        },
+        {
+            'id': 'remote-host-target',
+            'name': 'Remote Host Target',
+            'value': remote_cfg.get('host', ''),
+            'status': 'healthy' if remote_cfg.get('host') else 'unknown',
+            'owner': 'remote sync tooling',
+            'notes': 'Tracked remote host config used by deploy/smoke scripts.',
+        },
+        {
+            'id': 'app-base-path',
+            'name': 'App Base Path',
+            'value': app_base or '(auto)',
+            'status': 'healthy',
+            'owner': 'webui shell',
+            'notes': 'If blank, BASE path is inferred from request path / forwarded prefix.',
+        },
+    ]
+    configured = len([item for item in entries if item.get('status') == 'healthy'])
+    degraded = len([item for item in entries if item.get('status') == 'degraded'])
+    status = 'healthy' if degraded == 0 else 'degraded'
+    return {
+        'status': status,
+        'entries': entries,
+        'counts': {
+            'entryCount': len(entries),
+            'configuredCount': configured,
+            'missingCount': degraded,
+        },
+    }
+
+
+def _build_operations_backup_recovery_view():
+    deploy_backup_root = _get_deploy_copy_root() / '.deploy-backups'
+    hermes_mirror_dir = _get_hermes_script_mirror_dir()
+    mirror_manifest = hermes_mirror_dir / '.mirror-manifest.json'
+    backup_root = _get_backup_root()
+    operations_manual = _resolve_repo_artifact_path('docs/06-agent-ops/operations-manual.md')
+    live_sync_closeout = _resolve_repo_artifact_path('docs/02-engineering/harness/crazy-live-webui-sync-closeout-2026-05-03.md')
+    memory_backup_count = _safe_glob_count(_get_hermes_home() / 'memory', '*.bak') + _safe_glob_count(_get_hermes_home() / 'memory', '*.md.bak')
+    deploy_backup_dirs = _safe_sorted_paths(deploy_backup_root, '*')
+    backup_snapshots = _safe_sorted_paths(backup_root, '*')
+
+    surfaces = [
+        {
+            'id': 'deploy-copy-backups',
+            'name': 'Deploy Copy Backups',
+            'status': 'healthy' if deploy_backup_dirs else 'degraded',
+            'location': str(deploy_backup_root),
+            'count': len(deploy_backup_dirs),
+            'recoveryPath': 'Use sync_live_deploy_copy plus .deploy-backups rollback directory.',
+        },
+        {
+            'id': 'script-mirror-manifest',
+            'name': 'Hermes Script Mirror',
+            'status': 'healthy' if _safe_exists(mirror_manifest) else 'degraded',
+            'location': str(mirror_manifest),
+            'count': 1 if _safe_exists(mirror_manifest) else 0,
+            'recoveryPath': 'Use scripts/runtime/sync_hermes_script_mirror.py to restore tracked mirrors.',
+        },
+        {
+            'id': 'backup-root',
+            'name': 'Host Backup Root',
+            'status': 'healthy' if backup_snapshots else 'degraded',
+            'location': str(backup_root),
+            'count': len(backup_snapshots),
+            'recoveryPath': 'Use operations-manual backup / restore commands against dated backup root.',
+        },
+        {
+            'id': 'memory-edit-backups',
+            'name': 'Memory Edit Backups',
+            'status': 'healthy' if memory_backup_count > 0 else 'unknown',
+            'location': str(_get_hermes_home() / 'memory'),
+            'count': memory_backup_count,
+            'recoveryPath': 'Restore *.md.bak files when local memory edits need rollback.',
+        },
+        {
+            'id': 'runbook-coverage',
+            'name': 'Recovery Runbooks',
+            'status': 'healthy' if _safe_exists(operations_manual) and _safe_exists(live_sync_closeout) else 'degraded',
+            'location': 'docs/06-agent-ops/operations-manual.md + docs/02-engineering/harness/crazy-live-webui-sync-closeout-2026-05-03.md',
+            'count': int(_safe_exists(operations_manual)) + int(_safe_exists(live_sync_closeout)),
+            'recoveryPath': 'Follow repo-tracked backup and deploy sync closeout runbooks before host-side manual recovery.',
+        },
+    ]
+    healthy = len([item for item in surfaces if item.get('status') == 'healthy'])
+    degraded = len([item for item in surfaces if item.get('status') == 'degraded'])
+    status = 'healthy' if degraded == 0 else 'degraded'
+    return {
+        'status': status,
+        'surfaces': surfaces,
+        'counts': {
+            'surfaceCount': len(surfaces),
+            'healthyCount': healthy,
+            'degradedCount': degraded,
+        },
+        'runbooks': [
+            'docs/06-agent-ops/operations-manual.md',
+            'docs/02-engineering/harness/crazy-live-webui-sync-closeout-2026-05-03.md',
+            'scripts/runtime/sync_hermes_script_mirror.py',
+        ],
+    }
+
+
 def _build_operations_control_room_summary():
     return {
         'taskRegistry': _build_operations_task_registry_view(),
         'automationMaturity': _build_operations_automation_maturity_view(),
         'hostHealth': _build_operations_host_health_view(),
+        'envMap': _build_operations_env_map_view(),
+        'backupRecovery': _build_operations_backup_recovery_view(),
         'runbooks': _build_operations_runbooks_view(),
     }
 
@@ -4971,6 +5212,16 @@ def operations_automation_maturity():
 @api.route('/operations/host-health')
 def operations_host_health():
     return jsonify(_build_operations_host_health_view())
+
+
+@api.route('/operations/env-map')
+def operations_env_map():
+    return jsonify(_build_operations_env_map_view())
+
+
+@api.route('/operations/backup-recovery')
+def operations_backup_recovery():
+    return jsonify(_build_operations_backup_recovery_view())
 
 
 @api.route('/operations/runbooks')

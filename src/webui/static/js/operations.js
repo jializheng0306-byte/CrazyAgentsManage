@@ -61,6 +61,8 @@ var FAMILIES = {
   'task-registry': { icon: '📋', label: 'Task Registry', api: '/api/operations/task-registry', filterBy: null },
   automation:  { icon: '🤖', label: 'Automation Maturity', api: '/api/operations/automation-maturity', filterBy: null },
   'host-health': { icon: '🖥️', label: 'Host Health', api: '/api/operations/host-health', filterBy: null },
+  'env-map':   { icon: '🗺️', label: 'Env Map', api: '/api/operations/env-map', filterBy: null },
+  'backup-recovery': { icon: '🛟', label: 'Backup / Recovery', api: '/api/operations/backup-recovery', filterBy: null },
   runbooks:    { icon: '📚', label: 'Runbooks', api: '/api/operations/runbooks', filterBy: null },
   cron:        { icon: '⏰', label: 'Cron Jobs',        api: '/api/cron/list',                    filterBy: 'status' },
   alerts:      { icon: '🔔', label: 'Alerts',           api: '/api/alerts/list',                  filterBy: 'level' },
@@ -119,6 +121,8 @@ function applySummaryCounts(summary) {
   _updateTreeCount('task-registry', metrics.taskRegistryCount || 0);
   _updateTreeCount('automation', metrics.automationCount || 0);
   _updateTreeCount('host-health', metrics.hostHealthCount || 0);
+  _updateTreeCount('env-map', metrics.envMapCount || 0);
+  _updateTreeCount('backup-recovery', metrics.backupRecoveryCount || 0);
   _updateTreeCount('runbooks', metrics.runbookCount || 0);
   _updateTreeCount('isolation', metrics.isolationCount || 0);
   _updateTreeCount('alerts', (summary.alerts && summary.alerts.total) || 0);
@@ -244,6 +248,8 @@ function renderWorkspace(family, data) {
     case 'task-registry': renderTaskRegistry(content, data); break;
     case 'automation': renderAutomationMaturity(content, data); break;
     case 'host-health': renderHostHealth(content, data); break;
+    case 'env-map': renderEnvMap(content, data); break;
+    case 'backup-recovery': renderBackupRecovery(content, data); break;
     case 'runbooks':  renderRunbooks(content, data); break;
     case 'isolation': renderIsolation(content, data); break;
     case 'sources':   renderFilterableSources(content, data); break;
@@ -1033,6 +1039,62 @@ function renderHostHealth(container, data) {
 
   _showDetail(
     '<div class="ops-detail-header"><h3 class="ops-detail-name">Host Health Evidence</h3><div class="ops-detail-sub">disk / memory / gateway / alerts</div></div>' +
+    '<div class="ops-detail-section"><div class="ops-detail-section-title">Linked Runbooks</div>' +
+      (data.runbooks || []).map(function(path) { return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + path + '</span></div>'; }).join('') +
+    '</div>'
+  );
+}
+
+function renderEnvMap(container, data) {
+  if (!data || typeof data !== 'object') {
+    container.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">🗺️</div><p>暂无 env map 数据</p></div>';
+    return;
+  }
+  var counts = data.counts || {};
+  container.innerHTML =
+    '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
+      boundaryCard('Configured', '✅', counts.configuredCount || 0, data.status || 'unknown') +
+      boundaryCard('Missing', '⚠️', counts.missingCount || 0, counts.missingCount ? 'degraded' : 'healthy') +
+      boundaryCard('Entries', '🗂️', counts.entryCount || 0, data.status || 'unknown') +
+    '</div>' +
+    isolationSection('Env Entries', data.entries || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.name + ' <span class="ops-chip ' + (item.status || 'unknown') + '">' + statusLabel(item.status || 'unknown') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">' + (item.value || '--') + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">owner=' + (item.owner || '--') + ' · ' + (item.notes || '') + '</div>' +
+      '</div>';
+    });
+
+  _showDetail(
+    '<div class="ops-detail-header"><h3 class="ops-detail-name">Environment Map</h3><div class="ops-detail-sub">deploy shell / runtime root / capability endpoints</div></div>' +
+    isolationSection('Env Map', data.entries || [], function(item) {
+      return '<div class="ops-detail-row"><span class="ops-detail-row-label">' + item.name + '</span><span class="ops-detail-row-value">' + item.value + '</span></div>';
+    })
+  );
+}
+
+function renderBackupRecovery(container, data) {
+  if (!data || typeof data !== 'object') {
+    container.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">🛟</div><p>暂无 backup/recovery 数据</p></div>';
+    return;
+  }
+  var counts = data.counts || {};
+  container.innerHTML =
+    '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
+      boundaryCard('Healthy', '✅', counts.healthyCount || 0, data.status || 'unknown') +
+      boundaryCard('Degraded', '⚠️', counts.degradedCount || 0, counts.degradedCount ? 'degraded' : 'healthy') +
+      boundaryCard('Surfaces', '🗂️', counts.surfaceCount || 0, data.status || 'unknown') +
+    '</div>' +
+    isolationSection('Backup Surfaces', data.surfaces || [], function(item) {
+      return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +
+        '<div style="font-weight:600;">' + item.name + ' <span class="ops-chip ' + (item.status || 'unknown') + '">' + statusLabel(item.status || 'unknown') + '</span></div>' +
+        '<div style="font-size:12px;color:var(--ops-text-muted);margin-top:4px;">' + (item.location || '--') + ' · count=' + (item.count || 0) + '</div>' +
+        '<div style="font-size:12px;color:var(--ops-text-secondary);margin-top:4px;">' + (item.recoveryPath || '') + '</div>' +
+      '</div>';
+    });
+
+  _showDetail(
+    '<div class="ops-detail-header"><h3 class="ops-detail-name">Backup / Recovery</h3><div class="ops-detail-sub">backup coverage and recovery path visibility</div></div>' +
     '<div class="ops-detail-section"><div class="ops-detail-section-title">Linked Runbooks</div>' +
       (data.runbooks || []).map(function(path) { return '<div class="ops-detail-row"><span class="ops-detail-row-value">' + path + '</span></div>'; }).join('') +
     '</div>'

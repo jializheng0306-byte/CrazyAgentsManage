@@ -234,7 +234,7 @@
 1. 继续保持 `task bus / promotion gate` 与 harness closeout / runtime snapshot 的证据耦合，而不是退回聊天流
 2. 保持 `FlowMind` 只作为 contract/truth authority，不在 Crazy 本地重写主治理状态
 3. 将 `Loop Surface` 做成 `Collaboration` 子表面，而不是新一级 IA
-4. 如需继续扩 `Operations`，优先进入第二批 `env map / backup-recovery / recovery path` 对象，而不是重新打开 Sprint 2 主边界
+4. 第二批 `env map / backup-recovery` 对象已落最小 lane；如需继续扩 `Operations`，优先进入 `recovery path / env drift / backup coverage` 深化，而不是重新打开 Sprint 2 主边界
 
 ### 验收标准
 

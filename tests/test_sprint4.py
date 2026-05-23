@@ -184,6 +184,8 @@ class TestOperationsCapabilityPlane:
         assert 'Task Registry' in body
         assert 'Automation Maturity' in body
         assert 'Host Health' in body
+        assert 'Env Map' in body
+        assert 'Backup / Recovery' in body
         assert 'Runbooks' in body
         assert 'Readonly Boundary' in body
         assert 'data-family="boundary"' in body
@@ -191,6 +193,8 @@ class TestOperationsCapabilityPlane:
         assert 'data-family="task-registry"' in body
         assert 'data-family="automation"' in body
         assert 'data-family="host-health"' in body
+        assert 'data-family="env-map"' in body
+        assert 'data-family="backup-recovery"' in body
         assert 'data-family="runbooks"' in body
 
     def test_operations_integrations_boundary_api_returns_policy_projection(self, client, monkeypatch):
@@ -616,6 +620,69 @@ class TestOperationsCapabilityPlane:
         data = resp.get_json()
         assert data['counts']['runbookCount'] == 5
         assert data['counts']['visibleCount'] == 5
+
+    def test_operations_env_map_api_returns_deploy_and_runtime_roots(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        runtime_root = tmp_path / 'runtime-root'
+        deploy_root = tmp_path / 'deploy-copy'
+        repo_root.mkdir(parents=True, exist_ok=True)
+        runtime_root.mkdir(parents=True, exist_ok=True)
+        deploy_root.mkdir(parents=True, exist_ok=True)
+        hermes_home = tmp_path / 'hermes-home'
+        hermes_home.mkdir(parents=True, exist_ok=True)
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        monkeypatch.setenv('CRAZY_RUNTIME_REPO_ROOT', str(runtime_root))
+        monkeypatch.setenv('CRAZY_DEPLOY_COPY_ROOT', str(deploy_root))
+        monkeypatch.setenv('HERMES_HOME', str(hermes_home))
+        monkeypatch.setenv('EXECUTOR_API_BASE_URL', 'http://127.0.0.1:4788')
+        monkeypatch.setenv('FLOWMIND_API_BASE_URL', 'http://127.0.0.1:3001')
+        monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
+        webui_api._hermes_home = None
+        webui_api._remote_config = {'host': '47.99.217.1'}
+
+        resp = client.get('/api/operations/env-map')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['counts']['entryCount'] >= 8
+        names = [item['id'] for item in data['entries']]
+        assert 'repo-root' in names
+        assert 'runtime-root' in names
+        assert 'deploy-root' in names
+        assert 'hermes-home' in names
+
+    def test_operations_backup_recovery_api_returns_surface_summary(self, client, monkeypatch, tmp_path):
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'docs' / '06-agent-ops').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / '02-engineering' / 'harness').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'docs' / '06-agent-ops' / 'operations-manual.md').write_text('# manual\n', encoding='utf-8')
+        (repo_root / 'docs' / '02-engineering' / 'harness' / 'crazy-live-webui-sync-closeout-2026-05-03.md').write_text('# sync closeout\n', encoding='utf-8')
+        deploy_root = tmp_path / 'deploy-copy'
+        (deploy_root / '.deploy-backups' / 'run-1').mkdir(parents=True, exist_ok=True)
+        backup_root = tmp_path / 'backups'
+        (backup_root / '20260523').mkdir(parents=True, exist_ok=True)
+        hermes_home = tmp_path / 'hermes-home'
+        (hermes_home / 'memory').mkdir(parents=True, exist_ok=True)
+        (hermes_home / 'memory' / 'foo.md.bak').write_text('backup\n', encoding='utf-8')
+        mirror_dir = hermes_home / 'scripts'
+        mirror_dir.mkdir(parents=True, exist_ok=True)
+        (mirror_dir / '.mirror-manifest.json').write_text('{}\n', encoding='utf-8')
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: repo_root)
+        monkeypatch.setenv('CRAZY_DEPLOY_COPY_ROOT', str(deploy_root))
+        monkeypatch.setenv('HERMES_BACKUP_ROOT', str(backup_root))
+        monkeypatch.setenv('HERMES_HOME', str(hermes_home))
+        monkeypatch.setenv('HERMES_SCRIPT_MIRROR_DIR', str(mirror_dir))
+        webui_api._hermes_home = None
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/operations/backup-recovery')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['counts']['surfaceCount'] == 5
+        assert data['counts']['healthyCount'] >= 4
+        assert any(item['id'] == 'deploy-copy-backups' for item in data['surfaces'])
+        assert any(item['id'] == 'script-mirror-manifest' for item in data['surfaces'])
 
 
 class TestArchitecturePagesReachable:
