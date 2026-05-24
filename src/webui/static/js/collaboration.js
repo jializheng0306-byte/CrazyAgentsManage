@@ -1,6 +1,6 @@
 /**
  * CrazyAgentsManage — Collaboration Aggregation Page JS
- * Consumes handoff/snapshot/closeout/evidence APIs
+ * Consumes canonical collaboration summary / evidence APIs.
  */
 
 var CL_CONFIG = {
@@ -10,7 +10,7 @@ var CL_CONFIG = {
   })(),
   refreshInterval: 30000,
   maxHandoffs: 8,
-  maxTraces: 6,
+  maxTriage: 4,
 };
 
 function fetchJSON(url) {
@@ -23,6 +23,15 @@ function setText(id, text) {
   if (el) el.textContent = text;
 }
 
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function relativeTime(isoStr) {
   if (!isoStr) return '--';
   var d = new Date(isoStr);
@@ -33,102 +42,197 @@ function relativeTime(isoStr) {
   return Math.round(diff / 86400) + 'd ago';
 }
 
-function renderMetrics() {
-  fetchJSON('/api/runtime/handoffs').then(function(handoffs) {
-    setText('cl-handoff-count', Array.isArray(handoffs) ? handoffs.length : 0);
-  }).catch(function() { setText('cl-handoff-count', '0'); });
-
-  fetchJSON('/api/runtime/harness-summary').then(function(summary) {
-    var success = summary.success_count || 0;
-    var failure = summary.failure_count || 0;
-    setText('cl-trace-count', success + failure);
-    setText('cl-closeout-count', failure);
-  }).catch(function() {
-    setText('cl-trace-count', '0');
-    setText('cl-closeout-count', '0');
-  });
-
-  fetchJSON('/api/runtime/state').then(function(state) {
-    var hasState = state && state.exists;
-    setText('cl-snapshot-count', hasState ? '1' : '0');
-  }).catch(function() { setText('cl-snapshot-count', '0'); });
+function statusLabel(status) {
+  var map = {
+    healthy: '健康',
+    degraded: '降级',
+    unknown: '未知'
+  };
+  return map[status] || status || '未知';
 }
 
-function renderHandoffs() {
+function routeHref(path) {
+  return CL_CONFIG.apiBase + path;
+}
+
+function renderBriefing(summary) {
+  var briefing = (summary && summary.briefing) || {};
+  setText('cl-briefing-label', briefing.label || 'Collaboration aggregation');
+  setText('cl-briefing-title', briefing.title || '协作聚合摘要不可用');
+  setText('cl-briefing-copy', briefing.summary || '当前未拿到 collaboration summary payload。');
+
+  var nextHop = (summary && summary.nextHop) || {};
+  var nextHopEl = document.getElementById('cl-next-hop');
+  if (nextHopEl) nextHopEl.href = routeHref(nextHop.href || '/collaboration');
+  setText('cl-next-hop-label', nextHop.label || '继续查看协作面');
+  setText('cl-next-hop-reason', nextHop.reason || '当前没有可用的下一跳建议。');
+}
+
+function renderMetrics(summary) {
+  var counts = (summary && summary.counts) || {};
+  setText('cl-handoff-count', counts.handoffCount || 0);
+  setText('cl-trace-count', counts.openHandoffCount || 0);
+  setText('cl-closeout-count', counts.pendingCloseoutCount || 0);
+  setText('cl-snapshot-count', counts.snapshotCount || 0);
+}
+
+function renderTriage(summary) {
+  var triage = (summary && summary.triage) || [];
+  var list = document.getElementById('cl-triage-list');
+  if (!list) return;
+
+  if (!triage.length) {
+    list.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">🧭</div><p>暂无协作缺口</p></div>';
+    return;
+  }
+
+  list.innerHTML = triage.slice(0, CL_CONFIG.maxTriage).map(function(item) {
+    var refs = (item.evidenceRefs || []).map(function(ref) {
+      if (ref.href) {
+        return '<a class="cl-evidence-link" href="' + routeHref(ref.href) + '">' + escapeHtml(ref.label) + '</a>';
+      }
+      return '<span class="cl-evidence-pill" title="' + escapeHtml(ref.path || '') + '">' + escapeHtml(ref.label) + '</span>';
+    }).join('');
+    return '<article class="cl-triage-card">' +
+      '<div class="cl-triage-head">' +
+        '<div>' +
+          '<span class="cl-triage-label">' + escapeHtml(item.label || 'Triage') + '</span>' +
+          '<div class="cl-triage-value">' + escapeHtml(item.count || 0) + '</div>' +
+        '</div>' +
+        '<span class="cl-handoff-badge ' + escapeHtml(item.status || 'unknown') + '">' + escapeHtml(statusLabel(item.status || 'unknown')) + '</span>' +
+      '</div>' +
+      '<p class="cl-triage-desc">' + escapeHtml(item.summary || '—') + '</p>' +
+      '<div class="cl-evidence-links">' + refs + '</div>' +
+    '</article>';
+  }).join('');
+}
+
+function renderHandoffs(summary) {
+  var handoffs = (summary && summary.handoffs) || [];
   var list = document.getElementById('cl-handoff-list');
+  if (!list) return;
 
-  fetchJSON('/api/runtime/handoffs').then(function(handoffs) {
-    if (!Array.isArray(handoffs) || handoffs.length === 0) {
-      list.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">📤</div><p>暂无交接包</p></div>';
-      return;
-    }
+  if (!handoffs.length) {
+    list.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">📤</div><p>暂无交接包</p></div>';
+    return;
+  }
 
-    var limited = handoffs.slice(0, CL_CONFIG.maxHandoffs);
-
-    list.innerHTML = limited.map(function(h) {
-      return '<div class="cl-handoff-item">' +
-        '<span class="cl-handoff-icon">📤</span>' +
-        '<div class="cl-handoff-info">' +
-          '<p class="cl-handoff-name">' + (h.name || '未命名') + '</p>' +
-          '<p class="cl-handoff-preview" title="' + (h.preview || '') + '">' + (h.preview || '—') + '</p>' +
-        '</div>' +
-        '<div class="cl-handoff-meta">' +
-          '<span class="cl-handoff-badge">主协作对象</span>' +
-          '<span class="cl-handoff-time">' + relativeTime(h.updated_at) + '</span>' +
-        '</div>' +
-      '</div>';
+  list.innerHTML = handoffs.slice(0, CL_CONFIG.maxHandoffs).map(function(h) {
+    var artifacts = (h.artifactsToReview || []).slice(0, 3).map(function(item) {
+      return '<span class="cl-evidence-pill" title="' + escapeHtml(item) + '">' + escapeHtml(item) + '</span>';
     }).join('');
-  }).catch(function() {
-    list.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">⚠️</div><p>加载失败</p></div>';
-  });
+    var jumpHref = h.queueStatus === 'open' ? '/collaboration/tasks' : '/operations#harness';
+    return '<div class="cl-handoff-item">' +
+      '<span class="cl-handoff-icon">📤</span>' +
+      '<div class="cl-handoff-info">' +
+        '<p class="cl-handoff-name">' + escapeHtml(h.title || h.name || '未命名') + '</p>' +
+        '<p class="cl-handoff-preview" title="' + escapeHtml(h.preview || '') + '">' + escapeHtml(h.preview || '—') + '</p>' +
+        '<div class="cl-evidence-links" style="margin-top:8px;">' + (artifacts || '<span class="cl-evidence-pill">无 artifacts</span>') + '</div>' +
+      '</div>' +
+      '<div class="cl-handoff-meta">' +
+        '<span class="cl-handoff-badge ' + escapeHtml(h.severity || 'pending') + '">' + escapeHtml(h.runtimeStatus || 'unknown') + '</span>' +
+        '<span class="cl-handoff-time">' + escapeHtml(relativeTime(h.updated_at)) + '</span>' +
+        '<a class="cl-evidence-link" href="' + routeHref(jumpHref) + '">继续处理</a>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
-function renderTraces() {
+function renderEvidence(summary) {
   var grid = document.getElementById('cl-trace-grid');
+  if (!grid) return;
 
-  fetchJSON('/api/runtime/harness-summary').then(function(summary) {
-    var items = [];
+  var snapshot = summary.runtimeSnapshot || {};
+  var harness = summary.harness || {};
+  var items = [];
 
-    if (summary.latest_success) {
-      items.push({
-        type: 'success',
-        name: summary.latest_success.name || summary.latest_success.id || '成功记录',
-        meta: summary.latest_success.timestamp || '--',
-        desc: '最近成功执行，作为交接闭环的结果证据。'
-      });
-    }
+  if (snapshot.exists) {
+    items.push({
+      type: 'snapshot',
+      name: (snapshot.data && snapshot.data.phase) || 'runtime snapshot',
+      meta: (snapshot.data && snapshot.data.updated_at) || '--',
+      desc: (snapshot.data && snapshot.data.summary) || '当前协作轮次的 runtime-local phase / status / actor 摘要。',
+      refs: [
+        { label: '任务协作工作台', href: '/collaboration/tasks' },
+        { label: 'Runtime sessions', href: '/runtime/sessions' },
+      ],
+    });
+  }
 
-    if (summary.latest_failure) {
-      items.push({
-        type: 'failure',
-        name: summary.latest_failure.name || summary.latest_failure.id || '失败记录',
-        meta: summary.latest_failure.timestamp || '--',
-        desc: '最近失败执行，作为协作排障与复核证据。'
-      });
-    }
+  if (harness.latest_closeout) {
+    items.push({
+      type: 'closeout',
+      name: harness.latest_closeout.id || '最新 closeout',
+      meta: harness.latest_closeout.timestamp || '--',
+      desc: harness.latest_closeout.message || '最近一次 closeout artifact。',
+      refs: [
+        { label: 'Harness readiness', href: '/operations#harness' },
+        { label: 'Governance graph', href: '/governance/graph' },
+      ],
+    });
+  }
 
-    if (items.length === 0) {
-      grid.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">📋</div><p>暂无追踪记录</p></div>';
-      return;
-    }
+  if (harness.latest_success) {
+    items.push({
+      type: 'success',
+      name: harness.latest_success.id || '最近成功 trace',
+      meta: harness.latest_success.timestamp || '--',
+      desc: harness.latest_success.message || '最近一条成功执行 evidence。',
+      refs: [{ label: 'Harness readiness', href: '/operations#harness' }],
+    });
+  }
 
-    grid.innerHTML = items.slice(0, CL_CONFIG.maxTraces).map(function(t) {
-      return '<div class="cl-trace-card">' +
-        '<span class="cl-trace-type ' + t.type + '">' + (t.type === 'success' ? '支持证据 / 成功' : '支持证据 / 失败') + '</span>' +
-        '<div class="cl-trace-name">' + t.name + '</div>' +
-        '<div class="cl-trace-meta">' + t.meta + '</div>' +
-        '<p class="cl-trace-desc">' + t.desc + '</p>' +
-      '</div>';
+  if (!items.length) {
+    grid.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">📋</div><p>暂无协作证据</p></div>';
+    return;
+  }
+
+  grid.innerHTML = items.map(function(item) {
+    var refs = (item.refs || []).map(function(ref) {
+      return '<a class="cl-evidence-link" href="' + routeHref(ref.href) + '">' + escapeHtml(ref.label) + '</a>';
     }).join('');
-  }).catch(function() {
-    grid.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">⚠️</div><p>加载失败</p></div>';
-  });
+    return '<div class="cl-trace-card">' +
+      '<span class="cl-trace-type ' + escapeHtml(item.type) + '">' + escapeHtml(item.type) + '</span>' +
+      '<div class="cl-trace-name">' + escapeHtml(item.name) + '</div>' +
+      '<div class="cl-trace-meta">' + escapeHtml(item.meta) + '</div>' +
+      '<p class="cl-trace-desc">' + escapeHtml(item.desc) + '</p>' +
+      '<div class="cl-evidence-links" style="margin-top:12px;">' + refs + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderEvidenceJumps(summary) {
+  var container = document.getElementById('cl-evidence-jumps');
+  if (!container) return;
+  var items = (summary && summary.evidenceJumps) || [];
+  if (!items.length) {
+    container.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">🔗</div><p>暂无证据跳转</p></div>';
+    return;
+  }
+  container.innerHTML = items.map(function(item) {
+    return '<a class="cl-support-link" href="' + routeHref(item.href || '/collaboration') + '">' +
+      '<strong>' + escapeHtml(item.label || 'Evidence jump') + '</strong>' +
+      '<span>' + escapeHtml(item.desc || '—') + '</span>' +
+    '</a>';
+  }).join('');
 }
 
 function loadCollaboration() {
-  renderMetrics();
-  renderHandoffs();
-  renderTraces();
+  fetchJSON('/api/collaboration/summary').then(function(summary) {
+    renderBriefing(summary || {});
+    renderMetrics(summary || {});
+    renderTriage(summary || {});
+    renderHandoffs(summary || {});
+    renderEvidence(summary || {});
+    renderEvidenceJumps(summary || {});
+  }).catch(function() {
+    renderBriefing({});
+    renderMetrics({});
+    renderTriage({ triage: [] });
+    renderHandoffs({ handoffs: [] });
+    renderEvidence({ runtimeSnapshot: {}, harness: {} });
+    renderEvidenceJumps({ evidenceJumps: [] });
+  });
 }
 
 function init() {

@@ -393,6 +393,13 @@ def _read_optional_json(path):
         return {}
 
 
+def _read_optional_text(path, default=''):
+    try:
+        return path.read_text(encoding='utf-8')
+    except FileNotFoundError:
+        return default
+
+
 def _get_remote_repo_root():
     cfg = _get_remote_config()
     return cfg.get('repo_root') or os.environ.get('CRAZY_REMOTE_REPO_ROOT') or '/root/CrazyAgentsManage'
@@ -510,6 +517,227 @@ def _safe_sorted_paths(path, pattern='*'):
         return sorted(path.glob(pattern))
     except PermissionError:
         return []
+
+
+def _parse_iso_datetime(raw_value):
+    text = str(raw_value or '').strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace('Z', '+00:00'))
+    except ValueError:
+        return None
+
+
+def _artifact_root_candidates():
+    roots = []
+    seen = set()
+    for root in (_get_repo_root(), _get_runtime_repo_root()):
+        key = str(root)
+        if key in seen:
+            continue
+        seen.add(key)
+        roots.append(root)
+    return roots
+
+
+def _pick_runtime_collaboration_root():
+    best_root = _get_repo_root()
+    best_score = -1
+    for root in _artifact_root_candidates():
+        collab_root = root / '.omx' / 'crazyagents'
+        score = 0
+        if _safe_exists(collab_root / 'runtime-state.json'):
+            score += 5
+        try:
+            score += len(list((collab_root / 'outbox').glob('*.md')))
+        except FileNotFoundError:
+            pass
+        if score > best_score:
+            best_root = root
+            best_score = score
+    return best_root
+
+
+def _pick_harness_root():
+    best_root = _get_repo_root()
+    best_score = -1
+    for root in _artifact_root_candidates():
+        harness_root = root / 'harness'
+        score = 0
+        try:
+            score += len([p for p in (harness_root / 'trace' / 'successes').glob('*.json') if p.name != 'TEMPLATE.json'])
+            score += len([p for p in (harness_root / 'trace' / 'failures').glob('*.json') if p.name != 'TEMPLATE.json'])
+            score += len([p for p in (harness_root / 'closeouts').glob('*.json') if p.name != 'TEMPLATE.json'])
+        except FileNotFoundError:
+            pass
+        if score > best_score:
+            best_root = root
+            best_score = score
+    return best_root
+
+
+def _handoff_section_lines(content, heading):
+    lines = content.splitlines()
+    target = f'## {heading}'
+    capture = False
+    out = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped == target:
+            capture = True
+            continue
+        if capture and stripped.startswith('## '):
+            break
+        if capture:
+            out.append(line.rstrip())
+    return out
+
+
+def _handoff_section_list(content, heading):
+    items = []
+    for line in _handoff_section_lines(content, heading):
+        stripped = line.strip()
+        if stripped.startswith('- '):
+            value = stripped[2:].strip()
+            if value:
+                items.append(value)
+    return items
+
+
+def _handoff_section_value(content, label):
+    prefix = f'- {label}:'
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(prefix):
+            return stripped[len(prefix):].strip()
+    return ''
+
+
+def _handoff_preview_from_content(content):
+    summary = _handoff_section_value(content, 'Current summary')
+    goal = _handoff_section_value(content, 'Goal')
+    if summary and summary != '(none)':
+        return summary
+    if goal:
+        return goal
+    compact = ' '.join(part.strip() for part in content.splitlines() if part.strip())
+    return compact[:300]
+
+
+def _collect_runtime_handoffs(limit=20):
+    runtime_root = _pick_runtime_collaboration_root()
+    outbox = runtime_root / '.omx' / 'crazyagents' / 'outbox'
+    if not outbox.exists():
+        return []
+
+    items = []
+    for path in sorted(outbox.glob('*.md'), reverse=True):
+        content = _read_optional_text(path, '')
+        title = _handoff_section_value(content, 'Title') or path.name
+        runtime_status = (_handoff_section_value(content, 'Runtime status') or 'unknown').strip().lower()
+        runtime_phase = (_handoff_section_value(content, 'Runtime phase') or 'unknown').strip()
+        updated_at = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat()
+        artifacts = _handoff_section_list(content, 'Artifacts To Review')
+        questions = _handoff_section_list(content, 'Questions')
+        preview = _handoff_preview_from_content(content)
+        queue_status = 'closed' if runtime_status in ('completed', 'accepted', 'delivered', 'validated') else 'open'
+        severity = 'blocked' if runtime_status == 'blocked' else ('pending' if queue_status == 'open' else 'resolved')
+        items.append({
+            'name': path.name,
+            'path': str(path),
+            'relativePath': str(path.relative_to(runtime_root)),
+            'updated_at': updated_at,
+            'preview': preview,
+            'size': len(content),
+            'title': title,
+            'goal': _handoff_section_value(content, 'Goal'),
+            'runtimePhase': runtime_phase,
+            'runtimeStatus': runtime_status or 'unknown',
+            'currentSummary': _handoff_section_value(content, 'Current summary'),
+            'artifactsToReview': artifacts,
+            'questions': questions,
+            'queueStatus': queue_status,
+            'severity': severity,
+        })
+    return items[:limit]
+
+
+def _build_runtime_state_view():
+    runtime_root = _pick_runtime_collaboration_root()
+    state_path = runtime_root / '.omx' / 'crazyagents' / 'runtime-state.json'
+    data = _read_optional_json(state_path)
+    if not data:
+        return {
+            'exists': False,
+            'path': str(state_path),
+            'data': {},
+        }
+    return {
+        'exists': True,
+        'path': str(state_path),
+        'data': data,
+    }
+
+
+def _build_runtime_harness_summary():
+    repo_root = _pick_harness_root()
+    success_dir = repo_root / 'harness' / 'trace' / 'successes'
+    failure_dir = repo_root / 'harness' / 'trace' / 'failures'
+    closeout_dir = repo_root / 'harness' / 'closeouts'
+    summary = {
+        'success_count': 0,
+        'failure_count': 0,
+        'closeout_count': 0,
+        'latest_success': None,
+        'latest_failure': None,
+        'latest_closeout': None,
+        'pending_closeout_count': 0,
+        'source_root': str(repo_root),
+    }
+
+    success_files = sorted(
+        [p for p in success_dir.glob('*.json') if p.name != 'TEMPLATE.json'],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    ) if success_dir.exists() else []
+    failure_files = sorted(
+        [p for p in failure_dir.glob('*.json') if p.name != 'TEMPLATE.json'],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    ) if failure_dir.exists() else []
+    closeout_files = sorted(
+        [p for p in closeout_dir.glob('*.json') if p.name != 'TEMPLATE.json'],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    ) if closeout_dir.exists() else []
+
+    summary['success_count'] = len(success_files)
+    summary['failure_count'] = len(failure_files)
+    summary['closeout_count'] = len(closeout_files)
+
+    if success_files:
+        summary['latest_success'] = _read_optional_json(success_files[0])
+    if failure_files:
+        summary['latest_failure'] = _read_optional_json(failure_files[0])
+    if closeout_files:
+        summary['latest_closeout'] = _read_optional_json(closeout_files[0])
+
+    closeout_trace_ids = set()
+    for path in closeout_files:
+        payload = _read_optional_json(path)
+        if not isinstance(payload, dict):
+            continue
+        trace = payload.get('trace') if isinstance(payload.get('trace'), dict) else {}
+        trace_id = str(trace.get('id') or '').strip()
+        if trace_id:
+            closeout_trace_ids.add(trace_id)
+    trace_ids = [
+        str((_read_optional_json(path) or {}).get('id') or '').strip()
+        for path in success_files + failure_files
+    ]
+    summary['pending_closeout_count'] = len([trace_id for trace_id in trace_ids if trace_id and trace_id not in closeout_trace_ids])
+    return summary
 
 
 def _read_shared_context_json(rel_path, default=None):
@@ -2427,20 +2655,7 @@ def dashboard_gateway_status():
 
 @api.route('/runtime/state')
 def runtime_state():
-    repo_root = _get_repo_root()
-    state_path = repo_root / '.omx' / 'crazyagents' / 'runtime-state.json'
-    data = _read_optional_json(state_path)
-    if not data:
-        return jsonify({
-            'exists': False,
-            'path': str(state_path),
-            'data': {},
-        })
-    return jsonify({
-        'exists': True,
-        'path': str(state_path),
-        'data': data,
-    })
+    return jsonify(_build_runtime_state_view())
 
 
 def _resolve_handoff_replay(record_id):
@@ -2589,86 +2804,197 @@ def runtime_handoffs():
             )
         ), 502
 
-    repo_root = _get_repo_root()
-    outbox = repo_root / '.omx' / 'crazyagents' / 'outbox'
-    if not outbox.exists():
-        return jsonify([])
-
-    items = []
-    for path in sorted(outbox.glob('*.md'), reverse=True):
-        try:
-            content = path.read_text(encoding='utf-8')
-        except FileNotFoundError:
-            continue
-        items.append({
-            'name': path.name,
-            'path': str(path),
-            'updated_at': datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat(),
-            'preview': content[:300],
-            'size': len(content),
-        })
-    return jsonify(items[:20])
+    return jsonify(_collect_runtime_handoffs(limit=20))
 
 
 @api.route('/runtime/harness-summary')
 def runtime_harness_summary():
-    repo_root = _get_repo_root()
-    success_dir = repo_root / 'harness' / 'trace' / 'successes'
-    failure_dir = repo_root / 'harness' / 'trace' / 'failures'
-    closeout_dir = repo_root / 'harness' / 'closeouts'
-    summary = {
-        'success_count': 0,
-        'failure_count': 0,
-        'closeout_count': 0,
-        'latest_success': None,
-        'latest_failure': None,
-        'latest_closeout': None,
-        'pending_closeout_count': 0,
+    return jsonify(_build_runtime_harness_summary())
+
+
+def _build_collaboration_summary_view():
+    handoffs = _collect_runtime_handoffs(limit=20)
+    snapshot = _build_runtime_state_view()
+    harness = _build_runtime_harness_summary()
+
+    latest_closeout = harness.get('latest_closeout') if isinstance(harness.get('latest_closeout'), dict) else None
+    latest_closeout_ts = _parse_iso_datetime((latest_closeout or {}).get('timestamp'))
+    latest_snapshot_ts = _parse_iso_datetime(((snapshot.get('data') or {}) if snapshot.get('exists') else {}).get('updated_at'))
+
+    open_handoffs = [item for item in handoffs if item.get('queueStatus') == 'open']
+    blocked_handoffs = [item for item in open_handoffs if item.get('runtimeStatus') == 'blocked']
+    stale_unreviewed = []
+    now_utc = datetime.now(timezone.utc)
+    for item in open_handoffs:
+        item_ts = _parse_iso_datetime(item.get('updated_at'))
+        if item_ts and (now_utc - item_ts).total_seconds() >= 24 * 3600:
+            stale_unreviewed.append(item)
+
+    snapshot_status = str(((snapshot.get('data') or {}) if snapshot.get('exists') else {}).get('status') or '').strip().lower()
+    completed_snapshot = snapshot_status in ('completed', 'validated', 'accepted', 'delivered', 'blocked')
+    missing_writeback = 1 if completed_snapshot and latest_snapshot_ts and (not latest_closeout_ts or latest_snapshot_ts > latest_closeout_ts) else 0
+
+    triage = [
+        {
+            'id': 'open-handoff',
+            'label': 'Open Handoffs',
+            'count': len(open_handoffs),
+            'status': 'degraded' if open_handoffs else 'healthy',
+            'summary': '仍留在交接对象池中、未进入明确 closed runtime state 的 handoff 包。',
+            'href': '/collaboration/tasks',
+            'evidenceRefs': [
+                {'label': 'Handoff queue', 'kind': 'runtime-local', 'path': '.omx/crazyagents/outbox'},
+                {'label': 'Task workspace', 'kind': 'route', 'href': '/collaboration/tasks'},
+            ],
+        },
+        {
+            'id': 'pending-closeout',
+            'label': 'Pending Closeout',
+            'count': harness.get('pending_closeout_count', 0),
+            'status': 'degraded' if harness.get('pending_closeout_count', 0) else 'healthy',
+            'summary': '已写 trace 但仍未绑定 closeout artifact 的协作轮次。',
+            'href': '/operations#harness',
+            'evidenceRefs': [
+                {'label': 'Harness readiness', 'kind': 'route', 'href': '/operations#harness'},
+                {'label': 'Closeout artifacts', 'kind': 'repo-artifact', 'path': 'harness/closeouts/*.json'},
+            ],
+        },
+        {
+            'id': 'missing-writeback',
+            'label': 'Missing Writeback',
+            'count': missing_writeback,
+            'status': 'degraded' if missing_writeback else 'healthy',
+            'summary': 'runtime snapshot 已进入完成/验证态，但仓库 closeout 仍未追平。',
+            'href': '/collaboration',
+            'evidenceRefs': [
+                {'label': 'Runtime snapshot', 'kind': 'runtime-local', 'path': '.omx/crazyagents/runtime-state.json'},
+                {'label': 'Master task plan', 'kind': 'repo-artifact', 'path': 'docs/roadmap/master-task-plan.md'},
+            ],
+        },
+        {
+            'id': 'unreviewed-artifact',
+            'label': 'Unreviewed Artifact',
+            'count': len(stale_unreviewed),
+            'status': 'degraded' if stale_unreviewed else 'healthy',
+            'summary': '长期停留在 outbox 的旧 handoff artifact，说明 review / acceptance 没被系统性收口。',
+            'href': '/runtime/sessions',
+            'evidenceRefs': [
+                {'label': 'Runtime sessions', 'kind': 'route', 'href': '/runtime/sessions'},
+                {'label': 'Governance graph', 'kind': 'route', 'href': '/governance/graph'},
+            ],
+        },
+    ]
+
+    next_hop = next((item for item in triage if item.get('status') == 'degraded'), None)
+    if not next_hop:
+        next_hop = {
+            'label': '进入 Loop Surface',
+            'reason': '当前协作链没有显式缺口时，继续检查 cycle / gate / feedback / memory candidate。',
+            'href': '/collaboration/loops',
+        }
+    else:
+        next_hop = {
+            'label': next_hop.get('label'),
+            'reason': next_hop.get('summary'),
+            'href': next_hop.get('href'),
+        }
+
+    status = 'healthy'
+    if any(item.get('status') == 'degraded' for item in triage):
+        status = 'degraded'
+    elif not handoffs and not snapshot.get('exists') and not harness.get('closeout_count', 0):
+        status = 'unknown'
+
+    evidence_jumps = [
+        {'label': '任务协作工作台', 'href': '/collaboration/tasks', 'desc': '从 handoff 进入执行工作面。'},
+        {'label': 'Loop Surface', 'href': '/collaboration/loops', 'desc': '查看当前 cycle / gate / feedback / memory candidate。'},
+        {'label': '运行态会话', 'href': '/runtime/sessions', 'desc': '查看 supporting runtime evidence。'},
+        {'label': '治理图谱', 'href': '/governance/graph', 'desc': '查看关系与上下游参照。'},
+        {'label': 'Harness Readiness', 'href': '/operations#harness', 'desc': '核对 closeout / trace / writeback evidence。'},
+    ]
+
+    return {
+        'status': status,
+        'counts': {
+            'handoffCount': len(handoffs),
+            'openHandoffCount': len(open_handoffs),
+            'blockedHandoffCount': len(blocked_handoffs),
+            'pendingCloseoutCount': harness.get('pending_closeout_count', 0),
+            'missingWritebackCount': missing_writeback,
+            'unreviewedArtifactCount': len(stale_unreviewed),
+            'snapshotCount': 1 if snapshot.get('exists') else 0,
+            'closeoutCount': harness.get('closeout_count', 0),
+        },
+        'briefing': {
+            'label': 'Collaboration closeout chain',
+            'title': '协作闭环状态已聚合为 handoff / snapshot / closeout / repo truth 的统一摘要。',
+            'summary': '先看 open handoff、pending closeout、missing writeback 与 unreviewed artifact，再决定是进入任务工作台、Harness 证据面还是治理图谱。',
+        },
+        'nextHop': next_hop,
+        'handoffs': handoffs,
+        'runtimeSnapshot': snapshot,
+        'harness': harness,
+        'triage': triage,
+        'evidenceJumps': evidence_jumps,
     }
 
-    success_files = sorted(
-        [p for p in success_dir.glob('*.json') if p.name != 'TEMPLATE.json'],
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    ) if success_dir.exists() else []
-    failure_files = sorted(
-        [p for p in failure_dir.glob('*.json') if p.name != 'TEMPLATE.json'],
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    ) if failure_dir.exists() else []
-    closeout_files = sorted(
-        [p for p in closeout_dir.glob('*.json') if p.name != 'TEMPLATE.json'],
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    ) if closeout_dir.exists() else []
 
-    summary['success_count'] = len(success_files)
-    summary['failure_count'] = len(failure_files)
-    summary['closeout_count'] = len(closeout_files)
+def _build_collaboration_graph_projection():
+    summary = _build_collaboration_summary_view()
+    counts = summary.get('counts') or {}
+    handoff_status = 'healthy'
+    if counts.get('openHandoffCount', 0):
+        handoff_status = 'degraded'
+    elif not counts.get('handoffCount', 0):
+        handoff_status = 'unknown'
 
-    if success_files:
-        summary['latest_success'] = _read_optional_json(success_files[0])
-    if failure_files:
-        summary['latest_failure'] = _read_optional_json(failure_files[0])
-    if closeout_files:
-        summary['latest_closeout'] = _read_optional_json(closeout_files[0])
+    snapshot_status = 'healthy' if counts.get('snapshotCount', 0) else 'unknown'
+    if counts.get('missingWritebackCount', 0):
+        snapshot_status = 'degraded'
 
-    closeout_trace_ids = set()
-    for path in closeout_files:
-        payload = _read_optional_json(path)
-        if not isinstance(payload, dict):
-            continue
-        trace = payload.get('trace') if isinstance(payload.get('trace'), dict) else {}
-        trace_id = str(trace.get('id') or '').strip()
-        if trace_id:
-            closeout_trace_ids.add(trace_id)
-    trace_ids = [
-        str((_read_optional_json(path) or {}).get('id') or '').strip()
-        for path in success_files + failure_files
-    ]
-    summary['pending_closeout_count'] = len([trace_id for trace_id in trace_ids if trace_id and trace_id not in closeout_trace_ids])
+    closeout_status = 'healthy' if counts.get('closeoutCount', 0) else 'unknown'
+    if counts.get('pendingCloseoutCount', 0):
+        closeout_status = 'degraded'
 
-    return jsonify(summary)
+    repo_truth_status = 'healthy' if counts.get('closeoutCount', 0) and not counts.get('missingWritebackCount', 0) else 'unknown'
+    if counts.get('missingWritebackCount', 0):
+        repo_truth_status = 'degraded'
+
+    hermes_status = 'healthy'
+    if counts.get('blockedHandoffCount', 0) or counts.get('unreviewedArtifactCount', 0):
+        hermes_status = 'degraded'
+    elif not counts.get('handoffCount', 0):
+        hermes_status = 'unknown'
+
+    return {
+        'status': summary.get('status', 'unknown'),
+        'nodes': [
+            {'id': 'codex', 'label': 'Codex', 'status': 'healthy', 'summary': '实施、验证与仓库事实更新 owner。', 'href': '/collaboration/tasks'},
+            {'id': 'handoff', 'label': 'Handoff', 'status': handoff_status, 'summary': f"Open={counts.get('openHandoffCount', 0)} / total={counts.get('handoffCount', 0)}", 'href': '/collaboration'},
+            {'id': 'hermesagent', 'label': 'HermesAgent', 'status': hermes_status, 'summary': f"blocked={counts.get('blockedHandoffCount', 0)} / unreviewed={counts.get('unreviewedArtifactCount', 0)}", 'href': '/collaboration/tasks'},
+            {'id': 'runtime-snapshot', 'label': 'Runtime Snapshot', 'status': snapshot_status, 'summary': '当前协作轮次的 runtime-local 阶段与状态。', 'href': '/collaboration'},
+            {'id': 'closeout', 'label': 'Closeout', 'status': closeout_status, 'summary': f"pending={counts.get('pendingCloseoutCount', 0)} / total={counts.get('closeoutCount', 0)}", 'href': '/operations#harness'},
+            {'id': 'repo-truth', 'label': 'Repo Truth', 'status': repo_truth_status, 'summary': f"missing writeback={counts.get('missingWritebackCount', 0)}", 'href': '/governance/graph'},
+        ],
+        'edges': [
+            {'from': 'codex', 'to': 'handoff', 'label': 'produce handoff'},
+            {'from': 'handoff', 'to': 'hermesagent', 'label': 'operations review'},
+            {'from': 'hermesagent', 'to': 'runtime-snapshot', 'label': 'runtime acceptance signal'},
+            {'from': 'runtime-snapshot', 'to': 'closeout', 'label': 'closeout writeback'},
+            {'from': 'closeout', 'to': 'repo-truth', 'label': 'durable evidence'},
+        ],
+        'evidenceJumps': summary.get('evidenceJumps') or [],
+    }
+
+
+@api.route('/collaboration/summary')
+def collaboration_summary():
+    return jsonify(_build_collaboration_summary_view())
+
+
+@api.route('/collaboration/graph-projection')
+def collaboration_graph_projection():
+    return jsonify(_build_collaboration_graph_projection())
 
 
 @api.route('/collaboration/loops')
@@ -5049,7 +5375,7 @@ def _build_operations_host_health_view():
 
 
 def _build_operations_harness_view():
-    repo_harness_root = _resolve_repo_artifact_path('harness')
+    repo_harness_root = _pick_harness_root() / 'harness'
     closeout_dir = repo_harness_root / 'closeouts'
     success_dir = repo_harness_root / 'trace' / 'successes'
     failure_dir = repo_harness_root / 'trace' / 'failures'

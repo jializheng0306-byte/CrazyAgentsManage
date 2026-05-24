@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'webui'))
@@ -837,6 +838,8 @@ class TestArchitecturePagesReachable:
         assert '技术架构' in text
         assert 'TechArchitecturePreviewPage.tsx' in text
         assert '稳定入口' in text
+        assert 'tech-collaboration-chain' in text
+        assert 'architecture-tech.js' in text
 
     def test_architecture_preview_tsx_files_exist(self, client):
         src_root = os.path.join(os.path.dirname(__file__), '..', 'src')
@@ -1543,6 +1546,208 @@ class TestV04ContextManagementAPIs:
         assert 'closeout_count' in data
         assert 'pending_closeout_count' in data
 
+    def test_runtime_handoffs_prefers_runtime_repo_root_when_deploy_copy_is_sparse(self, client, monkeypatch, tmp_path):
+        deploy_root = tmp_path / 'deploy-copy'
+        runtime_root = tmp_path / 'runtime-root'
+        handoff_dir = runtime_root / '.omx' / 'crazyagents' / 'outbox'
+        handoff_dir.mkdir(parents=True, exist_ok=True)
+        handoff = handoff_dir / 'handoff-20260524T010000Z.md'
+        handoff.write_text(
+            '\n'.join([
+                '@HermesAgent',
+                '',
+                '## Handoff',
+                '- Title: Runtime root handoff',
+                '- Goal: Verify collaboration summary reads the richer runtime root',
+                '- Runtime phase: review-request',
+                '- Runtime status: blocked',
+                '- Current summary: Waiting on Hermes acceptance',
+                '',
+                '## Artifacts To Review',
+                '- docs/roadmap/master-task-plan.md',
+                '- docs/02-engineering/harness/HARNESS-ENTRY.md',
+                '',
+                '## Questions',
+                '- Which evidence jump should the operator follow first?',
+            ]),
+            encoding='utf-8',
+        )
+        stale_ts = time.time() - 3 * 24 * 3600
+        os.utime(handoff, (stale_ts, stale_ts))
+
+        (runtime_root / '.omx' / 'crazyagents').mkdir(parents=True, exist_ok=True)
+        (runtime_root / '.omx' / 'crazyagents' / 'runtime-state.json').write_text(
+            json.dumps(
+                {
+                    'updated_at': '2026-05-24T09:00:00+08:00',
+                    'phase': 'hermes-acceptance',
+                    'status': 'blocked',
+                    'actor': 'codex',
+                    'summary': 'Need Hermes review before closeout.',
+                },
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+        (runtime_root / 'harness' / 'trace' / 'successes').mkdir(parents=True, exist_ok=True)
+        (runtime_root / 'harness' / 'trace' / 'successes' / 'S-20260524-001.json').write_text(
+            json.dumps({'id': 'S-20260524-001', 'timestamp': '2026-05-24T01:00:00Z', 'message': 'runtime root success'}),
+            encoding='utf-8',
+        )
+        (runtime_root / 'harness' / 'closeouts').mkdir(parents=True, exist_ok=True)
+        (runtime_root / 'harness' / 'closeouts' / 'C-20260524-001.json').write_text(
+            json.dumps(
+                {
+                    'id': 'C-20260524-001',
+                    'timestamp': '2026-05-24T01:05:00Z',
+                    'status': 'success',
+                    'message': 'runtime root closeout',
+                    'trace': {'id': 'S-20260524-001', 'kind': 'success'},
+                }
+            ),
+            encoding='utf-8',
+        )
+
+        (deploy_root / '.omx' / 'crazyagents' / 'outbox').mkdir(parents=True, exist_ok=True)
+        (deploy_root / 'harness' / 'closeouts').mkdir(parents=True, exist_ok=True)
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: deploy_root)
+        monkeypatch.setattr(webui_api, '_get_runtime_repo_root', lambda: runtime_root)
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/runtime/handoffs')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert len(data) == 1
+        assert data[0]['title'] == 'Runtime root handoff'
+        assert data[0]['queueStatus'] == 'open'
+        assert data[0]['runtimeStatus'] == 'blocked'
+
+        summary = client.get('/api/runtime/harness-summary')
+        assert summary.status_code == 200
+        payload = summary.get_json()
+        assert payload['success_count'] == 1
+        assert payload['closeout_count'] == 1
+
+    def test_collaboration_summary_api_builds_triage_and_evidence_jumps(self, client, monkeypatch, tmp_path):
+        deploy_root = tmp_path / 'deploy-copy'
+        runtime_root = tmp_path / 'runtime-root'
+        handoff_dir = runtime_root / '.omx' / 'crazyagents' / 'outbox'
+        handoff_dir.mkdir(parents=True, exist_ok=True)
+        handoff = handoff_dir / 'handoff-20260524T010000Z.md'
+        handoff.write_text(
+            '\n'.join([
+                '@HermesAgent',
+                '',
+                '## Handoff',
+                '- Title: Closeout evidence follow-up',
+                '- Goal: Review the writeback path before declaring closure',
+                '- Runtime phase: acceptance-closeout',
+                '- Runtime status: in_progress',
+                '- Current summary: Closeout path still needs operator review.',
+                '',
+                '## Artifacts To Review',
+                '- docs/roadmap/master-task-plan.md',
+                '- docs/02-engineering/harness/HARNESS-ENTRY.md',
+            ]),
+            encoding='utf-8',
+        )
+        stale_ts = time.time() - 2 * 24 * 3600
+        os.utime(handoff, (stale_ts, stale_ts))
+        (runtime_root / '.omx' / 'crazyagents').mkdir(parents=True, exist_ok=True)
+        (runtime_root / '.omx' / 'crazyagents' / 'runtime-state.json').write_text(
+            json.dumps(
+                {
+                    'updated_at': '2026-05-24T09:00:00+08:00',
+                    'phase': 'acceptance-closeout',
+                    'status': 'completed',
+                    'actor': 'codex',
+                    'summary': 'Waiting for durable writeback.',
+                },
+                ensure_ascii=False,
+            ),
+            encoding='utf-8',
+        )
+        (runtime_root / 'harness' / 'trace' / 'successes').mkdir(parents=True, exist_ok=True)
+        (runtime_root / 'harness' / 'trace' / 'successes' / 'S-20260524-001.json').write_text(
+            json.dumps({'id': 'S-20260524-001', 'timestamp': '2026-05-24T00:40:00Z', 'message': 'pre-closeout trace'}),
+            encoding='utf-8',
+        )
+        (runtime_root / 'harness' / 'closeouts').mkdir(parents=True, exist_ok=True)
+        (runtime_root / 'harness' / 'closeouts' / 'C-20260524-001.json').write_text(
+            json.dumps(
+                {
+                    'id': 'C-20260524-001',
+                    'timestamp': '2026-05-24T00:41:00Z',
+                    'status': 'success',
+                    'message': 'Earlier closeout',
+                    'trace': {'id': 'S-20260524-001', 'kind': 'success'},
+                }
+            ),
+            encoding='utf-8',
+        )
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: deploy_root)
+        monkeypatch.setattr(webui_api, '_get_runtime_repo_root', lambda: runtime_root)
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/collaboration/summary')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['status'] == 'degraded'
+        assert data['counts']['handoffCount'] == 1
+        assert data['counts']['openHandoffCount'] == 1
+        assert data['counts']['missingWritebackCount'] == 1
+        assert data['counts']['unreviewedArtifactCount'] == 1
+        assert data['nextHop']['href'] == '/collaboration/tasks'
+        assert data['handoffs'][0]['artifactsToReview'][0] == 'docs/roadmap/master-task-plan.md'
+        triage_ids = [item['id'] for item in data['triage']]
+        assert triage_ids == ['open-handoff', 'pending-closeout', 'missing-writeback', 'unreviewed-artifact']
+        assert any(item['href'] == '/operations#harness' for item in data['evidenceJumps'])
+
+        manage_resp = client.get('/manage/api/collaboration/summary')
+        assert manage_resp.status_code == 200
+        assert manage_resp.get_json()['counts']['missingWritebackCount'] == 1
+
+    def test_collaboration_graph_projection_api_exposes_chain_nodes(self, client, monkeypatch, tmp_path):
+        deploy_root = tmp_path / 'deploy-copy'
+        runtime_root = tmp_path / 'runtime-root'
+        (runtime_root / '.omx' / 'crazyagents' / 'outbox').mkdir(parents=True, exist_ok=True)
+        (runtime_root / '.omx' / 'crazyagents' / 'outbox' / 'handoff-20260524T010000Z.md').write_text(
+            '\n'.join([
+                '@HermesAgent',
+                '',
+                '## Handoff',
+                '- Title: Projection handoff',
+                '- Goal: Build graph nodes',
+                '- Runtime phase: review-request',
+                '- Runtime status: blocked',
+                '- Current summary: Waiting on Hermes review',
+            ]),
+            encoding='utf-8',
+        )
+        (runtime_root / '.omx' / 'crazyagents' / 'runtime-state.json').write_text(
+            json.dumps({'updated_at': '2026-05-24T09:00:00+08:00', 'phase': 'review-request', 'status': 'blocked'}),
+            encoding='utf-8',
+        )
+        (runtime_root / 'harness' / 'closeouts').mkdir(parents=True, exist_ok=True)
+        (runtime_root / 'harness' / 'closeouts' / 'C-20260524-001.json').write_text(
+            json.dumps({'id': 'C-20260524-001', 'timestamp': '2026-05-24T09:10:00Z', 'status': 'success', 'trace': {'id': 'S-1', 'kind': 'success'}}),
+            encoding='utf-8',
+        )
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: deploy_root)
+        monkeypatch.setattr(webui_api, '_get_runtime_repo_root', lambda: runtime_root)
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/collaboration/graph-projection')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        node_ids = [item['id'] for item in data['nodes']]
+        assert node_ids == ['codex', 'handoff', 'hermesagent', 'runtime-snapshot', 'closeout', 'repo-truth']
+        assert any(edge['from'] == 'runtime-snapshot' and edge['to'] == 'closeout' for edge in data['edges'])
+        assert any(item['href'] == '/collaboration/tasks' for item in data['evidenceJumps'])
+
 
 class TestLoopSurfaceApis:
     @pytest.fixture(autouse=True)
@@ -1569,6 +1774,9 @@ class TestLoopSurfaceApis:
         assert resp.status_code == 200
         body = resp.data.decode('utf-8', errors='replace')
         assert '/collaboration/loops' in body
+        assert 'cl-next-hop' in body
+        assert 'cl-triage-list' in body
+        assert 'cl-evidence-jumps' in body
 
     def test_collaboration_loops_api_returns_empty_without_state(self, client):
         resp = client.get('/api/collaboration/loops')

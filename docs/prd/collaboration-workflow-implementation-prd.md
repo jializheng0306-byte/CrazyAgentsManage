@@ -10,7 +10,7 @@
 | 状态 | Draft |
 | Owner | Codex |
 | 继承自 | `docs/prd/technical-implementation-prd.md` |
-| 最后更新 | 2026-04-27 |
+| 最后更新 | 2026-05-24 |
 
 ## 文档目的
 
@@ -93,6 +93,11 @@
 - Codex、HermesAgent、handoff、runtime snapshot、closeout、repo truth 至少映射为稳定节点
 - 每个节点支持已存在、进行中、缺失、异常四类状态
 
+当前已落第一版 canonical surface：
+
+- `GET /api/collaboration/graph-projection`
+- `TechArchitecturePreviewPage` 读取同一条聚合状态源，而不是再独立拼另一套协作判断逻辑
+
 ### 5. Collaboration Summary Aggregation
 
 目标：
@@ -103,6 +108,11 @@
 
 - 至少提供 open handoff、pending closeout、missing writeback、unreviewed artifact 四类摘要
 - 可供架构展示页复用
+
+当前已落第一版 canonical surface：
+
+- `GET /api/collaboration/summary`
+- `Collaboration` 页面顶部 briefing / next hop / triage / evidence jumps
 
 ### 6. Loop / Cycle Collaboration Surface
 

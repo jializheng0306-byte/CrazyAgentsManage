@@ -318,12 +318,27 @@
 
 ### Phase C：Harness 与 Hermes 协作层对齐
 
-状态：待完成
+状态：进行中（first-slice landed）
 
 产出：
 
 - 通用 Harness 与 `Codex ↔ HermesAgent` 机制的清晰分层
 - PRD / roadmap / runtime / handoff / closeout 的统一 closeout 流程
+
+当前已落第一切片：
+
+- `Collaboration Summary Aggregation`
+  - `/api/collaboration/summary`
+  - `open handoff / pending closeout / missing writeback / unreviewed artifact`
+  - `Evidence Jumps`
+- `TechArchitecturePreviewPage` 协作链投影
+  - `/api/collaboration/graph-projection`
+  - `Codex / HermesAgent / handoff / runtime snapshot / closeout / repo truth`
+
+下一步继续做：
+
+- reviewer / Hermes acceptance / PRD closeout 的统一 evidence 链
+- 把协作 triage 从 summary 进一步贴到真实处理动作与明确 writeback path
 
 ### Phase D：页面系统与状态源收敛
 

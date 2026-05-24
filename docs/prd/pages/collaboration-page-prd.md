@@ -9,7 +9,7 @@
 | 版本 | v0.1.0 |
 | 状态 | Draft |
 | Owner | Codex |
-| 最后更新 | 2026-04-27 |
+| 最后更新 | 2026-05-24 |
 
 ## 页面目标
 
@@ -17,9 +17,12 @@
 
 当前实现已经收敛成**协作工作台**，因此页面主体不再是“若干并列列表”，而是：
 
+- 顶部协作状态摘要与 next hop
 - 左侧交接对象池
 - 中央协作执行语义
 - 右侧 harness 证据面板
+- 中部 `Collaboration Summary Aggregation`
+- 证据跳转入口
 
 它要回答：
 
@@ -62,21 +65,44 @@
 - 缺失 writeback 提示
 - harness 证据入口
 
+### 4. Collaboration Summary Aggregation
+
+内容：
+
+- open handoff
+- pending closeout
+- missing writeback
+- unreviewed artifact
+
+### 5. Evidence Jumps
+
+内容：
+
+- 跳到 task workspace
+- 跳到 loop surface
+- 跳到 runtime sessions
+- 跳到 governance graph
+- 跳到 operations > harness
+
 ## 页面信息架构
 
 建议页面结构自上而下为：
 
 1. 顶部协作状态摘要
-2. 左侧交接对象池
-3. 中央协作执行语义区
-4. 右侧 harness 证据面板
-5. `Loop Surface` 子表面入口（当前已挂到 `/collaboration/loops`）
+2. 协作分诊摘要
+3. 左侧交接对象池
+4. 中央协作执行语义区
+5. 证据跳转入口
+6. 右侧 harness 证据面板
+7. `Loop Surface` 子表面入口（当前已挂到 `/collaboration/loops`）
 
 ## 页面模块树
 
 - CollaborationPage
+  - CollaborationSummaryPanel
   - HandoffPoolPanel
   - CollaborationWorkspacePanel
+  - EvidenceJumpPanel
   - SupportingEvidencePanel
   - HarnessEvidencePanel
   - LoopSurfaceEntryPanel
