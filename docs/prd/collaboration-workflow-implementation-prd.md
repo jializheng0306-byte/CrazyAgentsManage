@@ -97,6 +97,7 @@
 
 - `GET /api/collaboration/graph-projection`
 - `TechArchitecturePreviewPage` 读取同一条聚合状态源，而不是再独立拼另一套协作判断逻辑
+- 当前链路节点已继续细化到 `Reviewer`、`Hermes Acceptance`、`PRD Closeout`
 
 ### 5. Collaboration Summary Aggregation
 
@@ -113,6 +114,10 @@
 
 - `GET /api/collaboration/summary`
 - `Collaboration` 页面顶部 briefing / next hop / triage / evidence jumps
+- 当前还会显式给出：
+  - `reviewer / Hermes acceptance / PRD closeout` unified evidence chain
+  - `next actor / next action`
+  - repo-tracked evidence refs
 
 ### 6. Loop / Cycle Collaboration Surface
 
@@ -146,6 +151,7 @@
 
 - 更强的协作自动化
 - 更完整的接受 / 拒绝 / 延后状态建模
+- reviewer / acceptance 结果与 handoff contract 的更细粒度耦合
 
 ## 非目标
 
@@ -158,5 +164,5 @@
 ## 完成标准
 
 1. 协作流程不再只是过程知识，而是产品表面的一部分
-2. operator 能看见 handoff 到 closeout 的证据链
+2. operator 能看见 handoff 到 closeout，再到 PRD / roadmap / tracker 的证据链
 3. 技术架构页能展示协作链路的动态状态

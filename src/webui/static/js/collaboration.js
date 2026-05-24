@@ -107,6 +107,38 @@ function renderTriage(summary) {
   }).join('');
 }
 
+function renderEvidenceChain(summary) {
+  var chain = (summary && summary.evidenceChain) || [];
+  var list = document.getElementById('cl-evidence-chain');
+  if (!list) return;
+
+  if (!chain.length) {
+    list.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">🪢</div><p>暂无统一证据链</p></div>';
+    return;
+  }
+
+  list.innerHTML = chain.map(function(item) {
+    var refs = (item.evidenceRefs || []).map(function(ref) {
+      if (ref.href) {
+        return '<a class="cl-evidence-link" href="' + routeHref(ref.href) + '">' + escapeHtml(ref.label) + '</a>';
+      }
+      return '<span class="cl-evidence-pill" title="' + escapeHtml(ref.path || '') + '">' + escapeHtml(ref.label) + '</span>';
+    }).join('');
+    return '<article class="cl-triage-card cl-chain-card">' +
+      '<div class="cl-triage-head">' +
+        '<div>' +
+          '<span class="cl-triage-label">' + escapeHtml(item.label || 'Evidence stage') + '</span>' +
+          '<div class="cl-chain-next-actor">' + escapeHtml(item.nextActor || '--') + '</div>' +
+        '</div>' +
+        '<span class="cl-handoff-badge ' + escapeHtml(item.status || 'unknown') + '">' + escapeHtml(statusLabel(item.status || 'unknown')) + '</span>' +
+      '</div>' +
+      '<p class="cl-triage-desc">' + escapeHtml(item.summary || '—') + '</p>' +
+      '<p class="cl-chain-next-action">' + escapeHtml(item.nextAction || '—') + '</p>' +
+      '<div class="cl-evidence-links">' + refs + '</div>' +
+    '</article>';
+  }).join('');
+}
+
 function renderHandoffs(summary) {
   var handoffs = (summary && summary.handoffs) || [];
   var list = document.getElementById('cl-handoff-list');
@@ -222,6 +254,7 @@ function loadCollaboration() {
     renderBriefing(summary || {});
     renderMetrics(summary || {});
     renderTriage(summary || {});
+    renderEvidenceChain(summary || {});
     renderHandoffs(summary || {});
     renderEvidence(summary || {});
     renderEvidenceJumps(summary || {});
@@ -229,6 +262,7 @@ function loadCollaboration() {
     renderBriefing({});
     renderMetrics({});
     renderTriage({ triage: [] });
+    renderEvidenceChain({ evidenceChain: [] });
     renderHandoffs({ handoffs: [] });
     renderEvidence({ runtimeSnapshot: {}, harness: {} });
     renderEvidenceJumps({ evidenceJumps: [] });

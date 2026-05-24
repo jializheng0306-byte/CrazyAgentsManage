@@ -1632,6 +1632,7 @@ class TestV04ContextManagementAPIs:
     def test_collaboration_summary_api_builds_triage_and_evidence_jumps(self, client, monkeypatch, tmp_path):
         deploy_root = tmp_path / 'deploy-copy'
         runtime_root = tmp_path / 'runtime-root'
+        flowmind_root = tmp_path / 'FlowMindDeploy'
         handoff_dir = runtime_root / '.omx' / 'crazyagents' / 'outbox'
         handoff_dir.mkdir(parents=True, exist_ok=True)
         handoff = handoff_dir / 'handoff-20260524T010000Z.md'
@@ -1682,10 +1683,21 @@ class TestV04ContextManagementAPIs:
                     'status': 'success',
                     'message': 'Earlier closeout',
                     'trace': {'id': 'S-20260524-001', 'kind': 'success'},
+                    'governanceReports': [
+                        {'path': 'docs/02-engineering/harness/harness-governance-report.md', 'repo': 'CrazyAgentsManage'},
+                    ],
                 }
             ),
             encoding='utf-8',
         )
+        (flowmind_root / 'docs' / '03-teams' / 'progress-tracking').mkdir(parents=True, exist_ok=True)
+        (flowmind_root / 'docs' / '03-teams' / 'progress-tracking' / 'sprint-tracker.md').write_text('# tracker\n', encoding='utf-8')
+        (flowmind_root / 'docs' / '01-product').mkdir(parents=True, exist_ok=True)
+        (flowmind_root / 'docs' / '01-product' / 'Roadmap.md').write_text('# roadmap\n', encoding='utf-8')
+        (flowmind_root / 'docs' / '01-product' / '下一阶段任务规划-2026-05-02.md').write_text('# next\n', encoding='utf-8')
+        (flowmind_root / 'changes' / 'records').mkdir(parents=True, exist_ok=True)
+        (flowmind_root / 'changes' / 'records' / 'CR-20260524-004.md').write_text('# cr-004\n', encoding='utf-8')
+        (flowmind_root / 'changes' / 'records' / 'CR-20260524-005.md').write_text('# cr-005\n', encoding='utf-8')
 
         monkeypatch.setattr(webui_api, '_get_repo_root', lambda: deploy_root)
         monkeypatch.setattr(webui_api, '_get_runtime_repo_root', lambda: runtime_root)
@@ -1703,11 +1715,71 @@ class TestV04ContextManagementAPIs:
         assert data['handoffs'][0]['artifactsToReview'][0] == 'docs/roadmap/master-task-plan.md'
         triage_ids = [item['id'] for item in data['triage']]
         assert triage_ids == ['open-handoff', 'pending-closeout', 'missing-writeback', 'unreviewed-artifact']
+        chain_ids = [item['id'] for item in data['evidenceChain']]
+        assert chain_ids == ['reviewer-state', 'hermes-acceptance', 'prd-closeout']
+        assert data['evidenceChain'][0]['nextActor'] == 'HermesAgent'
+        assert data['evidenceChain'][1]['status'] == 'healthy'
+        assert data['evidenceChain'][2]['status'] == 'degraded'
+        assert data['actionItems'][0]['label'] == 'Reviewer'
         assert any(item['href'] == '/operations#harness' for item in data['evidenceJumps'])
 
         manage_resp = client.get('/manage/api/collaboration/summary')
         assert manage_resp.status_code == 200
         assert manage_resp.get_json()['counts']['missingWritebackCount'] == 1
+
+    def test_collaboration_summary_api_marks_prd_closeout_healthy_when_cross_repo_evidence_is_present(self, client, monkeypatch, tmp_path):
+        deploy_root = tmp_path / 'deploy-copy'
+        runtime_root = tmp_path / 'runtime-root'
+        flowmind_root = tmp_path / 'FlowMindDeploy'
+        (runtime_root / '.omx' / 'crazyagents' / 'outbox').mkdir(parents=True, exist_ok=True)
+        (runtime_root / '.omx' / 'crazyagents' / 'runtime-state.json').write_text(
+            json.dumps(
+                {
+                    'updated_at': '2026-05-24T09:10:00+08:00',
+                    'phase': 'acceptance-closeout',
+                    'status': 'accepted',
+                    'actor': 'hermes',
+                    'summary': 'Operator acceptance confirmed.',
+                }
+            ),
+            encoding='utf-8',
+        )
+        (runtime_root / 'harness' / 'closeouts').mkdir(parents=True, exist_ok=True)
+        (runtime_root / 'harness' / 'closeouts' / 'C-20260524-010.json').write_text(
+            json.dumps(
+                {
+                    'id': 'C-20260524-010',
+                    'timestamp': '2026-05-24T01:10:00Z',
+                    'status': 'success',
+                    'message': 'Phase C evidence chain landed',
+                    'trace': {'id': 'S-20260524-010', 'kind': 'success'},
+                    'governanceReports': [
+                        {'path': 'docs/02-engineering/harness/harness-governance-report.md', 'repo': 'CrazyAgentsManage'},
+                        {'path': '../FlowMindDeploy/docs/05-version-control/architecture-drift-report.md', 'repo': 'FlowMindDeploy'},
+                    ],
+                }
+            ),
+            encoding='utf-8',
+        )
+        (flowmind_root / 'docs' / '03-teams' / 'progress-tracking').mkdir(parents=True, exist_ok=True)
+        (flowmind_root / 'docs' / '03-teams' / 'progress-tracking' / 'sprint-tracker.md').write_text('# tracker\n', encoding='utf-8')
+        (flowmind_root / 'docs' / '01-product').mkdir(parents=True, exist_ok=True)
+        (flowmind_root / 'docs' / '01-product' / 'Roadmap.md').write_text('# roadmap\n', encoding='utf-8')
+        (flowmind_root / 'docs' / '01-product' / '下一阶段任务规划-2026-05-02.md').write_text('# next\n', encoding='utf-8')
+        (flowmind_root / 'changes' / 'records').mkdir(parents=True, exist_ok=True)
+        (flowmind_root / 'changes' / 'records' / 'CR-20260524-004.md').write_text('# cr-004\n', encoding='utf-8')
+        (flowmind_root / 'changes' / 'records' / 'CR-20260524-005.md').write_text('# cr-005\n', encoding='utf-8')
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: deploy_root)
+        monkeypatch.setattr(webui_api, '_get_runtime_repo_root', lambda: runtime_root)
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/collaboration/summary')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        prd_closeout = next(item for item in data['evidenceChain'] if item['id'] == 'prd-closeout')
+        assert prd_closeout['status'] == 'healthy'
+        assert any('FlowMind' in ref['label'] for ref in prd_closeout['evidenceRefs'])
 
     def test_collaboration_graph_projection_api_exposes_chain_nodes(self, client, monkeypatch, tmp_path):
         deploy_root = tmp_path / 'deploy-copy'
@@ -1744,8 +1816,10 @@ class TestV04ContextManagementAPIs:
         assert resp.status_code == 200
         data = resp.get_json()
         node_ids = [item['id'] for item in data['nodes']]
-        assert node_ids == ['codex', 'handoff', 'hermesagent', 'runtime-snapshot', 'closeout', 'repo-truth']
-        assert any(edge['from'] == 'runtime-snapshot' and edge['to'] == 'closeout' for edge in data['edges'])
+        assert node_ids == ['codex', 'handoff', 'reviewer', 'hermesagent', 'hermes-acceptance', 'runtime-snapshot', 'closeout', 'prd-closeout', 'repo-truth']
+        assert any(edge['from'] == 'handoff' and edge['to'] == 'reviewer' for edge in data['edges'])
+        assert any(edge['from'] == 'hermes-acceptance' and edge['to'] == 'runtime-snapshot' for edge in data['edges'])
+        assert any(edge['from'] == 'closeout' and edge['to'] == 'prd-closeout' for edge in data['edges'])
         assert any(item['href'] == '/collaboration/tasks' for item in data['evidenceJumps'])
 
 

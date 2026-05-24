@@ -18,6 +18,7 @@
 当前实现已经收敛成**协作工作台**，因此页面主体不再是“若干并列列表”，而是：
 
 - 顶部协作状态摘要与 next hop
+- reviewer / acceptance / PRD closeout 统一证据链
 - 左侧交接对象池
 - 中央协作执行语义
 - 右侧 harness 证据面板
@@ -84,22 +85,34 @@
 - 跳到 governance graph
 - 跳到 operations > harness
 
+### 6. Unified Evidence Chain
+
+内容：
+
+- reviewer stage
+- Hermes acceptance stage
+- PRD / roadmap / tracker closeout stage
+- next actor
+- next action
+
 ## 页面信息架构
 
 建议页面结构自上而下为：
 
 1. 顶部协作状态摘要
 2. 协作分诊摘要
-3. 左侧交接对象池
-4. 中央协作执行语义区
-5. 证据跳转入口
-6. 右侧 harness 证据面板
-7. `Loop Surface` 子表面入口（当前已挂到 `/collaboration/loops`）
+3. 统一证据链
+4. 左侧交接对象池
+5. 中央协作执行语义区
+6. 证据跳转入口
+7. 右侧 harness 证据面板
+8. `Loop Surface` 子表面入口（当前已挂到 `/collaboration/loops`）
 
 ## 页面模块树
 
 - CollaborationPage
   - CollaborationSummaryPanel
+  - CollaborationEvidenceChainPanel
   - HandoffPoolPanel
   - CollaborationWorkspacePanel
   - EvidenceJumpPanel

@@ -2905,6 +2905,156 @@ def _build_collaboration_summary_view():
     elif not handoffs and not snapshot.get('exists') and not harness.get('closeout_count', 0):
         status = 'unknown'
 
+    review_refs = [
+        {'label': 'Handoff queue', 'kind': 'runtime-local', 'path': '.omx/crazyagents/outbox'},
+        {'label': 'Task workspace', 'kind': 'route', 'href': '/collaboration/tasks'},
+    ]
+    seen_review_paths = set()
+    for item in open_handoffs[:2]:
+        for artifact in item.get('artifactsToReview') or []:
+            artifact = str(artifact or '').strip()
+            if not artifact or artifact in seen_review_paths:
+                continue
+            seen_review_paths.add(artifact)
+            review_refs.append({'label': Path(artifact).name or artifact, 'kind': 'repo-artifact', 'path': artifact})
+            if len(review_refs) >= 5:
+                break
+        if len(review_refs) >= 5:
+            break
+
+    snapshot_data = (snapshot.get('data') or {}) if snapshot.get('exists') else {}
+    snapshot_phase = str(snapshot_data.get('phase') or '').strip()
+    snapshot_status = str(snapshot_data.get('status') or '').strip().lower()
+    snapshot_summary = str(snapshot_data.get('summary') or '').strip()
+    acceptance_status = 'unknown'
+    if snapshot.get('exists') or handoffs:
+        acceptance_status = 'healthy' if snapshot_status in ('accepted', 'validated', 'delivered', 'completed') else 'degraded'
+    acceptance_reason = snapshot_summary or '尚未形成明确的 runtime acceptance 摘要。'
+    acceptance_next_actor = 'Codex' if acceptance_status == 'healthy' else 'HermesAgent'
+    acceptance_next_action = (
+        '把当前 acceptance 结果推进到 closeout writeback 与文档回写。'
+        if acceptance_status == 'healthy'
+        else '在 runtime snapshot 中确认 Hermes acceptance 结果，并给出 accept / reject / defer。'
+    )
+    if not snapshot.get('exists') and not handoffs:
+        acceptance_next_actor = 'Codex'
+        acceptance_next_action = '先产出 handoff 与 runtime snapshot，再进入 acceptance。'
+
+    repo_root = _pick_harness_root()
+    repo_fact_root = _get_repo_root()
+    flowmind_root = repo_root.parent / 'FlowMindDeploy'
+    governance_reports = latest_closeout.get('governanceReports') if isinstance(latest_closeout, dict) else []
+    governance_reports = governance_reports if isinstance(governance_reports, list) else []
+    has_flowmind_governance = any(
+        isinstance(report, dict)
+        and (
+            str(report.get('repo') or '').strip() == 'FlowMindDeploy'
+            or 'FlowMindDeploy' in str(report.get('absolutePath') or '')
+            or str(report.get('path') or '').startswith('../FlowMindDeploy/')
+        )
+        for report in governance_reports
+    )
+    crazy_doc_paths = [
+        'docs/roadmap/master-task-plan.md',
+        'docs/prd/collaboration-workflow-implementation-prd.md',
+        'docs/prd/collaboration-operator-workflow-prd.md',
+        'docs/prd/pages/collaboration-page-prd.md',
+    ]
+    crazy_doc_hits = [
+        rel_path for rel_path in crazy_doc_paths
+        if (repo_fact_root / rel_path).exists()
+    ]
+    should_enforce_crazy_doc_anchors = any((repo_fact_root / rel_path).exists() for rel_path in crazy_doc_paths)
+    flowmind_doc_paths = [
+        'docs/03-teams/progress-tracking/sprint-tracker.md',
+        'docs/01-product/Roadmap.md',
+        'docs/01-product/下一阶段任务规划-2026-05-02.md',
+        'changes/records/CR-20260524-004.md',
+        'changes/records/CR-20260524-005.md',
+    ]
+    flowmind_doc_refs = []
+    for rel_path in flowmind_doc_paths:
+        if flowmind_root.exists() and (flowmind_root / rel_path).exists():
+            flowmind_doc_refs.append({
+                'label': f"FlowMind · {Path(rel_path).name}",
+                'kind': 'repo-artifact',
+                'path': f"../FlowMindDeploy/{rel_path}",
+            })
+    prd_closeout_status = 'unknown'
+    if latest_closeout:
+        doc_anchor_ok = (len(crazy_doc_hits) == len(crazy_doc_paths)) if should_enforce_crazy_doc_anchors else True
+        prd_closeout_status = 'healthy' if has_flowmind_governance and doc_anchor_ok else 'degraded'
+    elif snapshot.get('exists') or handoffs:
+        prd_closeout_status = 'degraded'
+    prd_closeout_summary = (
+        f"closeout={latest_closeout.get('id', '--')} / docs={len(crazy_doc_hits)}/{len(crazy_doc_paths) if should_enforce_crazy_doc_anchors else 'n/a'} / cross-repo-governance={'yes' if has_flowmind_governance else 'no'}"
+        if latest_closeout
+        else '尚未形成 closeout + PRD/roadmap/tracker 的统一回写证据。'
+    )
+
+    evidence_chain = [
+        {
+            'id': 'reviewer-state',
+            'label': 'Reviewer',
+            'status': 'degraded' if open_handoffs else ('unknown' if not handoffs else 'healthy'),
+            'summary': f"open={len(open_handoffs)} / blocked={len(blocked_handoffs)} / total={len(handoffs)}",
+            'nextActor': 'HermesAgent' if open_handoffs else 'Codex',
+            'nextAction': (
+                'Review open handoffs, inspect repo artifacts, and return accept / reject / defer.'
+                if open_handoffs
+                else '当前没有待处理 handoff review。'
+            ),
+            'href': '/collaboration/tasks',
+            'evidenceRefs': review_refs,
+        },
+        {
+            'id': 'hermes-acceptance',
+            'label': 'Hermes Acceptance',
+            'status': acceptance_status,
+            'summary': f"phase={snapshot_phase or '--'} / status={snapshot_status or '--'} / {acceptance_reason}",
+            'nextActor': acceptance_next_actor,
+            'nextAction': acceptance_next_action,
+            'href': '/collaboration',
+            'evidenceRefs': [
+                {'label': 'Runtime snapshot', 'kind': 'runtime-local', 'path': '.omx/crazyagents/runtime-state.json'},
+                {'label': 'Task workspace', 'kind': 'route', 'href': '/collaboration/tasks'},
+                {'label': 'Runtime sessions', 'kind': 'route', 'href': '/runtime/sessions'},
+            ],
+        },
+        {
+            'id': 'prd-closeout',
+            'label': 'PRD Closeout',
+            'status': prd_closeout_status,
+            'summary': prd_closeout_summary,
+            'nextActor': 'Codex',
+            'nextAction': (
+                'Update PRD / roadmap / tracker / change record, then rerun cross-repo PRD sync.'
+                if prd_closeout_status != 'healthy'
+                else '保持 Crazy PRD、FlowMind canonical tracker 与 closeout evidence 同步。'
+            ),
+            'href': '/operations#harness',
+            'evidenceRefs': [
+                {'label': 'Closeout artifacts', 'kind': 'repo-artifact', 'path': 'harness/closeouts/*.json'},
+                {'label': 'Master task plan', 'kind': 'repo-artifact', 'path': 'docs/roadmap/master-task-plan.md'},
+                {'label': 'Collaboration PRD', 'kind': 'repo-artifact', 'path': 'docs/prd/collaboration-workflow-implementation-prd.md'},
+                {'label': 'Collaboration page PRD', 'kind': 'repo-artifact', 'path': 'docs/prd/pages/collaboration-page-prd.md'},
+                *flowmind_doc_refs[:3],
+            ],
+        },
+    ]
+    action_items = [
+        {
+            'label': item.get('label'),
+            'status': item.get('status'),
+            'summary': item.get('summary'),
+            'nextActor': item.get('nextActor'),
+            'nextAction': item.get('nextAction'),
+            'href': item.get('href'),
+        }
+        for item in evidence_chain
+        if item.get('status') == 'degraded'
+    ]
+
     evidence_jumps = [
         {'label': '任务协作工作台', 'href': '/collaboration/tasks', 'desc': '从 handoff 进入执行工作面。'},
         {'label': 'Loop Surface', 'href': '/collaboration/loops', 'desc': '查看当前 cycle / gate / feedback / memory candidate。'},
@@ -2912,6 +3062,13 @@ def _build_collaboration_summary_view():
         {'label': '治理图谱', 'href': '/governance/graph', 'desc': '查看关系与上下游参照。'},
         {'label': 'Harness Readiness', 'href': '/operations#harness', 'desc': '核对 closeout / trace / writeback evidence。'},
     ]
+
+    if action_items:
+        next_hop = {
+            'label': action_items[0].get('label'),
+            'reason': f"{action_items[0].get('nextActor')}: {action_items[0].get('nextAction')}",
+            'href': action_items[0].get('href') or '/collaboration',
+        }
 
     return {
         'status': status,
@@ -2935,6 +3092,8 @@ def _build_collaboration_summary_view():
         'runtimeSnapshot': snapshot,
         'harness': harness,
         'triage': triage,
+        'evidenceChain': evidence_chain,
+        'actionItems': action_items,
         'evidenceJumps': evidence_jumps,
     }
 
@@ -2966,23 +3125,35 @@ def _build_collaboration_graph_projection():
     elif not counts.get('handoffCount', 0):
         hermes_status = 'unknown'
 
+    evidence_chain = summary.get('evidenceChain') or []
+    reviewer_stage = next((item for item in evidence_chain if item.get('id') == 'reviewer-state'), {})
+    acceptance_stage = next((item for item in evidence_chain if item.get('id') == 'hermes-acceptance'), {})
+    prd_closeout_stage = next((item for item in evidence_chain if item.get('id') == 'prd-closeout'), {})
+
     return {
         'status': summary.get('status', 'unknown'),
         'nodes': [
             {'id': 'codex', 'label': 'Codex', 'status': 'healthy', 'summary': '实施、验证与仓库事实更新 owner。', 'href': '/collaboration/tasks'},
             {'id': 'handoff', 'label': 'Handoff', 'status': handoff_status, 'summary': f"Open={counts.get('openHandoffCount', 0)} / total={counts.get('handoffCount', 0)}", 'href': '/collaboration'},
+            {'id': 'reviewer', 'label': 'Reviewer', 'status': reviewer_stage.get('status', 'unknown'), 'summary': reviewer_stage.get('summary', '待检查 reviewer state。'), 'href': reviewer_stage.get('href', '/collaboration/tasks')},
             {'id': 'hermesagent', 'label': 'HermesAgent', 'status': hermes_status, 'summary': f"blocked={counts.get('blockedHandoffCount', 0)} / unreviewed={counts.get('unreviewedArtifactCount', 0)}", 'href': '/collaboration/tasks'},
+            {'id': 'hermes-acceptance', 'label': 'Hermes Acceptance', 'status': acceptance_stage.get('status', 'unknown'), 'summary': acceptance_stage.get('summary', '待检查 runtime acceptance。'), 'href': acceptance_stage.get('href', '/collaboration')},
             {'id': 'runtime-snapshot', 'label': 'Runtime Snapshot', 'status': snapshot_status, 'summary': '当前协作轮次的 runtime-local 阶段与状态。', 'href': '/collaboration'},
             {'id': 'closeout', 'label': 'Closeout', 'status': closeout_status, 'summary': f"pending={counts.get('pendingCloseoutCount', 0)} / total={counts.get('closeoutCount', 0)}", 'href': '/operations#harness'},
+            {'id': 'prd-closeout', 'label': 'PRD Closeout', 'status': prd_closeout_stage.get('status', 'unknown'), 'summary': prd_closeout_stage.get('summary', '待检查 PRD / roadmap / tracker 回写。'), 'href': prd_closeout_stage.get('href', '/operations#harness')},
             {'id': 'repo-truth', 'label': 'Repo Truth', 'status': repo_truth_status, 'summary': f"missing writeback={counts.get('missingWritebackCount', 0)}", 'href': '/governance/graph'},
         ],
         'edges': [
             {'from': 'codex', 'to': 'handoff', 'label': 'produce handoff'},
-            {'from': 'handoff', 'to': 'hermesagent', 'label': 'operations review'},
-            {'from': 'hermesagent', 'to': 'runtime-snapshot', 'label': 'runtime acceptance signal'},
+            {'from': 'handoff', 'to': 'reviewer', 'label': 'review request'},
+            {'from': 'reviewer', 'to': 'hermesagent', 'label': 'review owner'},
+            {'from': 'hermesagent', 'to': 'hermes-acceptance', 'label': 'operations acceptance'},
+            {'from': 'hermes-acceptance', 'to': 'runtime-snapshot', 'label': 'runtime acceptance signal'},
             {'from': 'runtime-snapshot', 'to': 'closeout', 'label': 'closeout writeback'},
-            {'from': 'closeout', 'to': 'repo-truth', 'label': 'durable evidence'},
+            {'from': 'closeout', 'to': 'prd-closeout', 'label': 'doc writeback'},
+            {'from': 'prd-closeout', 'to': 'repo-truth', 'label': 'durable evidence'},
         ],
+        'actionItems': summary.get('actionItems') or [],
         'evidenceJumps': summary.get('evidenceJumps') or [],
     }
 

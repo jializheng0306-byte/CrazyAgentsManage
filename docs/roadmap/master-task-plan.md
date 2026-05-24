@@ -318,7 +318,7 @@
 
 ### Phase C：Harness 与 Hermes 协作层对齐
 
-状态：进行中（first-slice landed）
+状态：进行中（second-slice landed）
 
 产出：
 
@@ -335,10 +335,22 @@
   - `/api/collaboration/graph-projection`
   - `Codex / HermesAgent / handoff / runtime snapshot / closeout / repo truth`
 
+当前已落第二切片：
+
+- `Unified Evidence Chain`
+  - reviewer
+  - Hermes acceptance
+  - PRD closeout
+- `/collaboration` 已显式给出
+  - next actor
+  - next action
+  - repo-tracked evidence refs
+- `/architecture/tech` 已把上述阶段继续投影为链路节点，而不是停留在第一版粗粒度节点
+
 下一步继续做：
 
-- reviewer / Hermes acceptance / PRD closeout 的统一 evidence 链
 - 把协作 triage 从 summary 进一步贴到真实处理动作与明确 writeback path
+- 继续判断是否需要把 reviewer / acceptance 的结果进一步回写到更细粒度的 handoff contract / acceptance artifact
 
 ### Phase D：页面系统与状态源收敛
 

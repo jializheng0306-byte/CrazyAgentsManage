@@ -243,6 +243,25 @@
   padding: 18px;
 }
 
+.cl-chain-card {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cl-chain-next-actor {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--cl-text-primary);
+}
+
+.cl-chain-next-action {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #bfdbfe;
+}
+
 .cl-triage-head {
   display: flex;
   justify-content: space-between;

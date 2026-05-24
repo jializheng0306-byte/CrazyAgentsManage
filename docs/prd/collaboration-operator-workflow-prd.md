@@ -11,7 +11,7 @@
 | Owner | Codex（文档管理） |
 | 运营评审方 | HermesAgent |
 | 继承自 | `docs/prd/operations-implementation-prd.md` |
-| 最后更新 | 2026-04-27 |
+| 最后更新 | 2026-05-24 |
 
 ## 文档目的
 
@@ -38,6 +38,7 @@ Operator 在 `Collaboration` 分区中必须能完成：
 2. 看见 HermesAgent 是否完成 review / acceptance
 3. 看见 closeout 是否已写回仓库事实
 4. 发现未闭环协作链路
+5. 知道当前应该由谁继续处理，以及下一条标准动作是什么
 
 ## 核心工作流
 
@@ -103,6 +104,7 @@ Operator 在 `Collaboration` 分区中必须能完成：
 1. 发现 open handoff、pending closeout、missing writeback、unreviewed artifact
 2. 判断属于 review 缺口、文档缺口还是实施缺口
 3. 分流到 Governance、Runtime 或文档面
+4. 根据 `next actor / next action` 直接继续推进，而不是再从聊天补推断
 
 验收标准：
 
@@ -116,6 +118,7 @@ Operator 在 `Collaboration` 分区中必须能完成：
 Operator 在这类页面中需要看到：
 
 - handoff、runtime snapshot、closeout、repo truth 之间的链路关系
+- reviewer、Hermes acceptance、PRD closeout 三个中间阶段
 - 当前哪一段链路处于进行中、异常或缺失状态
 - 从架构节点跳转到证据页或文档页的能力
 
@@ -130,5 +133,5 @@ Operator 在这类页面中需要看到：
 ## 完成标准
 
 1. Collaboration 分区不再只是 artifact 列表，而具备 operator 可执行的闭环路径
-2. handoff -> snapshot -> closeout -> repo truth 的关系能被 operator 直接检查
+2. handoff -> reviewer -> Hermes acceptance -> closeout -> PRD closeout -> repo truth 的关系能被 operator 直接检查
 3. 技术架构页可以承载协作工作流的动态入口
