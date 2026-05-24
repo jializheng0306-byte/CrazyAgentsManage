@@ -2615,11 +2615,15 @@ def runtime_harness_summary():
     repo_root = _get_repo_root()
     success_dir = repo_root / 'harness' / 'trace' / 'successes'
     failure_dir = repo_root / 'harness' / 'trace' / 'failures'
+    closeout_dir = repo_root / 'harness' / 'closeouts'
     summary = {
         'success_count': 0,
         'failure_count': 0,
+        'closeout_count': 0,
         'latest_success': None,
         'latest_failure': None,
+        'latest_closeout': None,
+        'pending_closeout_count': 0,
     }
 
     success_files = sorted(
@@ -2632,14 +2636,37 @@ def runtime_harness_summary():
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     ) if failure_dir.exists() else []
+    closeout_files = sorted(
+        [p for p in closeout_dir.glob('*.json') if p.name != 'TEMPLATE.json'],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    ) if closeout_dir.exists() else []
 
     summary['success_count'] = len(success_files)
     summary['failure_count'] = len(failure_files)
+    summary['closeout_count'] = len(closeout_files)
 
     if success_files:
         summary['latest_success'] = _read_optional_json(success_files[0])
     if failure_files:
         summary['latest_failure'] = _read_optional_json(failure_files[0])
+    if closeout_files:
+        summary['latest_closeout'] = _read_optional_json(closeout_files[0])
+
+    closeout_trace_ids = set()
+    for path in closeout_files:
+        payload = _read_optional_json(path)
+        if not isinstance(payload, dict):
+            continue
+        trace = payload.get('trace') if isinstance(payload.get('trace'), dict) else {}
+        trace_id = str(trace.get('id') or '').strip()
+        if trace_id:
+            closeout_trace_ids.add(trace_id)
+    trace_ids = [
+        str((_read_optional_json(path) or {}).get('id') or '').strip()
+        for path in success_files + failure_files
+    ]
+    summary['pending_closeout_count'] = len([trace_id for trace_id in trace_ids if trace_id and trace_id not in closeout_trace_ids])
 
     return jsonify(summary)
 
@@ -5023,6 +5050,7 @@ def _build_operations_host_health_view():
 
 def _build_operations_harness_view():
     repo_harness_root = _resolve_repo_artifact_path('harness')
+    closeout_dir = repo_harness_root / 'closeouts'
     success_dir = repo_harness_root / 'trace' / 'successes'
     failure_dir = repo_harness_root / 'trace' / 'failures'
     memory_root = repo_harness_root / 'memory'
@@ -5030,10 +5058,13 @@ def _build_operations_harness_view():
 
     success_files = [p for p in _safe_sorted_paths(success_dir, '*.json') if p.name != 'TEMPLATE.json']
     failure_files = [p for p in _safe_sorted_paths(failure_dir, '*.json') if p.name != 'TEMPLATE.json']
+    closeout_files = [p for p in _safe_sorted_paths(closeout_dir, '*.json') if p.name != 'TEMPLATE.json']
     latest_success_path = success_files[-1] if success_files else None
     latest_failure_path = failure_files[-1] if failure_files else None
+    latest_closeout_path = closeout_files[-1] if closeout_files else None
     latest_success = _read_optional_json(latest_success_path) if latest_success_path else None
     latest_failure = _read_optional_json(latest_failure_path) if latest_failure_path else None
+    latest_closeout = _read_optional_json(latest_closeout_path) if latest_closeout_path else None
     latest_success_mtime = latest_success_path.stat().st_mtime if latest_success_path else 0
     latest_failure_mtime = latest_failure_path.stat().st_mtime if latest_failure_path else 0
 
@@ -5059,9 +5090,10 @@ def _build_operations_harness_view():
         {
             'id': 'closeout-layer',
             'name': 'Closeout Layer',
-            'status': 'healthy' if _safe_exists(_resolve_repo_artifact_path('scripts/harness-closeout-writeback.cjs')) and _safe_exists(docs_root / 'HARNESS-ENTRY.md') and _safe_exists(docs_root / 'harness-governance-report.md') else 'degraded',
+            'status': 'healthy' if _safe_exists(_resolve_repo_artifact_path('scripts/harness-closeout-writeback.cjs')) and _safe_exists(docs_root / 'HARNESS-ENTRY.md') and _safe_exists(docs_root / 'harness-governance-report.md') and _safe_exists(closeout_dir) else 'degraded',
             'evidence': [
                 'scripts/harness-closeout-writeback.cjs',
+                'harness/closeouts/*.json',
                 'docs/02-engineering/harness/HARNESS-ENTRY.md',
                 'docs/02-engineering/harness/harness-governance-report.md',
             ],
@@ -5081,11 +5113,23 @@ def _build_operations_harness_view():
 
     healthy_readiness = len([item for item in readiness if item.get('status') == 'healthy'])
     failure_newer_than_success = latest_failure_mtime > latest_success_mtime if latest_failure_mtime and latest_success_mtime else False
+    closeout_trace_ids = set()
+    for payload in [(_read_optional_json(path) or {}) for path in closeout_files]:
+        trace = payload.get('trace') if isinstance(payload.get('trace'), dict) else {}
+        trace_id = str(trace.get('id') or '').strip()
+        if trace_id:
+            closeout_trace_ids.add(trace_id)
+    unclosed_trace_count = len([
+        record_id for record_id in [str((latest_success or {}).get('id') or '').strip()] + [str((latest_failure or {}).get('id') or '').strip()]
+        if record_id and record_id not in closeout_trace_ids
+    ])
 
     status = 'healthy'
     if healthy_readiness < len(readiness):
         status = 'degraded'
     elif failure_newer_than_success:
+        status = 'degraded'
+    elif unclosed_trace_count > 0:
         status = 'degraded'
     elif not success_files:
         status = 'unknown'
@@ -5095,13 +5139,17 @@ def _build_operations_harness_view():
         'counts': {
             'successCount': len(success_files),
             'failureCount': len(failure_files),
+            'closeoutCount': len(closeout_files),
             'totalTraces': len(success_files) + len(failure_files),
             'readinessHealthyCount': healthy_readiness,
+            'pendingCloseoutCount': unclosed_trace_count,
         },
         'latestSuccess': latest_success,
         'latestFailure': latest_failure,
+        'latestCloseout': latest_closeout,
         'latestSuccessPath': str(latest_success_path) if latest_success_path else '',
         'latestFailurePath': str(latest_failure_path) if latest_failure_path else '',
+        'latestCloseoutPath': str(latest_closeout_path) if latest_closeout_path else '',
         'failureNewerThanSuccess': failure_newer_than_success,
         'readiness': readiness,
         'runbooks': [

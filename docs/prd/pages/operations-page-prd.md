@@ -113,6 +113,7 @@
 内容：
 
 - success / failure trace
+- closeout artifacts
 - critic readiness
 - closeout writeback readiness
 - worktree bootstrap readiness

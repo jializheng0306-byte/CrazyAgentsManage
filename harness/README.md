@@ -43,6 +43,8 @@ CrazyAgentsManage 的 canonical harness core。
 - `trace/`
   - `failures/` 结构化失败记录，供 Critic 分析
   - `successes/` 成功模式记录，供流程固化
+- `closeouts/`
+  - 非平凡迭代的结构化 closeout 记录，绑定 trace / critic / governance / worktree lane
 - `memory/`
   - `situational.md` 情景记忆
   - `procedural.md` 程序记忆
@@ -81,6 +83,7 @@ node scripts/harness-critic.cjs --json
 ./scripts/check_harness_governance.sh --local-only
 ./scripts/check_harness_governance_all.sh
 ./scripts/check_harness_governance_all.sh --skip-cross-repo
+python3 scripts/check_harness_closeout_chain.py
 node scripts/harness-closeout-writeback.cjs --status success --message "Round completed" --critic-write-back --json
 node scripts/harness-closeout-writeback.cjs --status failed --message "Round failed" --stage verification --json
 ```

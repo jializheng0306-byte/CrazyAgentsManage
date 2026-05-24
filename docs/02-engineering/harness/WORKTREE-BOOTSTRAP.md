@@ -49,6 +49,7 @@ scripts/worktree/create-agent-worktree.sh --agent qoder --lane docs --topic page
 
 - branch: `<lane>/<topic>`
 - worktree path: `../CrazyAgentsManage-<agent>-<lane>-<topic>`
+- runtime-local metadata: `.omx/worktree-context.json`
 
 ## 6. 进入顺序
 

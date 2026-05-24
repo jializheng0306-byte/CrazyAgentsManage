@@ -7,7 +7,9 @@ var fs = require('fs');
 var path = require('path');
 var execSync = require('child_process').execSync;
 
-var ROOT = path.resolve(__dirname, '..');
+var ROOT = process.env.HARNESS_REPO_ROOT
+  ? path.resolve(process.env.HARNESS_REPO_ROOT)
+  : path.resolve(__dirname, '..');
 var TRACE_ROOT = process.env.HARNESS_TRACE_ROOT || path.join(ROOT, 'harness', 'trace');
 var SUCCESSES_DIR = path.join(TRACE_ROOT, 'successes');
 

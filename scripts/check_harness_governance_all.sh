@@ -22,6 +22,8 @@ done
 if [[ "$RUN_LOCAL" -eq 1 ]]; then
   echo "[governance:all] local harness consistency"
   python3 "${SCRIPT_DIR}/check_harness_governance_consistency.py"
+  echo "[governance:all] closeout chain consistency"
+  python3 "${SCRIPT_DIR}/check_harness_closeout_chain.py"
 fi
 
 if [[ "$RUN_CROSS_REPO" -eq 1 ]]; then

@@ -19,7 +19,98 @@ const cp = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = process.env.HARNESS_REPO_ROOT
+  ? path.resolve(process.env.HARNESS_REPO_ROOT)
+  : path.resolve(__dirname, "..");
+const CLOSEOUT_ROOT = process.env.HARNESS_CLOSEOUT_ROOT || path.join(ROOT, "harness", "closeouts");
+const LANE_PREFIXES = new Set(["codex", "ops", "shared", "docs", "hotfix", "release", "feat", "fix", "chore"]);
+
+function ensureDir(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function safeBranch() {
+  try {
+    return cp.spawnSync("git", ["branch", "--show-current"], {
+      cwd: ROOT,
+      env: process.env,
+      encoding: "utf8",
+    }).stdout.trim() || "detached";
+  } catch (_) {
+    return "unknown";
+  }
+}
+
+function nextCloseoutId() {
+  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  ensureDir(CLOSEOUT_ROOT);
+  const existing = fs.readdirSync(CLOSEOUT_ROOT).filter((name) => {
+    return name.startsWith("C-" + stamp + "-") && name.endsWith(".json");
+  }).length;
+  return "C-" + stamp + "-" + String(existing + 1).padStart(3, "0");
+}
+
+function readJsonIfExists(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (_) {
+    return null;
+  }
+}
+
+function normalizePath(input) {
+  return path.resolve(String(input || ROOT));
+}
+
+function readWorktreeContext(worktreePath) {
+  const contextPath = path.join(worktreePath, ".omx", "worktree-context.json");
+  const payload = readJsonIfExists(contextPath);
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  payload._contextPath = contextPath;
+  return payload;
+}
+
+function inferLaneInfo(options, branch, worktreePath, worktreeContext) {
+  if (options.lane) {
+    return { lane: options.lane, source: "cli-arg", topic: options.topic || "" };
+  }
+  if (worktreeContext && worktreeContext.lane) {
+    return {
+      lane: String(worktreeContext.lane),
+      source: "worktree-context",
+      topic: String(worktreeContext.topic || options.topic || ""),
+    };
+  }
+  if (branch && branch.includes("/")) {
+    const prefix = branch.split("/")[0];
+    if (LANE_PREFIXES.has(prefix)) {
+      return { lane: prefix, source: "branch-prefix", topic: options.topic || "" };
+    }
+  }
+  if (normalizePath(worktreePath) === ROOT) {
+    return { lane: "primary", source: "primary-worktree", topic: options.topic || "" };
+  }
+  return { lane: "", source: "missing", topic: options.topic || "" };
+}
+
+function shouldAutoCriticWriteBack(status, criticResult) {
+  if (status !== "failed" || !criticResult || !Array.isArray(criticResult.recommendations)) {
+    return false;
+  }
+  return criticResult.recommendations.some((rec) => rec.priority && rec.priority !== "LOW");
+}
+
+function writeCloseoutArtifact(payload) {
+  ensureDir(CLOSEOUT_ROOT);
+  const filePath = path.join(CLOSEOUT_ROOT, payload.id + ".json");
+  fs.writeFileSync(filePath, JSON.stringify(payload, null, 2) + "\n", "utf8");
+  return filePath;
+}
 
 function parseArgs(argv) {
   const out = {
@@ -41,6 +132,9 @@ function parseArgs(argv) {
     governanceReports: [],
     days: "7",
     json: false,
+    lane: "",
+    topic: "",
+    trivial: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -100,6 +194,15 @@ function parseArgs(argv) {
         break;
       case "--json":
         out.json = true;
+        break;
+      case "--lane":
+        out.lane = String(argv[++i] || "").trim();
+        break;
+      case "--topic":
+        out.topic = String(argv[++i] || "").trim();
+        break;
+      case "--trivial":
+        out.trivial = true;
         break;
       default:
         break;
@@ -234,6 +337,15 @@ function main() {
     throw new Error("--message is required");
   }
 
+  options.branch = options.branch || safeBranch();
+  options.worktree = normalizePath(options.worktree || ROOT);
+  const worktreeContext = readWorktreeContext(options.worktree);
+  const laneInfo = inferLaneInfo(options, options.branch, options.worktree, worktreeContext);
+  const nonTrivial = !options.trivial;
+  if (nonTrivial && !laneInfo.lane) {
+    throw new Error("non-trivial closeout requires traceable lane metadata: pass --lane or use a bootstrapped worktree");
+  }
+
   const shouldRunGovernanceCheck =
     !options.skipGovernanceCheck && (options.governanceCheck || options.status === "success");
 
@@ -269,16 +381,59 @@ function main() {
   }
 
   let critic = null;
+  let criticWriteBackApplied = false;
   if (options.critic || options.status === "failed") {
-    critic = maybeRunCritic(options.days, options.criticWriteBack);
+    critic = maybeRunCritic(options.days, false);
+    if (options.criticWriteBack || shouldAutoCriticWriteBack(options.status, critic)) {
+      critic = maybeRunCritic(options.days, true);
+      criticWriteBackApplied = true;
+    }
   }
+
+  const closeoutId = nextCloseoutId();
+  const closeoutPayload = {
+    id: closeoutId,
+    timestamp: new Date().toISOString(),
+    status: options.status,
+    nonTrivial,
+    message: options.message,
+    trace,
+    critic,
+    criticWriteBackApplied,
+    governance,
+    governanceReports,
+    context: {
+      agent: options.agent,
+      branch: options.branch,
+      worktree: options.worktree,
+      lane: laneInfo.lane,
+      laneSource: laneInfo.source,
+      topic: laneInfo.topic,
+      worktreeContextPath: worktreeContext ? worktreeContext._contextPath : "",
+      steps: options.steps ? options.steps.split(",").map((item) => item.trim()).filter(Boolean) : [],
+      type: options.type,
+      file: options.file,
+      stage: options.stage,
+      command: options.command,
+      fatal: options.fatal,
+    },
+  };
+  const closeoutFile = writeCloseoutArtifact(closeoutPayload);
 
   const payload = {
     status: options.status,
     trace,
     critic,
+    criticWriteBackApplied,
     governance,
     governanceReports,
+    closeout: {
+      id: closeoutId,
+      file: path.relative(ROOT, closeoutFile),
+      lane: laneInfo.lane,
+      laneSource: laneInfo.source,
+      topic: laneInfo.topic,
+    },
   };
 
   if (options.json) {
@@ -287,8 +442,9 @@ function main() {
   }
 
   process.stdout.write(`trace: ${trace.kind}:${trace.id}\n`);
+  process.stdout.write(`closeout: ${closeoutId}\n`);
   if (critic) {
-    process.stdout.write(`critic: ok${options.criticWriteBack ? " (write-back)" : ""}\n`);
+    process.stdout.write(`critic: ok${criticWriteBackApplied ? " (write-back)" : ""}\n`);
   }
   if (governance) {
     process.stdout.write("governance: ok\n");

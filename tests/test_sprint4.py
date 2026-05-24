@@ -1,7 +1,10 @@
 import pytest
 import json
 import os
+import shutil
+import subprocess
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'webui'))
 
@@ -439,12 +442,17 @@ class TestOperationsCapabilityPlane:
         repo_root = tmp_path / 'repo'
         (repo_root / 'harness' / 'trace' / 'successes').mkdir(parents=True, exist_ok=True)
         (repo_root / 'harness' / 'trace' / 'failures').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness' / 'closeouts').mkdir(parents=True, exist_ok=True)
         (repo_root / 'harness' / 'memory').mkdir(parents=True, exist_ok=True)
         (repo_root / 'docs' / '02-engineering' / 'harness').mkdir(parents=True, exist_ok=True)
         (repo_root / 'scripts' / 'worktree').mkdir(parents=True, exist_ok=True)
         (repo_root / 'scripts').mkdir(exist_ok=True)
         (repo_root / 'harness' / 'trace' / 'successes' / 'S-20260523-001.json').write_text(json.dumps({'id': 'S-20260523-001', 'message': 'round ok'}), encoding='utf-8')
         (repo_root / 'harness' / 'trace' / 'failures' / 'F-20260522-001.json').write_text(json.dumps({'id': 'F-20260522-001', 'message': 'old failure'}), encoding='utf-8')
+        (repo_root / 'harness' / 'closeouts' / 'C-20260523-001.json').write_text(
+            json.dumps({'id': 'C-20260523-001', 'status': 'success', 'trace': {'id': 'S-20260523-001', 'kind': 'success'}}),
+            encoding='utf-8',
+        )
         (repo_root / 'harness' / 'memory' / 'failure-patterns.md').write_text('# failures\n', encoding='utf-8')
         (repo_root / 'harness' / 'memory' / 'procedural.md').write_text('# procedural\n', encoding='utf-8')
         (repo_root / 'docs' / '02-engineering' / 'harness' / 'HARNESS-ENTRY.md').write_text('# harness\n', encoding='utf-8')
@@ -463,9 +471,12 @@ class TestOperationsCapabilityPlane:
         data = resp.get_json()
         assert data['counts']['successCount'] == 1
         assert data['counts']['failureCount'] == 1
+        assert data['counts']['closeoutCount'] == 1
+        assert data['counts']['pendingCloseoutCount'] == 1
         assert data['counts']['readinessHealthyCount'] == 4
         assert data['latestSuccess']['id'] == 'S-20260523-001'
         assert data['latestFailure']['id'] == 'F-20260522-001'
+        assert data['latestCloseout']['id'] == 'C-20260523-001'
 
     def test_operations_summary_includes_isolation_family(self, client, monkeypatch, tmp_path):
         repo_root = tmp_path / 'repo'
@@ -858,6 +869,112 @@ class TestSprint3CapabilityRegression:
         assert resp.status_code == 400
         data = resp.get_json()
         assert 'error' in data
+
+
+class TestHarnessWorkflowEnforcement:
+    def test_harness_closeout_writeback_creates_closeout_artifact_with_lane(self, tmp_path):
+        node = shutil.which('node')
+        if not node:
+            pytest.skip('node not available')
+
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'scripts').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness' / 'trace' / 'successes').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness' / 'trace' / 'failures').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness' / 'closeouts').mkdir(parents=True, exist_ok=True)
+
+        for rel in ['scripts/record-success.cjs', 'scripts/record-failure.cjs', 'scripts/harness-closeout-writeback.cjs']:
+            src = Path(__file__).resolve().parents[1] / rel
+            dst = repo_root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_text(src.read_text(encoding='utf-8'), encoding='utf-8')
+
+        result = subprocess.run(
+            [
+                node,
+                str(repo_root / 'scripts' / 'harness-closeout-writeback.cjs'),
+                '--status', 'success',
+                '--message', 'Round completed',
+                '--lane', 'shared',
+                '--topic', 'harness-starter',
+                '--skip-governance-check',
+                '--json',
+            ],
+            cwd=repo_root,
+            env={**os.environ, 'HARNESS_REPO_ROOT': str(repo_root)},
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+
+        payload = json.loads(result.stdout)
+        closeout = payload['closeout']
+        closeout_path = repo_root / closeout['file']
+        assert closeout_path.exists()
+        saved = json.loads(closeout_path.read_text(encoding='utf-8'))
+        assert saved['trace']['kind'] == 'success'
+        assert saved['context']['lane'] == 'shared'
+        assert saved['context']['laneSource'] == 'cli-arg'
+        assert saved['context']['topic'] == 'harness-starter'
+
+    def test_harness_closeout_failure_auto_triggers_critic_write_back(self, tmp_path):
+        node = shutil.which('node')
+        if not node:
+            pytest.skip('node not available')
+
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'scripts').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness' / 'trace' / 'successes').mkdir(parents=True, exist_ok=True)
+        failure_dir = repo_root / 'harness' / 'trace' / 'failures'
+        failure_dir.mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness' / 'closeouts').mkdir(parents=True, exist_ok=True)
+        memory_dir = repo_root / 'harness' / 'memory'
+        memory_dir.mkdir(parents=True, exist_ok=True)
+        (memory_dir / 'failure-patterns.md').write_text('# failures\n', encoding='utf-8')
+        (memory_dir / 'procedural.md').write_text('# procedural\n', encoding='utf-8')
+
+        for rel in ['scripts/record-success.cjs', 'scripts/record-failure.cjs', 'scripts/harness-critic.cjs', 'scripts/harness-closeout-writeback.cjs']:
+            src = Path(__file__).resolve().parents[1] / rel
+            dst = repo_root / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_text(src.read_text(encoding='utf-8'), encoding='utf-8')
+
+        sample_failure = {
+            'id': 'F-20260524-001',
+            'timestamp': '2026-05-24T08:00:00Z',
+            'type': 'typescript-error',
+            'file': 'src/foo.ts',
+            'message': 'example',
+            'context': {},
+        }
+        for idx in range(2):
+            payload = dict(sample_failure)
+            payload['id'] = f'F-20260524-00{idx + 1}'
+            (failure_dir / f"{payload['id']}.json").write_text(json.dumps(payload), encoding='utf-8')
+
+        result = subprocess.run(
+            [
+                node,
+                str(repo_root / 'scripts' / 'harness-closeout-writeback.cjs'),
+                '--status', 'failed',
+                '--type', 'typescript-error',
+                '--message', 'Verification failed',
+                '--lane', 'shared',
+                '--topic', 'critic-enforcement',
+                '--skip-governance-check',
+                '--json',
+            ],
+            cwd=repo_root,
+            env={**os.environ, 'HARNESS_REPO_ROOT': str(repo_root)},
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+
+        payload = json.loads(result.stdout)
+        assert payload['criticWriteBackApplied'] is True
+        procedural = (memory_dir / 'procedural.md').read_text(encoding='utf-8')
+        assert 'Critic Follow-up' in procedural
 
     def test_cron_list_api_reachable(self, client):
         resp = client.get('/api/cron/list')
@@ -1319,6 +1436,8 @@ class TestV04ContextManagementAPIs:
         data = resp.get_json()
         assert 'success_count' in data
         assert 'failure_count' in data
+        assert 'closeout_count' in data
+        assert 'pending_closeout_count' in data
 
 
 class TestLoopSurfaceApis:

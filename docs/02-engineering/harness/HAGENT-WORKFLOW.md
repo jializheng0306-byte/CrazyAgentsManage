@@ -42,9 +42,10 @@
 4. 如需并行执行，为不同执行 Agent 分配独立 worktree
 5. 执行实现并完成验证
 6. 写入 success / failure trace
-7. 必要时由 HermesAgent 做运营验收或由 Reviewer 做交叉审查
-8. closeout 时更新 `docs/`、`harness/` 与 roadmap
-9. 如失败模式重复出现，回写 `harness/memory/`
+7. 通过 `harness-closeout-writeback` 写入 closeout artifact，并记录 worktree lane
+8. 必要时由 HermesAgent 做运营验收或由 Reviewer 做交叉审查
+9. closeout 时更新 `docs/`、`harness/` 与 roadmap
+10. 如失败模式重复出现，回写 `harness/memory/`
 
 ## 5. CrazyAgentsManage 特殊要求
 

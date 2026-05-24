@@ -115,16 +115,31 @@ else
   git worktree add -b "${TARGET_BRANCH}" "${WORKTREE_PATH}" "${BASE_BRANCH}"
 fi
 
+mkdir -p "${WORKTREE_PATH}/.omx"
+cat > "${WORKTREE_PATH}/.omx/worktree-context.json" <<EOF
+{
+  "agent": "${AGENT_SAFE}",
+  "lane": "${LANE}",
+  "topic": "${TOPIC_SAFE}",
+  "branch": "${TARGET_BRANCH}",
+  "baseBranch": "${BASE_BRANCH}",
+  "repoRoot": "${REPO_ROOT}",
+  "worktreePath": "${WORKTREE_PATH}",
+  "createdAt": "$(date -Iseconds)"
+}
+EOF
+
 cat <<EOF
 
 [worktree] created successfully
 
 Next steps:
 1. cd ${WORKTREE_PATH}
-2. Use the agent-specific adapter entry:
+2. Worktree metadata: .omx/worktree-context.json
+3. Use the agent-specific adapter entry:
    - Codex / OMX: AGENTS.md
    - Other agents: use the repository adapter entry, then continue into docs/02-engineering/harness/HARNESS-ENTRY.md
-3. Keep this worktree private to the assigned agent/runtime.
-4. Write shared conclusions back to tracked artifacts only.
+4. Keep this worktree private to the assigned agent/runtime.
+5. Write shared conclusions back to tracked artifacts only.
 
 EOF

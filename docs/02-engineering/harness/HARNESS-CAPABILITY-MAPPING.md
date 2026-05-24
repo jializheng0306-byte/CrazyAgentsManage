@@ -198,6 +198,7 @@ FlowMindDeploy 的 `harness/exec-plans/` 与 Harness 入口规则。
 
 - repository-owned 的执行计划层
 - repository-owned 的 success/failure trace 层
+- repository-owned 的 closeout artifact 层
 - critic 自学习层
 - closeout writeback 层
 - worktree bootstrap 层

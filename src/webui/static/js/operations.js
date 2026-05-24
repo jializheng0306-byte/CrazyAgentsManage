@@ -1061,14 +1061,15 @@ function renderHarness(container, data) {
     '<div class="ops-summary-grid" style="margin-bottom:16px;">' +
       boundaryCard('Success', '✅', counts.successCount || 0, data.status || 'unknown') +
       boundaryCard('Failure', '⚠️', counts.failureCount || 0, counts.failureCount ? 'degraded' : 'healthy') +
-      boundaryCard('Readiness', '🧪', counts.readinessHealthyCount || 0, data.status || 'unknown') +
-      boundaryCard('Traces', '🗂️', counts.totalTraces || 0, data.status || 'unknown') +
+      boundaryCard('Closeouts', '📦', counts.closeoutCount || 0, data.status || 'unknown') +
+      boundaryCard('Pending', '🧾', counts.pendingCloseoutCount || 0, counts.pendingCloseoutCount ? 'degraded' : 'healthy') +
     '</div>' +
     '<div class="ops-detail-section">' +
       '<div class="ops-detail-section-title">Harness Summary</div>' +
       '<div class="ops-detail-row"><span class="ops-detail-row-label">Failure newer than success</span><span class="ops-detail-row-value">' + (data.failureNewerThanSuccess ? 'yes' : 'no') + '</span></div>' +
       '<div class="ops-detail-row"><span class="ops-detail-row-label">Latest success</span><span class="ops-detail-row-value">' + ((data.latestSuccess && data.latestSuccess.id) || '--') + '</span></div>' +
       '<div class="ops-detail-row"><span class="ops-detail-row-label">Latest failure</span><span class="ops-detail-row-value">' + ((data.latestFailure && data.latestFailure.id) || '--') + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Latest closeout</span><span class="ops-detail-row-value">' + ((data.latestCloseout && data.latestCloseout.id) || '--') + '</span></div>' +
     '</div>' +
     isolationSection('Readiness Layers', data.readiness || [], function(item) {
       return '<div style="padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.12);">' +

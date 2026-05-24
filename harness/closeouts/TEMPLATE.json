@@ -1,0 +1,35 @@
+{
+  "id": "C-YYYYMMDD-001",
+  "timestamp": "2026-05-24T00:00:00Z",
+  "status": "success",
+  "nonTrivial": true,
+  "message": "Round completed",
+  "trace": {
+    "kind": "success",
+    "id": "S-YYYYMMDD-001"
+  },
+  "critic": null,
+  "criticWriteBackApplied": false,
+  "governance": {
+    "stdout": "[governance:all] all checks passed"
+  },
+  "governanceReports": [],
+  "context": {
+    "agent": "codex",
+    "branch": "shared/example-topic",
+    "worktree": "/abs/path/to/worktree",
+    "lane": "shared",
+    "laneSource": "worktree-context",
+    "topic": "example-topic",
+    "worktreeContextPath": "/abs/path/to/worktree/.omx/worktree-context.json",
+    "steps": [
+      "plan",
+      "verify"
+    ],
+    "type": "round-success",
+    "file": "",
+    "stage": "",
+    "command": "",
+    "fatal": false
+  }
+}

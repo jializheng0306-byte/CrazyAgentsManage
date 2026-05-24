@@ -292,7 +292,7 @@
 
 ### Phase B：Harness 机制完整迁入
 
-状态：进行中
+状态：starter 已完成，强制 adoption 待继续
 
 产出：
 
@@ -305,8 +305,10 @@
 
 - `Operations > Harness`
   - 暴露 success / failure trace 计数
+  - 暴露 closeout artifact 计数
   - 暴露 critic / closeout / worktree readiness
   - 暴露 harness runbooks 与默认命令链
+  - 宿主 smoke 已产生 `S-20260524-001` + `C-20260524-001`
 
 下一步不再是“脚本是否存在”，而是：
 
