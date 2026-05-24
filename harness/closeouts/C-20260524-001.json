@@ -1,0 +1,53 @@
+{
+  "id": "C-20260524-001",
+  "timestamp": "2026-05-24T03:05:23.507Z",
+  "status": "success",
+  "nonTrivial": true,
+  "message": "Publish Workstream 4 default adoption enforcement",
+  "trace": {
+    "kind": "success",
+    "id": "S-20260524-001"
+  },
+  "critic": null,
+  "criticWriteBackApplied": false,
+  "governance": {
+    "stdout": "[governance:all] local harness consistency\nOK: harness governance docs are locally consistent\n[governance:all] closeout chain consistency\nOK: harness closeout chain is consistent\n[governance:all] cross-repo PRD sync\nOK: cross-repo PRD sync anchors are aligned\n[governance:all] all checks passed"
+  },
+  "governanceReports": [
+    {
+      "path": "docs/02-engineering/harness/harness-governance-report.md",
+      "absolutePath": "/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/harness-governance-report.md",
+      "title": "Harness Governance Report",
+      "repo": "CrazyAgentsManage",
+      "status": "PASS",
+      "passCount": 5,
+      "failCount": 0,
+      "summary": "No harness governance drift detected in the current minimal scan."
+    },
+    {
+      "path": "../FlowMindDeploy/docs/05-version-control/architecture-drift-report.md",
+      "absolutePath": "/home/flowmind/FlowMindDeploy/docs/05-version-control/architecture-drift-report.md",
+      "title": "Architecture Drift Report",
+      "repo": "FlowMindDeploy",
+      "status": "PASS",
+      "passCount": 9,
+      "failCount": 0,
+      "summary": "No architecture/code drift detected in the current minimal scan."
+    }
+  ],
+  "context": {
+    "agent": "codex",
+    "branch": "feat/auto-capture-trace-reconciled-20260518",
+    "worktree": "/home/flowmind/CrazyAgentsManage",
+    "lane": "shared",
+    "laneSource": "cli-arg",
+    "topic": "workstream4-default-adoption",
+    "worktreeContextPath": "",
+    "steps": [],
+    "type": "",
+    "file": "",
+    "stage": "",
+    "command": "",
+    "fatal": false
+  }
+}

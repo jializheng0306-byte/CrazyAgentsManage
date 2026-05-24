@@ -19,6 +19,26 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+function boolFromEnv(name) {
+  return String(process.env[name] || '').trim().toLowerCase() === 'true';
+}
+
+function resolveInvocationMode() {
+  var closeoutManaged = boolFromEnv('HARNESS_CLOSEOUT_CONTEXT');
+  var trivial = boolFromEnv('HARNESS_TRACE_TRIVIAL');
+  if (!closeoutManaged && !trivial) {
+    process.stderr.write(
+      'record-failure.cjs only supports trivial direct traces; non-trivial rounds must use node scripts/harness-closeout-writeback.cjs\n'
+    );
+    process.exit(1);
+  }
+  return {
+    closeoutManaged: closeoutManaged,
+    trivial: trivial,
+    source: closeoutManaged ? 'closeout-writeback' : 'direct-trivial',
+  };
+}
+
 function safeBranch() {
   try {
     return execSync('git branch --show-current', {
@@ -42,6 +62,7 @@ function nextId() {
 }
 
 function main() {
+  var invocation = resolveInvocationMode();
   var id = nextId();
   var governanceReports = [];
   if (process.env.HARNESS_GOVERNANCE_REPORTS) {
@@ -67,6 +88,9 @@ function main() {
       verification_step: process.env.HARNESS_FAILURE_STAGE || '',
       command: process.env.HARNESS_FAILURE_COMMAND || '',
       fatal: process.env.HARNESS_FAILURE_FATAL === 'true',
+      traceSource: invocation.source,
+      closeoutManaged: invocation.closeoutManaged,
+      trivial: invocation.trivial,
       governanceReports: governanceReports,
     },
   };

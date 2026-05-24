@@ -1067,6 +1067,8 @@ function renderHarness(container, data) {
     '<div class="ops-detail-section">' +
       '<div class="ops-detail-section-title">Harness Summary</div>' +
       '<div class="ops-detail-row"><span class="ops-detail-row-label">Failure newer than success</span><span class="ops-detail-row-value">' + (data.failureNewerThanSuccess ? 'yes' : 'no') + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Default entry</span><span class="ops-detail-row-value">' + (((data.policy || {}).defaultEntry) || '--') + '</span></div>' +
+      '<div class="ops-detail-row"><span class="ops-detail-row-label">Direct trace policy</span><span class="ops-detail-row-value">' + (((data.policy || {}).directTracePolicy) || '--') + '</span></div>' +
       '<div class="ops-detail-row"><span class="ops-detail-row-label">Latest success</span><span class="ops-detail-row-value">' + ((data.latestSuccess && data.latestSuccess.id) || '--') + '</span></div>' +
       '<div class="ops-detail-row"><span class="ops-detail-row-label">Latest failure</span><span class="ops-detail-row-value">' + ((data.latestFailure && data.latestFailure.id) || '--') + '</span></div>' +
       '<div class="ops-detail-row"><span class="ops-detail-row-label">Latest closeout</span><span class="ops-detail-row-value">' + ((data.latestCloseout && data.latestCloseout.id) || '--') + '</span></div>' +

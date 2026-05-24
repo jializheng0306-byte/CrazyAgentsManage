@@ -117,6 +117,8 @@
 - critic readiness
 - closeout writeback readiness
 - worktree bootstrap readiness
+- non-trivial round canonical closeout entry
+- pending closeout detection
 
 ### 10. Env Map / Backup / Recovery / Recovery Paths
 

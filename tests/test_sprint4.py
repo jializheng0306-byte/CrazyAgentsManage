@@ -477,6 +477,9 @@ class TestOperationsCapabilityPlane:
         assert data['latestSuccess']['id'] == 'S-20260523-001'
         assert data['latestFailure']['id'] == 'F-20260522-001'
         assert data['latestCloseout']['id'] == 'C-20260523-001'
+        assert data['policy']['defaultEntry'] == 'Non-trivial rounds must close via harness-closeout-writeback.'
+        assert 'record-success.cjs' not in data['commands'][0]
+        assert data['commands'][0].startswith('node scripts/harness-closeout-writeback.cjs --status success')
 
     def test_operations_summary_includes_isolation_family(self, client, monkeypatch, tmp_path):
         repo_root = tmp_path / 'repo'
@@ -872,6 +875,72 @@ class TestSprint3CapabilityRegression:
 
 
 class TestHarnessWorkflowEnforcement:
+    @pytest.mark.parametrize(
+        ('script_name', 'expected_fragment'),
+        [
+            ('record-success.cjs', 'record-success.cjs only supports trivial direct traces'),
+            ('record-failure.cjs', 'record-failure.cjs only supports trivial direct traces'),
+        ],
+    )
+    def test_direct_trace_scripts_reject_nontrivial_invocation(self, tmp_path, script_name, expected_fragment):
+        node = shutil.which('node')
+        if not node:
+            pytest.skip('node not available')
+
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'scripts').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness' / 'trace' / 'successes').mkdir(parents=True, exist_ok=True)
+        (repo_root / 'harness' / 'trace' / 'failures').mkdir(parents=True, exist_ok=True)
+
+        src = Path(__file__).resolve().parents[1] / 'scripts' / script_name
+        dst = repo_root / 'scripts' / script_name
+        dst.write_text(src.read_text(encoding='utf-8'), encoding='utf-8')
+
+        result = subprocess.run(
+            [node, str(dst)],
+            cwd=repo_root,
+            env={**os.environ, 'HARNESS_REPO_ROOT': str(repo_root)},
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        assert result.returncode != 0
+        assert expected_fragment in result.stderr
+
+    def test_record_success_allows_trivial_direct_probe(self, tmp_path):
+        node = shutil.which('node')
+        if not node:
+            pytest.skip('node not available')
+
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'scripts').mkdir(parents=True, exist_ok=True)
+        success_dir = repo_root / 'harness' / 'trace' / 'successes'
+        success_dir.mkdir(parents=True, exist_ok=True)
+
+        src = Path(__file__).resolve().parents[1] / 'scripts' / 'record-success.cjs'
+        dst = repo_root / 'scripts' / 'record-success.cjs'
+        dst.write_text(src.read_text(encoding='utf-8'), encoding='utf-8')
+
+        result = subprocess.run(
+            [node, str(dst)],
+            cwd=repo_root,
+            env={
+                **os.environ,
+                'HARNESS_REPO_ROOT': str(repo_root),
+                'HARNESS_TRACE_TRIVIAL': 'true',
+                'HARNESS_SUCCESS_MESSAGE': 'trivial probe',
+            },
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+
+        trace_id = result.stdout.strip()
+        payload = json.loads((success_dir / f'{trace_id}.json').read_text(encoding='utf-8'))
+        assert payload['context']['traceSource'] == 'direct-trivial'
+        assert payload['context']['trivial'] is True
+
     def test_harness_closeout_writeback_creates_closeout_artifact_with_lane(self, tmp_path):
         node = shutil.which('node')
         if not node:

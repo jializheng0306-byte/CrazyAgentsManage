@@ -361,6 +361,8 @@ function main() {
       HARNESS_BRANCH: options.branch,
       HARNESS_WORKTREE: options.worktree,
       HARNESS_SUCCESS_STEPS: options.steps,
+      HARNESS_CLOSEOUT_CONTEXT: "true",
+      HARNESS_TRACE_TRIVIAL: options.trivial ? "true" : "false",
       HARNESS_GOVERNANCE_REPORTS: JSON.stringify(governanceReports),
     });
     trace = { kind: "success", id: result.stdout };
@@ -375,6 +377,8 @@ function main() {
       HARNESS_FAILURE_STAGE: options.stage,
       HARNESS_FAILURE_COMMAND: options.command,
       HARNESS_FAILURE_FATAL: options.fatal ? "true" : "false",
+      HARNESS_CLOSEOUT_CONTEXT: "true",
+      HARNESS_TRACE_TRIVIAL: options.trivial ? "true" : "false",
       HARNESS_GOVERNANCE_REPORTS: JSON.stringify(governanceReports),
     });
     trace = { kind: "failure", id: result.stdout };

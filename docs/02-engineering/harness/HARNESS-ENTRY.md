@@ -128,17 +128,18 @@ Harness 要求先执行 [SEMANTIC-FIRST-READING-RULE.md](./SEMANTIC-FIRST-READIN
 Canonical repository-owned closeout and learning commands:
 
 ```bash
-node scripts/record-success.cjs
-node scripts/record-failure.cjs
+node scripts/harness-closeout-writeback.cjs --status success --message "Round completed" --critic-write-back --json
+node scripts/harness-closeout-writeback.cjs --status failed --message "Round failed" --stage verification --json
 node scripts/harness-critic.cjs --json
 python3 scripts/check_harness_closeout_chain.py
 ./scripts/check_harness_governance.sh
 ./scripts/check_harness_governance.sh --with-cross-repo
 ./scripts/check_harness_governance_all.sh
-node scripts/harness-closeout-writeback.cjs --status success --message "Round completed" --critic-write-back --json
 ```
 
 These commands complement the Python runtime scripts under `scripts/runtime/`; they do not replace the Hermes-specific handoff and runtime-state workflow.
+
+`record-success.cjs` / `record-failure.cjs` 现在只作为 `harness-closeout-writeback.cjs` 的底层 trace writer。对于非平凡迭代，不再允许把它们当成 direct closeout 入口；direct 调用仅保留给 trivial local probe。
 
 `status=success` 的 `harness-closeout-writeback` 默认会先执行全量治理检查 `./scripts/check_harness_governance_all.sh`。
 

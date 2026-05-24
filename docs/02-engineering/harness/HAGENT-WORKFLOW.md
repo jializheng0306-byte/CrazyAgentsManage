@@ -41,8 +41,8 @@
 3. 判断任务级别 L1-L4
 4. 如需并行执行，为不同执行 Agent 分配独立 worktree
 5. 执行实现并完成验证
-6. 写入 success / failure trace
-7. 通过 `harness-closeout-writeback` 写入 closeout artifact，并记录 worktree lane
+6. 通过 `harness-closeout-writeback` 写入 success / failure trace 与 closeout artifact，并记录 worktree lane
+7. 不要把 `record-success.cjs` / `record-failure.cjs` 当成非平凡迭代的 direct closeout 入口
 8. 必要时由 HermesAgent 做运营验收或由 Reviewer 做交叉审查
 9. closeout 时更新 `docs/`、`harness/` 与 roadmap
 10. 如失败模式重复出现，回写 `harness/memory/`

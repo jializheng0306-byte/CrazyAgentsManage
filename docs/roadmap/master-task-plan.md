@@ -292,7 +292,7 @@
 
 ### Phase B：Harness 机制完整迁入
 
-状态：starter 已完成，强制 adoption 待继续
+状态：completed-published
 
 产出：
 
@@ -309,10 +309,12 @@
   - 暴露 critic / closeout / worktree readiness
   - 暴露 harness runbooks 与默认命令链
   - 宿主 smoke 已产生 `S-20260524-001` + `C-20260524-001`
+- non-trivial trace 默认不再允许 direct 调 `record-success.cjs` / `record-failure.cjs`
+- canonical closeout 入口已收敛到 `harness-closeout-writeback.cjs`
 
-下一步不再是“脚本是否存在”，而是：
+当前这条线已完成 published closeout，后续不再属于“先把 Harness 补齐”，而是：
 
-- 是否强制在每轮非平凡迭代中真正走 success / failure / critic / closeout / worktree 链
+- 把 reviewer / Hermes acceptance / PRD closeout 进一步贴到同一条 evidence 链
 
 ### Phase C：Harness 与 Hermes 协作层对齐
 

@@ -79,7 +79,7 @@ FlowMindDeploy 的 `harness/exec-plans/` 与 Harness 入口规则。
 
 ### 当前意义
 
-每一轮非平凡迭代可以有结构化 closeout，而不是只靠口头说明完成。
+它们现在是 `harness-closeout-writeback.cjs` 的底层 trace writer；非平凡迭代默认不再 direct 调用，而是统一经由 closeout writeback 收口。
 
 ## 3. Critic 自学习能力
 
@@ -176,7 +176,7 @@ FlowMindDeploy 的 `harness/exec-plans/` 与 Harness 入口规则。
    - 由 HermesAgent 做运营复核
 5. closeout 时：
    - 更新 PRD / roadmap / docs
-   - 写 success/failure trace
+   - 通过 `harness-closeout-writeback.cjs` 写 success/failure trace
    - 必要时运行 critic
 
 ## 四、当前项目中的实际落点
@@ -204,4 +204,4 @@ FlowMindDeploy 的 `harness/exec-plans/` 与 Harness 入口规则。
 - worktree bootstrap 层
 - 与 `Codex ↔ HermesAgent` 专用协作层并存的清晰分层
 
-下一步重点不再是“有没有 Harness”，而是“是否强制在每轮非平凡迭代中真正使用这套 Harness”。
+下一步重点不再是“有没有 Harness”，而是把 reviewer / Hermes acceptance / PRD closeout 进一步贴到同一条 canonical closeout evidence 链上。

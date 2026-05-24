@@ -74,10 +74,6 @@ CrazyAgentsManage 的 canonical harness core。
 ## Critic 命令
 
 ```bash
-node scripts/harness-critic.cjs
-node scripts/harness-critic.cjs --days 3
-node scripts/harness-critic.cjs --write-back
-node scripts/harness-critic.cjs --json
 ./scripts/check_harness_governance.sh
 ./scripts/check_harness_governance.sh --with-cross-repo
 ./scripts/check_harness_governance.sh --local-only
@@ -86,6 +82,10 @@ node scripts/harness-critic.cjs --json
 python3 scripts/check_harness_closeout_chain.py
 node scripts/harness-closeout-writeback.cjs --status success --message "Round completed" --critic-write-back --json
 node scripts/harness-closeout-writeback.cjs --status failed --message "Round failed" --stage verification --json
+node scripts/harness-critic.cjs
+node scripts/harness-critic.cjs --days 3
+node scripts/harness-critic.cjs --write-back
+node scripts/harness-critic.cjs --json
 ```
 
 ## Governance Gate
@@ -95,6 +95,8 @@ node scripts/harness-closeout-writeback.cjs --status failed --message "Round fai
 - 推荐默认入口：`./scripts/check_harness_governance_all.sh`
 - `status=success` 的 closeout 会默认执行全量治理检查；失败则直接阻断 closeout
 - `status=failed` 的 closeout 默认不阻断，便于记录失败现场；如需强制执行可加 `--governance-check`
+- 非平凡迭代的 canonical trace 入口是 `node scripts/harness-closeout-writeback.cjs ...`
+- `record-success.cjs` / `record-failure.cjs` 现在只作为底层 trace writer；direct 调用仅允许 trivial local probe
 - 当前治理检查会回写报告到 `docs/02-engineering/harness/harness-governance-report.md`
 - closeout writeback 会把当前 harness 治理报告与 FlowMind 的 architecture drift 报告摘要一起写入 `governanceReports`
 

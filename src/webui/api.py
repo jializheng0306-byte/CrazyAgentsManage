@@ -5158,11 +5158,15 @@ def _build_operations_harness_view():
             'docs/02-engineering/harness/WORKTREE-BOOTSTRAP.md',
             'docs/02-engineering/harness/HARNESS-CAPABILITY-MAPPING.md',
         ],
+        'policy': {
+            'defaultEntry': 'Non-trivial rounds must close via harness-closeout-writeback.',
+            'directTracePolicy': 'record-success.cjs / record-failure.cjs are low-level only; direct use is limited to trivial local probes.',
+        },
         'commands': [
-            'node scripts/record-success.cjs',
-            'node scripts/record-failure.cjs',
-            'node scripts/harness-critic.cjs --json',
             'node scripts/harness-closeout-writeback.cjs --status success --message \"Round completed\" --critic-write-back --json',
+            'node scripts/harness-closeout-writeback.cjs --status failed --message \"Round failed\" --stage verification --json',
+            'node scripts/harness-critic.cjs --json',
+            'python3 scripts/check_harness_closeout_chain.py',
             'scripts/worktree/create-agent-worktree.sh --agent codex --lane shared --topic <topic>',
         ],
     }
