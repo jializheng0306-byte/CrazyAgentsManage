@@ -209,7 +209,7 @@
 - Sprint 1 已在 Crazy lane 本地形成两轮 Lore 提交：
   - `5e88b51` freeze baseline
   - `cedc03c` close remaining overview hardening risks
-- `Operations / Overview / host health / focused Playwright gate` 已完成第一轮闭环
+- `Operations / Overview / host health / focused Playwright gate` 已完成闭环，tunnel-backed live gate 已产品化为 canonical 验证路径
 - `Centaur Loop` 借鉴线当前已从纯分析层推进到两份执行文档：
   - `docs/prd/pages/loop-surface-page-prd.md`
   - `docs/roadmap/sprint2-cycle-upgrade-first-batch-2026-05-22.md`

@@ -63,7 +63,9 @@
 ### 本地
 
 - `.venv/bin/python -m pytest tests/test_sprint4.py -q`
+- `.venv/bin/python -m pytest tests/test_phase_c_live_gate_runner.py tests/test_sprint4.py -q`
 - `python3 -m py_compile src/webui/api.py src/webui/app.py`
+- `python3 -m py_compile scripts/runtime/run_phase_c_collaboration_live_gate.py`
 - `node --check src/webui/static/js/collaboration.js`
 - `node --check src/webui/static/js/tasks.js`
 - `node --check src/webui/static/js/operations.js`
@@ -91,6 +93,10 @@
 - focused Playwright gate:
   - `/manage/collaboration`
   - `/manage/architecture/tech`
+  - canonical command:
+    - `python3 scripts/runtime/run_phase_c_collaboration_live_gate.py --output-dir /tmp/phase-c-live-gate`
+  - optional non-blocking public probe:
+    - `python3 scripts/runtime/run_phase_c_collaboration_live_gate.py --output-dir /tmp/phase-c-live-gate --probe-public-url http://47.99.217.1/manage`
 
 ## 5. 当前裁定
 
@@ -103,6 +109,25 @@
 1. canonical evidence chain 已成立
 2. triage 已继续贴到 action playbook 与 writeback path
 3. `Tasks` / `Operations` 已能接住协作上下文跳转
+
+## 6. 剩余风险收口（2026-05-24 补记）
+
+此前 focused Playwright gate 的主要不稳定点，不在页面实现本身，而在“公网直连入口”缺乏稳定性。
+
+当前已明确收口为：
+
+- `SSH tunnel -> localhost -> /manage/*` 是 canonical live gate 路径
+- `public URL` 只保留为附加探针，不再作为 blocker
+- 仓库内已有脚本 `scripts/runtime/run_phase_c_collaboration_live_gate.py` 负责：
+  - 建立和清理 ALI-HERMES tunnel
+  - 当默认本地端口被占用时自动切到空闲端口
+  - 运行 focused Playwright gate
+  - 可选附带 public probe，但 public 失败不会推翻 canonical gate 结果
+- 本轮收口证据：
+  - `trace.id = S-20260524-008`
+  - `closeout.id = C-20260524-008`
+  - canonical gate passed
+  - public probe remained `ERR_EMPTY_RESPONSE`, but no longer blocks release judgment
 
 剩余主问题变成：
 
