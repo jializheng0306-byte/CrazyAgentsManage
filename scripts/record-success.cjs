@@ -21,20 +21,106 @@ function boolFromEnv(name) {
   return String(process.env[name] || '').trim().toLowerCase() === 'true';
 }
 
-function resolveInvocationMode() {
+function parseArgs(argv) {
+  var out = {
+    allowTrivialDirect: false,
+    probeReason: '',
+    message: '',
+    type: '',
+    agent: '',
+    branch: '',
+    worktree: '',
+    steps: '',
+  };
+  for (var i = 0; i < argv.length; i++) {
+    var arg = argv[i];
+    switch (arg) {
+      case '--allow-trivial-direct':
+        out.allowTrivialDirect = true;
+        break;
+      case '--probe-reason':
+        out.probeReason = String(argv[++i] || '').trim();
+        break;
+      case '--message':
+        out.message = String(argv[++i] || '').trim();
+        break;
+      case '--type':
+        out.type = String(argv[++i] || '').trim();
+        break;
+      case '--agent':
+        out.agent = String(argv[++i] || '').trim();
+        break;
+      case '--branch':
+        out.branch = String(argv[++i] || '').trim();
+        break;
+      case '--worktree':
+        out.worktree = String(argv[++i] || '').trim();
+        break;
+      case '--steps':
+        out.steps = String(argv[++i] || '').trim();
+        break;
+      default:
+        break;
+    }
+  }
+  return out;
+}
+
+function safeParentCommand() {
+  var ppid = String(process.ppid || '').trim();
+  if (!ppid) return '';
+  try {
+    return fs.readFileSync('/proc/' + ppid + '/cmdline', 'utf8').replace(/\u0000/g, ' ').trim();
+  } catch (_) {}
+  try {
+    return execSync('ps -o command= -p ' + ppid, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore'],
+    }).trim();
+  } catch (_) {
+    return '';
+  }
+}
+
+function resolveInvocationMode(options) {
   var closeoutManaged = boolFromEnv('HARNESS_CLOSEOUT_CONTEXT');
-  var trivial = boolFromEnv('HARNESS_TRACE_TRIVIAL');
-  if (!closeoutManaged && !trivial) {
+  if (closeoutManaged) {
+    if (safeParentCommand().indexOf('harness-closeout-writeback.cjs') === -1) {
+      process.stderr.write(
+        'HARNESS_CLOSEOUT_CONTEXT is reserved for a harness-closeout-writeback.cjs parent process\n'
+      );
+      process.exit(1);
+    }
+    return {
+      closeoutManaged: true,
+      trivial: false,
+      source: 'closeout-writeback',
+      probeReason: '',
+    };
+  }
+  if (!options.allowTrivialDirect || !options.probeReason) {
     process.stderr.write(
-      'record-success.cjs only supports trivial direct traces; non-trivial rounds must use node scripts/harness-closeout-writeback.cjs\n'
+      'record-success.cjs only supports trivial direct traces via --allow-trivial-direct --probe-reason; non-trivial rounds must use node scripts/harness-closeout-writeback.cjs\n'
     );
     process.exit(1);
   }
   return {
-    closeoutManaged: closeoutManaged,
-    trivial: trivial,
-    source: closeoutManaged ? 'closeout-writeback' : 'direct-trivial',
+    closeoutManaged: false,
+    trivial: true,
+    source: 'direct-trivial',
+    probeReason: options.probeReason,
   };
+}
+
+function optionOrEnv(value, envName, fallback) {
+  if (String(value || '').trim()) {
+    return String(value).trim();
+  }
+  if (String(process.env[envName] || '').trim()) {
+    return String(process.env[envName]).trim();
+  }
+  return fallback;
 }
 
 function safeBranch() {
@@ -65,7 +151,8 @@ function parseSteps(raw) {
 }
 
 function main() {
-  var invocation = resolveInvocationMode();
+  var options = parseArgs(process.argv.slice(2));
+  var invocation = resolveInvocationMode(options);
   var id = nextId();
   var governanceReports = [];
   if (process.env.HARNESS_GOVERNANCE_REPORTS) {
@@ -81,16 +168,17 @@ function main() {
   var record = {
     id: id,
     timestamp: new Date().toISOString(),
-    type: process.env.HARNESS_SUCCESS_TYPE || 'pipeline-success',
-    message: process.env.HARNESS_SUCCESS_MESSAGE || 'Pipeline completed successfully',
+    type: optionOrEnv(options.type, 'HARNESS_SUCCESS_TYPE', 'pipeline-success'),
+    message: optionOrEnv(options.message, 'HARNESS_SUCCESS_MESSAGE', 'Pipeline completed successfully'),
     context: {
-      agent: process.env.HARNESS_AGENT || 'unknown',
-      branch: process.env.HARNESS_BRANCH || safeBranch(),
-      worktree: process.env.HARNESS_WORKTREE || process.cwd(),
-      steps: parseSteps(process.env.HARNESS_SUCCESS_STEPS),
+      agent: optionOrEnv(options.agent, 'HARNESS_AGENT', 'unknown'),
+      branch: optionOrEnv(options.branch, 'HARNESS_BRANCH', safeBranch()),
+      worktree: optionOrEnv(options.worktree, 'HARNESS_WORKTREE', process.cwd()),
+      steps: parseSteps(optionOrEnv(options.steps, 'HARNESS_SUCCESS_STEPS', '')),
       traceSource: invocation.source,
       closeoutManaged: invocation.closeoutManaged,
       trivial: invocation.trivial,
+      probeReason: invocation.probeReason,
       governanceReports: governanceReports,
     },
   };

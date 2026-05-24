@@ -96,7 +96,8 @@ node scripts/harness-critic.cjs --json
 - `status=success` 的 closeout 会默认执行全量治理检查；失败则直接阻断 closeout
 - `status=failed` 的 closeout 默认不阻断，便于记录失败现场；如需强制执行可加 `--governance-check`
 - 非平凡迭代的 canonical trace 入口是 `node scripts/harness-closeout-writeback.cjs ...`
-- `record-success.cjs` / `record-failure.cjs` 现在只作为底层 trace writer；direct 调用仅允许 trivial local probe
+- `record-success.cjs` / `record-failure.cjs` 现在只作为底层 trace writer；direct 调用仅允许显式 `--allow-trivial-direct --probe-reason ...` probe
+- `HARNESS_CLOSEOUT_CONTEXT` 只保留给 `harness-closeout-writeback.cjs` 的真实父进程调用，不能用环境变量伪装
 - 当前治理检查会回写报告到 `docs/02-engineering/harness/harness-governance-report.md`
 - closeout writeback 会把当前 harness 治理报告与 FlowMind 的 architecture drift 报告摘要一起写入 `governanceReports`
 

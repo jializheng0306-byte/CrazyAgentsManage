@@ -481,6 +481,20 @@ class TestOperationsCapabilityPlane:
         assert 'record-success.cjs' not in data['commands'][0]
         assert data['commands'][0].startswith('node scripts/harness-closeout-writeback.cjs --status success')
 
+    def test_manage_operations_api_alias_returns_summary(self, client):
+        resp = client.get('/manage/api/operations/summary')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert 'families' in data
+        assert 'metrics' in data
+
+    def test_manage_operations_api_alias_returns_harness_view(self, client):
+        resp = client.get('/manage/api/operations/harness')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert 'counts' in data
+        assert 'policy' in data
+
     def test_operations_summary_includes_isolation_family(self, client, monkeypatch, tmp_path):
         repo_root = tmp_path / 'repo'
         (repo_root / 'docs' / '02-engineering' / 'harness').mkdir(parents=True, exist_ok=True)
@@ -878,8 +892,8 @@ class TestHarnessWorkflowEnforcement:
     @pytest.mark.parametrize(
         ('script_name', 'expected_fragment'),
         [
-            ('record-success.cjs', 'record-success.cjs only supports trivial direct traces'),
-            ('record-failure.cjs', 'record-failure.cjs only supports trivial direct traces'),
+            ('record-success.cjs', 'record-success.cjs only supports trivial direct traces via --allow-trivial-direct --probe-reason'),
+            ('record-failure.cjs', 'record-failure.cjs only supports trivial direct traces via --allow-trivial-direct --probe-reason'),
         ],
     )
     def test_direct_trace_scripts_reject_nontrivial_invocation(self, tmp_path, script_name, expected_fragment):
@@ -908,6 +922,31 @@ class TestHarnessWorkflowEnforcement:
         assert result.returncode != 0
         assert expected_fragment in result.stderr
 
+    @pytest.mark.parametrize('script_name', ['record-success.cjs', 'record-failure.cjs'])
+    def test_direct_trace_scripts_reject_forged_closeout_env(self, tmp_path, script_name):
+        node = shutil.which('node')
+        if not node:
+            pytest.skip('node not available')
+
+        repo_root = tmp_path / 'repo'
+        (repo_root / 'scripts').mkdir(parents=True, exist_ok=True)
+
+        src = Path(__file__).resolve().parents[1] / 'scripts' / script_name
+        dst = repo_root / 'scripts' / script_name
+        dst.write_text(src.read_text(encoding='utf-8'), encoding='utf-8')
+
+        result = subprocess.run(
+            [node, str(dst)],
+            cwd=repo_root,
+            env={**os.environ, 'HARNESS_REPO_ROOT': str(repo_root), 'HARNESS_CLOSEOUT_CONTEXT': 'true'},
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        assert result.returncode != 0
+        assert 'HARNESS_CLOSEOUT_CONTEXT is reserved for a harness-closeout-writeback.cjs parent process' in result.stderr
+
     def test_record_success_allows_trivial_direct_probe(self, tmp_path):
         node = shutil.which('node')
         if not node:
@@ -923,14 +962,9 @@ class TestHarnessWorkflowEnforcement:
         dst.write_text(src.read_text(encoding='utf-8'), encoding='utf-8')
 
         result = subprocess.run(
-            [node, str(dst)],
+            [node, str(dst), '--allow-trivial-direct', '--probe-reason', 'local smoke', '--message', 'trivial probe'],
             cwd=repo_root,
-            env={
-                **os.environ,
-                'HARNESS_REPO_ROOT': str(repo_root),
-                'HARNESS_TRACE_TRIVIAL': 'true',
-                'HARNESS_SUCCESS_MESSAGE': 'trivial probe',
-            },
+            env={**os.environ, 'HARNESS_REPO_ROOT': str(repo_root)},
             text=True,
             capture_output=True,
             check=True,
@@ -940,6 +974,7 @@ class TestHarnessWorkflowEnforcement:
         payload = json.loads((success_dir / f'{trace_id}.json').read_text(encoding='utf-8'))
         assert payload['context']['traceSource'] == 'direct-trivial'
         assert payload['context']['trivial'] is True
+        assert payload['context']['probeReason'] == 'local smoke'
 
     def test_harness_closeout_writeback_creates_closeout_artifact_with_lane(self, tmp_path):
         node = shutil.which('node')

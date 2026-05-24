@@ -79,7 +79,7 @@ FlowMindDeploy 的 `harness/exec-plans/` 与 Harness 入口规则。
 
 ### 当前意义
 
-它们现在是 `harness-closeout-writeback.cjs` 的底层 trace writer；非平凡迭代默认不再 direct 调用，而是统一经由 closeout writeback 收口。
+它们现在是 `harness-closeout-writeback.cjs` 的底层 trace writer；非平凡迭代默认不再 direct 调用，而是统一经由 closeout writeback 收口。direct probe 也必须显式带 `--allow-trivial-direct --probe-reason ...`，且不能伪造 closeout 父进程环境。
 
 ## 3. Critic 自学习能力
 

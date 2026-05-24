@@ -23,20 +23,118 @@ function boolFromEnv(name) {
   return String(process.env[name] || '').trim().toLowerCase() === 'true';
 }
 
-function resolveInvocationMode() {
+function parseArgs(argv) {
+  var out = {
+    allowTrivialDirect: false,
+    probeReason: '',
+    message: '',
+    type: '',
+    file: '',
+    stage: '',
+    command: '',
+    agent: '',
+    branch: '',
+    worktree: '',
+    fatal: false,
+  };
+  for (var i = 0; i < argv.length; i++) {
+    var arg = argv[i];
+    switch (arg) {
+      case '--allow-trivial-direct':
+        out.allowTrivialDirect = true;
+        break;
+      case '--probe-reason':
+        out.probeReason = String(argv[++i] || '').trim();
+        break;
+      case '--message':
+        out.message = String(argv[++i] || '').trim();
+        break;
+      case '--type':
+        out.type = String(argv[++i] || '').trim();
+        break;
+      case '--file':
+        out.file = String(argv[++i] || '').trim();
+        break;
+      case '--stage':
+        out.stage = String(argv[++i] || '').trim();
+        break;
+      case '--command':
+        out.command = String(argv[++i] || '').trim();
+        break;
+      case '--agent':
+        out.agent = String(argv[++i] || '').trim();
+        break;
+      case '--branch':
+        out.branch = String(argv[++i] || '').trim();
+        break;
+      case '--worktree':
+        out.worktree = String(argv[++i] || '').trim();
+        break;
+      case '--fatal':
+        out.fatal = true;
+        break;
+      default:
+        break;
+    }
+  }
+  return out;
+}
+
+function safeParentCommand() {
+  var ppid = String(process.ppid || '').trim();
+  if (!ppid) return '';
+  try {
+    return fs.readFileSync('/proc/' + ppid + '/cmdline', 'utf8').replace(/\u0000/g, ' ').trim();
+  } catch (_) {}
+  try {
+    return execSync('ps -o command= -p ' + ppid, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore'],
+    }).trim();
+  } catch (_) {
+    return '';
+  }
+}
+
+function resolveInvocationMode(options) {
   var closeoutManaged = boolFromEnv('HARNESS_CLOSEOUT_CONTEXT');
-  var trivial = boolFromEnv('HARNESS_TRACE_TRIVIAL');
-  if (!closeoutManaged && !trivial) {
+  if (closeoutManaged) {
+    if (safeParentCommand().indexOf('harness-closeout-writeback.cjs') === -1) {
+      process.stderr.write(
+        'HARNESS_CLOSEOUT_CONTEXT is reserved for a harness-closeout-writeback.cjs parent process\n'
+      );
+      process.exit(1);
+    }
+    return {
+      closeoutManaged: true,
+      trivial: false,
+      source: 'closeout-writeback',
+      probeReason: '',
+    };
+  }
+  if (!options.allowTrivialDirect || !options.probeReason) {
     process.stderr.write(
-      'record-failure.cjs only supports trivial direct traces; non-trivial rounds must use node scripts/harness-closeout-writeback.cjs\n'
+      'record-failure.cjs only supports trivial direct traces via --allow-trivial-direct --probe-reason; non-trivial rounds must use node scripts/harness-closeout-writeback.cjs\n'
     );
     process.exit(1);
   }
   return {
-    closeoutManaged: closeoutManaged,
-    trivial: trivial,
-    source: closeoutManaged ? 'closeout-writeback' : 'direct-trivial',
+    closeoutManaged: false,
+    trivial: true,
+    source: 'direct-trivial',
+    probeReason: options.probeReason,
   };
+}
+
+function optionOrEnv(value, envName, fallback) {
+  if (String(value || '').trim()) {
+    return String(value).trim();
+  }
+  if (String(process.env[envName] || '').trim()) {
+    return String(process.env[envName]).trim();
+  }
+  return fallback;
 }
 
 function safeBranch() {
@@ -62,7 +160,8 @@ function nextId() {
 }
 
 function main() {
-  var invocation = resolveInvocationMode();
+  var options = parseArgs(process.argv.slice(2));
+  var invocation = resolveInvocationMode(options);
   var id = nextId();
   var governanceReports = [];
   if (process.env.HARNESS_GOVERNANCE_REPORTS) {
@@ -78,19 +177,20 @@ function main() {
   var record = {
     id: id,
     timestamp: new Date().toISOString(),
-    type: process.env.HARNESS_FAILURE_TYPE || process.env.HARNESS_FAILURE_STAGE || 'unknown-failure',
-    file: process.env.HARNESS_FAILURE_FILE || '',
-    message: process.env.HARNESS_FAILURE_MESSAGE || 'Unknown failure',
+    type: optionOrEnv(options.type, 'HARNESS_FAILURE_TYPE', optionOrEnv(options.stage, 'HARNESS_FAILURE_STAGE', 'unknown-failure')),
+    file: optionOrEnv(options.file, 'HARNESS_FAILURE_FILE', ''),
+    message: optionOrEnv(options.message, 'HARNESS_FAILURE_MESSAGE', 'Unknown failure'),
     context: {
-      agent: process.env.HARNESS_AGENT || 'unknown',
-      branch: process.env.HARNESS_BRANCH || safeBranch(),
-      worktree: process.env.HARNESS_WORKTREE || process.cwd(),
-      verification_step: process.env.HARNESS_FAILURE_STAGE || '',
-      command: process.env.HARNESS_FAILURE_COMMAND || '',
-      fatal: process.env.HARNESS_FAILURE_FATAL === 'true',
+      agent: optionOrEnv(options.agent, 'HARNESS_AGENT', 'unknown'),
+      branch: optionOrEnv(options.branch, 'HARNESS_BRANCH', safeBranch()),
+      worktree: optionOrEnv(options.worktree, 'HARNESS_WORKTREE', process.cwd()),
+      verification_step: optionOrEnv(options.stage, 'HARNESS_FAILURE_STAGE', ''),
+      command: optionOrEnv(options.command, 'HARNESS_FAILURE_COMMAND', ''),
+      fatal: options.fatal || process.env.HARNESS_FAILURE_FATAL === 'true',
       traceSource: invocation.source,
       closeoutManaged: invocation.closeoutManaged,
       trivial: invocation.trivial,
+      probeReason: invocation.probeReason,
       governanceReports: governanceReports,
     },
   };

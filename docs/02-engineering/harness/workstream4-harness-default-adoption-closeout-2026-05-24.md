@@ -25,8 +25,9 @@
 `scripts/record-success.cjs` 与 `scripts/record-failure.cjs` 现在默认拒绝 non-trivial direct 调用：
 
 - 允许：`harness-closeout-writeback.cjs` 内部调用
-- 允许：`HARNESS_TRACE_TRIVIAL=true` 的 trivial local probe
+- 允许：显式 `--allow-trivial-direct --probe-reason ...` 的 trivial local probe
 - 拒绝：把 direct trace 脚本当作 non-trivial round 的主 closeout 入口
+- 拒绝：仅靠 `HARNESS_CLOSEOUT_CONTEXT` 等环境变量伪装 closeout 父进程
 
 ### 2.2 Operations > Harness policy visibility
 
@@ -37,7 +38,16 @@
 
 页面侧同步把这两条规则显示在 `Harness Summary`。
 
-### 2.3 Canonical command list
+### 2.3 Public `/manage` API compatibility
+
+补了一条运行态兼容层：
+
+- Flask 现在同时注册 `/api/...`
+- 也注册 `/manage/api/...`
+
+这样 public `/manage/operations` 页面在 Nginx 代理下不再因为 `/manage/api/... -> 404` 只剩壳层。
+
+### 2.4 Canonical command list
 
 `Operations > Harness` 的默认命令链现已收紧为：
 
@@ -59,6 +69,7 @@
 - `node --check scripts/record-failure.cjs`
 - `node --check scripts/harness-closeout-writeback.cjs`
 - `bash scripts/check_harness_governance_all.sh`
+- `node tests/workstream4_harness_live_ui_gate_check.js`
 
 本地 closeout evidence：
 
@@ -66,6 +77,11 @@
 - `closeout.id = C-20260524-001`
 - `lane = shared`
 - `topic = workstream4-default-adoption`
+- residual-risk follow-up:
+  - `trace.id = S-20260524-002`
+  - `closeout.id = C-20260524-002`
+  - `lane = shared`
+  - `topic = workstream4-residual-risk-resolution`
 
 ### 宿主
 
@@ -78,18 +94,31 @@
 宿主 smoke 关注：
 
 - direct `record-success.cjs` 对 non-trivial round 必须失败
+- forged `HARNESS_CLOSEOUT_CONTEXT=true` 对 direct `record-success.cjs` 也必须失败
 - `harness-closeout-writeback.cjs` 仍可成功写出 canonical trace + closeout
 - `/api/operations/harness` 返回新的 policy 字段
+- `http://47.99.217.1/manage/operations#harness` 的 live UI 必须显示 `Default entry` / `Direct trace policy`
 
 宿主 evidence：
 
 - direct trace rejection:
-  - `record-success.cjs only supports trivial direct traces; non-trivial rounds must use node scripts/harness-closeout-writeback.cjs`
+  - `record-success.cjs only supports trivial direct traces via --allow-trivial-direct --probe-reason; non-trivial rounds must use node scripts/harness-closeout-writeback.cjs`
+- forged closeout env rejection:
+  - `HARNESS_CLOSEOUT_CONTEXT is reserved for a harness-closeout-writeback.cjs parent process`
 - canonical closeout:
   - `trace.id = S-20260524-002`
   - `closeout.id = C-20260524-002`
   - `lane = shared`
   - `topic = host-default-adoption-smoke`
+- live UI gate:
+  - `status = 200`
+  - active family = `Harness`
+  - visible policy includes `harness-closeout-writeback`
+  - visible policy includes `--allow-trivial-direct`
+  - `/manage/api/operations/harness` returns `200`
+  - screenshot artifact: `/tmp/workstream4-harness-live-ui.png`
+  - JSON artifact: `/tmp/workstream4-harness-live-ui.json`
+  - visual readback: `Harness` family已激活，`Default entry` 与 `Direct trace policy` 在 workspace 中可见，无 console error
 
 ## 4. 裁定
 
@@ -99,6 +128,8 @@
 2. default adoption enforcement
 3. `Operations` 上的可见 policy
 4. 宿主可复验的行为约束
+5. public `/manage` 面的真实 API compatibility
+6. 浏览器级 live UI gate + visual readback
 
 因此本条线从：
 

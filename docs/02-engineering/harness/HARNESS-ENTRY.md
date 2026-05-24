@@ -139,7 +139,7 @@ python3 scripts/check_harness_closeout_chain.py
 
 These commands complement the Python runtime scripts under `scripts/runtime/`; they do not replace the Hermes-specific handoff and runtime-state workflow.
 
-`record-success.cjs` / `record-failure.cjs` 现在只作为 `harness-closeout-writeback.cjs` 的底层 trace writer。对于非平凡迭代，不再允许把它们当成 direct closeout 入口；direct 调用仅保留给 trivial local probe。
+`record-success.cjs` / `record-failure.cjs` 现在只作为 `harness-closeout-writeback.cjs` 的底层 trace writer。对于非平凡迭代，不再允许把它们当成 direct closeout 入口；direct 调用只保留给显式 `--allow-trivial-direct --probe-reason ...` probe。`HARNESS_CLOSEOUT_CONTEXT` 也只保留给真实的 closeout 父进程，不接受环境变量伪装。
 
 `status=success` 的 `harness-closeout-writeback` 默认会先执行全量治理检查 `./scripts/check_harness_governance_all.sh`。
 

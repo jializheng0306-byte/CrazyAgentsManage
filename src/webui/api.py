@@ -5160,7 +5160,7 @@ def _build_operations_harness_view():
         ],
         'policy': {
             'defaultEntry': 'Non-trivial rounds must close via harness-closeout-writeback.',
-            'directTracePolicy': 'record-success.cjs / record-failure.cjs are low-level only; direct use is limited to trivial local probes.',
+            'directTracePolicy': 'record-success.cjs / record-failure.cjs are internal trace writers; direct use requires --allow-trivial-direct plus --probe-reason, and forged closeout env is rejected.',
         },
         'commands': [
             'node scripts/harness-closeout-writeback.cjs --status success --message \"Round completed\" --critic-write-back --json',

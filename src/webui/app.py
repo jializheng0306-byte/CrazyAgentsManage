@@ -7,6 +7,7 @@ import os
 static_folder = os.path.join(os.path.dirname(__file__), 'static')
 app = Flask(__name__, static_folder=static_folder, static_url_path='/static')
 app.register_blueprint(api)
+app.register_blueprint(api, url_prefix='/manage/api', name='manage_api')
 
 
 # Serve static files at /manage/static/ for nginx compatibility
