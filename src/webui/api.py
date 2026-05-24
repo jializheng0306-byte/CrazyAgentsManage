@@ -3004,7 +3004,16 @@ def _build_collaboration_summary_view():
                 if open_handoffs
                 else '当前没有待处理 handoff review。'
             ),
-            'href': '/collaboration/tasks',
+            'href': '/collaboration/tasks?action=reviewer-state&focus=request-bus&stage=reviewer',
+            'playbook': {
+                'routeLabel': '打开 Tasks · request bus',
+                'routeHref': '/collaboration/tasks?action=reviewer-state&focus=request-bus&stage=reviewer',
+                'commands': [],
+                'writebackPaths': [
+                    '.omx/crazyagents/runtime-state.json',
+                    '.omx/crazyagents/outbox/*.md',
+                ],
+            },
             'evidenceRefs': review_refs,
         },
         {
@@ -3014,7 +3023,16 @@ def _build_collaboration_summary_view():
             'summary': f"phase={snapshot_phase or '--'} / status={snapshot_status or '--'} / {acceptance_reason}",
             'nextActor': acceptance_next_actor,
             'nextAction': acceptance_next_action,
-            'href': '/collaboration',
+            'href': '/collaboration/tasks?action=hermes-acceptance&focus=request-bus&stage=acceptance',
+            'playbook': {
+                'routeLabel': '打开 Tasks · acceptance context',
+                'routeHref': '/collaboration/tasks?action=hermes-acceptance&focus=request-bus&stage=acceptance',
+                'commands': [],
+                'writebackPaths': [
+                    '.omx/crazyagents/runtime-state.json',
+                    'harness/closeouts/*.json',
+                ],
+            },
             'evidenceRefs': [
                 {'label': 'Runtime snapshot', 'kind': 'runtime-local', 'path': '.omx/crazyagents/runtime-state.json'},
                 {'label': 'Task workspace', 'kind': 'route', 'href': '/collaboration/tasks'},
@@ -3032,7 +3050,22 @@ def _build_collaboration_summary_view():
                 if prd_closeout_status != 'healthy'
                 else '保持 Crazy PRD、FlowMind canonical tracker 与 closeout evidence 同步。'
             ),
-            'href': '/operations#harness',
+            'href': '/operations?family=harness&action=prd-closeout&focus=commands#harness',
+            'playbook': {
+                'routeLabel': '打开 Operations · Harness',
+                'routeHref': '/operations?family=harness&action=prd-closeout&focus=commands#harness',
+                'commands': [
+                    'node scripts/harness-closeout-writeback.cjs --status success --message "Round completed" --critic-write-back --json',
+                    'python3 /home/flowmind/FlowMindDeploy/scripts/governance/check_cross_repo_prd_sync.py --source-repo-root /home/flowmind/FlowMindDeploy --counterpart-repo-root /home/flowmind/CrazyAgentsManage',
+                ],
+                'writebackPaths': [
+                    'docs/roadmap/master-task-plan.md',
+                    'docs/prd/collaboration-workflow-implementation-prd.md',
+                    'docs/prd/pages/collaboration-page-prd.md',
+                    '../FlowMindDeploy/docs/03-teams/progress-tracking/sprint-tracker.md',
+                    '../FlowMindDeploy/changes/records/*.md',
+                ],
+            },
             'evidenceRefs': [
                 {'label': 'Closeout artifacts', 'kind': 'repo-artifact', 'path': 'harness/closeouts/*.json'},
                 {'label': 'Master task plan', 'kind': 'repo-artifact', 'path': 'docs/roadmap/master-task-plan.md'},
@@ -3050,6 +3083,7 @@ def _build_collaboration_summary_view():
             'nextActor': item.get('nextActor'),
             'nextAction': item.get('nextAction'),
             'href': item.get('href'),
+            'playbook': item.get('playbook') or {},
         }
         for item in evidence_chain
         if item.get('status') == 'degraded'

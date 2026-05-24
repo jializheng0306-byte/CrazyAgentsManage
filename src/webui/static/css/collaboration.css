@@ -262,6 +262,29 @@
   color: #bfdbfe;
 }
 
+.cl-chain-primary-link {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 12px;
+  color: #93c5fd;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cl-chain-primary-link:hover {
+  color: #dbeafe;
+}
+
+.cl-chain-subtitle {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-text-muted);
+}
+
 .cl-triage-head {
   display: flex;
   justify-content: space-between;

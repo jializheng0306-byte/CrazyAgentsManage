@@ -73,6 +73,31 @@ class TestSearchIntegration:
             if resp.status_code == 200:
                 assert b'nav-search' in resp.data, f'{page} missing nav-search input'
 
+    def test_tasks_js_supports_collaboration_action_query(self, client):
+        resp = client.get('/static/js/tasks.js')
+        data = resp.data.decode()
+        assert 'URLSearchParams' in data
+        assert "params.get('action')" in data
+        assert 'request-bus-panel' in data
+
+    def test_operations_js_supports_collaboration_action_query(self, client):
+        resp = client.get('/static/js/operations.js')
+        data = resp.data.decode()
+        assert 'URLSearchParams' in data
+        assert "get('family')" in data
+        assert "get('action')" in data
+
+    def test_tasks_page_has_action_panels(self, client):
+        resp = client.get('/tasks?action=reviewer-state&focus=request-bus')
+        body = resp.data.decode('utf-8', errors='replace')
+        assert 'request-bus-panel' in body
+        assert 'tasks-dag-panel' in body
+
+    def test_operations_page_has_context_banner(self, client):
+        resp = client.get('/operations?family=harness&action=prd-closeout')
+        body = resp.data.decode('utf-8', errors='replace')
+        assert 'ops-context-banner' in body
+
 
 class TestResponsiveDesign:
     def test_components_css_has_media_queries(self, client):
@@ -1711,7 +1736,7 @@ class TestV04ContextManagementAPIs:
         assert data['counts']['openHandoffCount'] == 1
         assert data['counts']['missingWritebackCount'] == 1
         assert data['counts']['unreviewedArtifactCount'] == 1
-        assert data['nextHop']['href'] == '/collaboration/tasks'
+        assert data['nextHop']['href'].startswith('/collaboration/tasks?action=reviewer-state')
         assert data['handoffs'][0]['artifactsToReview'][0] == 'docs/roadmap/master-task-plan.md'
         triage_ids = [item['id'] for item in data['triage']]
         assert triage_ids == ['open-handoff', 'pending-closeout', 'missing-writeback', 'unreviewed-artifact']
@@ -1721,6 +1746,10 @@ class TestV04ContextManagementAPIs:
         assert data['evidenceChain'][1]['status'] == 'healthy'
         assert data['evidenceChain'][2]['status'] == 'degraded'
         assert data['actionItems'][0]['label'] == 'Reviewer'
+        assert data['actionItems'][0]['playbook']['routeHref'].startswith('/collaboration/tasks?action=reviewer-state')
+        assert '.omx/crazyagents/runtime-state.json' in data['actionItems'][0]['playbook']['writebackPaths']
+        assert data['evidenceChain'][2]['playbook']['routeHref'].startswith('/operations?family=harness&action=prd-closeout')
+        assert any(cmd.startswith('node scripts/harness-closeout-writeback.cjs') for cmd in data['evidenceChain'][2]['playbook']['commands'])
         assert any(item['href'] == '/operations#harness' for item in data['evidenceJumps'])
 
         manage_resp = client.get('/manage/api/collaboration/summary')

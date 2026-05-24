@@ -28,6 +28,10 @@ var OPS = {
   }
 };
 
+function _queryParams() {
+  return new URLSearchParams(window.location.search || '');
+}
+
 function _url(path) {
   return OPS.apiBase + path;
 }
@@ -51,6 +55,49 @@ function _setText(id, text) {
 function _familyFromHash() {
   var hash = (window.location.hash || '').replace(/^#/, '');
   return FAMILIES[hash] ? hash : '';
+}
+
+function _familyFromQuery() {
+  var family = String(_queryParams().get('family') || '').trim();
+  return FAMILIES[family] ? family : '';
+}
+
+function _actionContext() {
+  var params = _queryParams();
+  var action = String(params.get('action') || '').trim();
+  var focus = String(params.get('focus') || '').trim();
+  if (!action && !focus) return null;
+  return { action: action, focus: focus };
+}
+
+function _showContextBanner(message, isError) {
+  var banner = _el('ops-context-banner');
+  if (!banner) return;
+  if (!message) {
+    banner.style.display = 'none';
+    banner.textContent = '';
+    return;
+  }
+  banner.style.display = 'block';
+  banner.style.borderLeft = isError ? '4px solid #ef4444' : '4px solid #22c55e';
+  banner.style.color = isError ? '#fecaca' : '#bbf7d0';
+  banner.textContent = message;
+}
+
+function _contextMessage(context) {
+  if (!context) return '';
+  if (context.action === 'prd-closeout') {
+    return '来自 Collaboration 的 PRD closeout playbook：当前已切到 Harness family，请先核对 canonical closeout commands 和文档回写路径。';
+  }
+  return '来自 Collaboration 的协作动作跳转：请优先处理当前 operations context。';
+}
+
+function _focusOpsContext(context) {
+  if (!context || context.focus !== 'commands') return;
+  var rail = _el('ops-rail');
+  if (rail && typeof rail.scrollIntoView === 'function') {
+    rail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 // ============================================================
@@ -236,6 +283,7 @@ function loadWorkspace(family) {
   _fetch(def.api).then(function(data) {
     OPS.cache[family] = data;
     renderWorkspace(family, data);
+    _focusOpsContext(_actionContext());
   }).catch(function() {
     content.innerHTML = '<div class="ops-empty"><div class="ops-empty-icon">⚠️</div><p>加载失败</p></div>';
   });
@@ -1628,7 +1676,7 @@ function applyHashFamily() {
 
 function init() {
   window.addEventListener('hashchange', applyHashFamily);
-  var initialFamily = _familyFromHash();
+  var initialFamily = _familyFromQuery() || _familyFromHash();
   if (initialFamily) {
     OPS.currentFamily = initialFamily;
     var items = document.querySelectorAll('.ops-tree-item');
@@ -1638,6 +1686,8 @@ function init() {
     var def = FAMILIES[initialFamily];
     _el('ops-workspace-title').innerHTML = '<span>' + def.icon + '</span> ' + def.label;
   }
+  var context = _actionContext();
+  _showContextBanner(_contextMessage(context), false);
   updateWorkspaceActions(OPS.currentFamily);
   loadMetrics();
   loadWorkspace(OPS.currentFamily);

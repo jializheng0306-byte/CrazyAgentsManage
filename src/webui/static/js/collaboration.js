@@ -118,6 +118,13 @@ function renderEvidenceChain(summary) {
   }
 
   list.innerHTML = chain.map(function(item) {
+    var playbook = item.playbook || {};
+    var commands = (playbook.commands || []).map(function(cmd) {
+      return '<span class="cl-evidence-pill" title="' + escapeHtml(cmd) + '">' + escapeHtml(cmd) + '</span>';
+    }).join('');
+    var writebacks = (playbook.writebackPaths || []).map(function(path) {
+      return '<span class="cl-evidence-pill" title="' + escapeHtml(path) + '">' + escapeHtml(path) + '</span>';
+    }).join('');
     var refs = (item.evidenceRefs || []).map(function(ref) {
       if (ref.href) {
         return '<a class="cl-evidence-link" href="' + routeHref(ref.href) + '">' + escapeHtml(ref.label) + '</a>';
@@ -134,6 +141,10 @@ function renderEvidenceChain(summary) {
       '</div>' +
       '<p class="cl-triage-desc">' + escapeHtml(item.summary || '—') + '</p>' +
       '<p class="cl-chain-next-action">' + escapeHtml(item.nextAction || '—') + '</p>' +
+      (playbook.routeHref ? '<a class="cl-chain-primary-link" href="' + routeHref(playbook.routeHref) + '">' + escapeHtml(playbook.routeLabel || '打开处理工作面') + '</a>' : '') +
+      (commands ? '<div class="cl-chain-subtitle">Canonical commands</div><div class="cl-evidence-links">' + commands + '</div>' : '') +
+      (writebacks ? '<div class="cl-chain-subtitle">Writeback paths</div><div class="cl-evidence-links">' + writebacks + '</div>' : '') +
+      '<div class="cl-chain-subtitle">Evidence refs</div>' +
       '<div class="cl-evidence-links">' + refs + '</div>' +
     '</article>';
   }).join('');

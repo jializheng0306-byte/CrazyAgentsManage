@@ -8,6 +8,43 @@ var requestBus = [];
 var requestBusLanes = { inbox: [], working: [], outbox: [], archive: [] };
 var requestBusAutomation = {};
 
+function taskQueryParams() {
+  return new URLSearchParams(window.location.search || '');
+}
+
+function taskActionContext() {
+  var params = taskQueryParams();
+  var action = String(params.get('action') || '').trim();
+  var focus = String(params.get('focus') || '').trim();
+  var stage = String(params.get('stage') || '').trim();
+  if (!action && !focus && !stage) return null;
+  return { action: action, focus: focus, stage: stage };
+}
+
+function taskActionMessage(context) {
+  if (!context) return '';
+  if (context.action === 'reviewer-state') {
+    return '来自 Collaboration 的 reviewer playbook：优先检查 request bus 与 open handoff，对当前 review 结果做 accept / reject / defer 收口。';
+  }
+  if (context.action === 'hermes-acceptance') {
+    return '来自 Collaboration 的 Hermes acceptance playbook：优先确认 acceptance 结果，并准备把 runtime snapshot 推进到 closeout writeback。';
+  }
+  return '来自 Collaboration 的协作动作跳转：请先处理当前 task bus / handoff 上下文。';
+}
+
+function focusTaskPanel(context) {
+  if (!context || !context.focus) return;
+  var targetId = '';
+  if (context.focus === 'request-bus') targetId = 'request-bus-panel';
+  if (context.focus === 'dag') targetId = 'tasks-dag-panel';
+  if (context.focus === 'tasks') targetId = 'tasks-list-panel';
+  if (!targetId) return;
+  var el = document.getElementById(targetId);
+  if (el && typeof el.scrollIntoView === 'function') {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 function fetchJsonWithTimeout(url) {
   var controller = new AbortController();
   var timeoutId = setTimeout(function() { controller.abort(); }, 60000);
@@ -51,7 +88,11 @@ function domSafeId(value) {
 }
 
 async function loadTasks() {
+  var context = taskActionContext();
   showTaskBusBanner('', false);
+  if (context) {
+    showTaskBusBanner(taskActionMessage(context), false);
+  }
   try {
     var taskData = await fetchJsonWithTimeout('./api/tasks/list');
     allTasks = taskData.tasks || [];
@@ -80,6 +121,7 @@ async function loadTasks() {
     renderAutomationSummary(requestBusAutomation);
     renderRequestBusLanes(requestBusLanes);
     renderRequestBus(requestBus);
+    if (context) focusTaskPanel(context);
   } catch (e) {
     console.error('Failed to load request bus:', e);
     showTaskBusBanner('task bus 控制面加载失败。', true);

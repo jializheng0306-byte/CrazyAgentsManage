@@ -318,7 +318,7 @@
 
 ### Phase C：Harness 与 Hermes 协作层对齐
 
-状态：进行中（second-slice landed）
+状态：进行中（third-slice landed）
 
 产出：
 
@@ -347,10 +347,20 @@
   - repo-tracked evidence refs
 - `/architecture/tech` 已把上述阶段继续投影为链路节点，而不是停留在第一版粗粒度节点
 
+当前已落第三切片：
+
+- `Action Playbooks`
+  - 每个 degraded 协作阶段都带出 route / command / writeback path
+  - `next hop` 不再只是裸链接，而是带 action context 的落地入口
+- `Tasks` / `Operations` 已支持 context-aware landing
+  - `Tasks` 可接 `action / focus / stage`
+  - `Operations` 可接 `family / action / focus`
+  - 页面打开后会直接显示对应协作处理上下文
+
 下一步继续做：
 
-- 把协作 triage 从 summary 进一步贴到真实处理动作与明确 writeback path
 - 继续判断是否需要把 reviewer / acceptance 的结果进一步回写到更细粒度的 handoff contract / acceptance artifact
+- 继续把 action playbook 从“人读得懂”推进到“对象级 writeback / artifact 级确认” 
 
 ### Phase D：页面系统与状态源收敛
 
