@@ -364,10 +364,16 @@
   - `/collaboration` 会直接显示 object-level artifact ready / missing 状态
   - operator 不再需要自己比对 handoff / snapshot / closeout / docs 路径
 
+当前已落第五切片：
+
+- `Acceptance Artifact`
+  - `accept / reject / defer` 已有独立 repo-owned artifact
+  - `Hermes Acceptance` 会优先消费 `harness/acceptance/*.json`
+  - playbook 已给出 acceptance artifact 的 canonical writeback 命令
+
 下一步继续做：
 
-- 继续判断是否需要把 `accept / reject / defer` 做成独立 acceptance artifact
-- 继续判断 reviewer / Hermes acceptance 是否需要更细粒度的 handoff contract writeback，而不只停留在 confirmation projection
+- 继续判断 reviewer / Hermes acceptance 是否需要更细粒度的 handoff contract writeback，而不只停留在 acceptance artifact 引用
 
 ### Phase D：页面系统与状态源收敛
 

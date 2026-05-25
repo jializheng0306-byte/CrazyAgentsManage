@@ -569,6 +569,7 @@ def _pick_harness_root():
             score += len([p for p in (harness_root / 'trace' / 'successes').glob('*.json') if p.name != 'TEMPLATE.json'])
             score += len([p for p in (harness_root / 'trace' / 'failures').glob('*.json') if p.name != 'TEMPLATE.json'])
             score += len([p for p in (harness_root / 'closeouts').glob('*.json') if p.name != 'TEMPLATE.json'])
+            score += len([p for p in (harness_root / 'acceptance').glob('*.json') if p.name != 'TEMPLATE.json'])
         except FileNotFoundError:
             pass
         if score > best_score:
@@ -685,13 +686,16 @@ def _build_runtime_harness_summary():
     success_dir = repo_root / 'harness' / 'trace' / 'successes'
     failure_dir = repo_root / 'harness' / 'trace' / 'failures'
     closeout_dir = repo_root / 'harness' / 'closeouts'
+    acceptance_dir = repo_root / 'harness' / 'acceptance'
     summary = {
         'success_count': 0,
         'failure_count': 0,
         'closeout_count': 0,
+        'acceptance_count': 0,
         'latest_success': None,
         'latest_failure': None,
         'latest_closeout': None,
+        'latest_acceptance': None,
         'pending_closeout_count': 0,
         'source_root': str(repo_root),
     }
@@ -711,10 +715,16 @@ def _build_runtime_harness_summary():
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     ) if closeout_dir.exists() else []
+    acceptance_files = sorted(
+        [p for p in acceptance_dir.glob('*.json') if p.name != 'TEMPLATE.json'],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    ) if acceptance_dir.exists() else []
 
     summary['success_count'] = len(success_files)
     summary['failure_count'] = len(failure_files)
     summary['closeout_count'] = len(closeout_files)
+    summary['acceptance_count'] = len(acceptance_files)
 
     if success_files:
         summary['latest_success'] = _read_optional_json(success_files[0])
@@ -722,6 +732,8 @@ def _build_runtime_harness_summary():
         summary['latest_failure'] = _read_optional_json(failure_files[0])
     if closeout_files:
         summary['latest_closeout'] = _read_optional_json(closeout_files[0])
+    if acceptance_files:
+        summary['latest_acceptance'] = _read_optional_json(acceptance_files[0])
 
     closeout_trace_ids = set()
     for path in closeout_files:
@@ -2897,7 +2909,9 @@ def _build_collaboration_summary_view():
     flowmind_root = repo_fact_root.parent / 'FlowMindDeploy'
 
     latest_closeout = harness.get('latest_closeout') if isinstance(harness.get('latest_closeout'), dict) else None
+    latest_acceptance = harness.get('latest_acceptance') if isinstance(harness.get('latest_acceptance'), dict) else None
     latest_closeout_ts = _parse_iso_datetime((latest_closeout or {}).get('timestamp'))
+    latest_acceptance_ts = _parse_iso_datetime((latest_acceptance or {}).get('timestamp'))
     latest_snapshot_ts = _parse_iso_datetime(((snapshot.get('data') or {}) if snapshot.get('exists') else {}).get('updated_at'))
 
     open_handoffs = [item for item in handoffs if item.get('queueStatus') == 'open']
@@ -3006,15 +3020,35 @@ def _build_collaboration_summary_view():
     snapshot_status = str(snapshot_data.get('status') or '').strip().lower()
     snapshot_summary = str(snapshot_data.get('summary') or '').strip()
     acceptance_status = 'unknown'
-    if snapshot.get('exists') or handoffs:
-        acceptance_status = 'healthy' if snapshot_status in ('accepted', 'validated', 'delivered', 'completed') else 'degraded'
     acceptance_reason = snapshot_summary or '尚未形成明确的 runtime acceptance 摘要。'
-    acceptance_next_actor = 'Codex' if acceptance_status == 'healthy' else 'HermesAgent'
-    acceptance_next_action = (
-        '把当前 acceptance 结果推进到 closeout writeback 与文档回写。'
-        if acceptance_status == 'healthy'
-        else '在 runtime snapshot 中确认 Hermes acceptance 结果，并给出 accept / reject / defer。'
-    )
+    acceptance_next_actor = 'HermesAgent'
+    acceptance_next_action = '在 runtime snapshot 中确认 Hermes acceptance 结果，并给出 accept / reject / defer。'
+    acceptance_decision = str((latest_acceptance or {}).get('decision') or '').strip().lower()
+    if latest_acceptance and (not latest_snapshot_ts or not latest_acceptance_ts or latest_acceptance_ts >= latest_snapshot_ts):
+        if acceptance_decision == 'accepted':
+            acceptance_status = 'healthy'
+            acceptance_next_actor = 'Codex'
+            acceptance_next_action = '把当前 acceptance artifact 推进到 closeout writeback 与文档回写。'
+        elif acceptance_decision in ('rejected', 'deferred'):
+            acceptance_status = 'degraded'
+            acceptance_next_actor = 'Codex' if acceptance_decision == 'rejected' else 'HermesAgent'
+            acceptance_next_action = (
+                '根据 rejection acceptance artifact 修正 handoff / artifacts 后再重新进入 review。'
+                if acceptance_decision == 'rejected'
+                else '根据 deferred acceptance artifact 补齐缺失证据或等待下一轮 review。'
+            )
+        acceptance_reason = (
+            f"artifact={latest_acceptance.get('id', '--')} / decision={acceptance_decision or '--'} / "
+            f"{str(latest_acceptance.get('summary') or '').strip() or 'Acceptance artifact 已存在。'}"
+        )
+    elif snapshot.get('exists') or handoffs:
+        acceptance_status = 'healthy' if snapshot_status in ('accepted', 'validated', 'delivered', 'completed') else 'degraded'
+        acceptance_next_actor = 'Codex' if acceptance_status == 'healthy' else 'HermesAgent'
+        acceptance_next_action = (
+            '把当前 acceptance 结果推进到 closeout writeback 与文档回写。'
+            if acceptance_status == 'healthy'
+            else '在 runtime snapshot 中确认 Hermes acceptance 结果，并给出 accept / reject / defer。'
+        )
     if not snapshot.get('exists') and not handoffs:
         acceptance_next_actor = 'Codex'
         acceptance_next_action = '先产出 handoff 与 runtime snapshot，再进入 acceptance。'
@@ -3114,6 +3148,13 @@ def _build_collaboration_summary_view():
             note='Hermes acceptance 必须先有 runtime snapshot。',
         )
     ]
+    acceptance_confirmation_items.append({
+        'label': 'Latest acceptance artifact',
+        'path': 'harness/acceptance/*.json',
+        'kind': 'repo-artifact',
+        'status': 'healthy' if latest_acceptance else 'degraded',
+        'note': 'accept / reject / defer 应落成独立 acceptance artifact，而不只停留在 snapshot status。',
+    })
     for artifact in (snapshot_data.get('artifacts') or [])[:3]:
         acceptance_confirmation_items.append(
             _build_confirmation_item(
@@ -3210,15 +3251,21 @@ def _build_collaboration_summary_view():
             'playbook': {
                 'routeLabel': '打开 Tasks · acceptance context',
                 'routeHref': '/collaboration/tasks?action=hermes-acceptance&focus=request-bus&stage=acceptance',
-                'commands': [],
+                'commands': [
+                    'python3 scripts/write_acceptance_artifact.py --decision accepted --summary "Operational acceptance confirmed."',
+                    'python3 scripts/write_acceptance_artifact.py --decision deferred --summary "Acceptance deferred pending additional evidence."',
+                    'python3 scripts/write_acceptance_artifact.py --decision rejected --summary "Acceptance rejected pending handoff correction."',
+                ],
                 'writebackPaths': [
                     '.omx/crazyagents/runtime-state.json',
+                    'harness/acceptance/*.json',
                     'harness/closeouts/*.json',
                 ],
             },
             'writebackConfirmation': acceptance_writeback,
             'evidenceRefs': [
                 {'label': 'Runtime snapshot', 'kind': 'runtime-local', 'path': '.omx/crazyagents/runtime-state.json'},
+                {'label': 'Acceptance artifacts', 'kind': 'repo-artifact', 'path': 'harness/acceptance/*.json'},
                 {'label': 'Task workspace', 'kind': 'route', 'href': '/collaboration/tasks'},
                 {'label': 'Runtime sessions', 'kind': 'route', 'href': '/runtime/sessions'},
             ],

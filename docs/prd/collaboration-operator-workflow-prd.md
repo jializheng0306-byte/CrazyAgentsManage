@@ -11,7 +11,7 @@
 | Owner | Codex（文档管理） |
 | 运营评审方 | HermesAgent |
 | 继承自 | `docs/prd/operations-implementation-prd.md` |
-| 最后更新 | 2026-05-24 |
+| 最后更新 | 2026-05-25 |
 
 ## 文档目的
 
@@ -39,6 +39,7 @@ Operator 在 `Collaboration` 分区中必须能完成：
 3. 看见 closeout 是否已写回仓库事实
 4. 发现未闭环协作链路
 5. 知道当前应该由谁继续处理，以及下一条标准动作是什么
+6. 明确看到 acceptance 是 `accepted / rejected / deferred` 哪一种独立工件结论
 
 ## 核心工作流
 
@@ -68,7 +69,7 @@ Operator 在 `Collaboration` 分区中必须能完成：
 关键步骤：
 
 1. 查看 runtime snapshot 的 phase、status、actor、summary
-2. 判断当前轮次是否卡住、缺证据或待 closeout
+2. 优先查看 acceptance artifact；只有 artifact 缺失时再回退看 snapshot status
 3. 跳转到对应 artifact
 
 验收标准：
@@ -76,7 +77,24 @@ Operator 在 `Collaboration` 分区中必须能完成：
 - snapshot 可读、可跟踪
 - runtime-local 状态边界清楚
 
-### 3. Closeout Verification Workflow
+### 3. Acceptance Artifact Workflow
+
+目标：
+
+- 让 `accept / reject / defer` 不再只停留在 snapshot status
+
+关键步骤：
+
+1. 查看最新 acceptance artifact
+2. 判断当前决策是 accepted / rejected / deferred
+3. 按该 artifact 决策继续推进 closeout，或回退修正 handoff / evidence
+
+验收标准：
+
+- acceptance 有独立 repo-owned object
+- operator 能区分“尚未决定”和“已经 defer / reject”
+
+### 4. Closeout Verification Workflow
 
 目标：
 
@@ -93,7 +111,7 @@ Operator 在 `Collaboration` 分区中必须能完成：
 - closeout 不只是结束标记，而是证据链起点
 - operator 能发现“做了但没落库”的协作缺口
 
-### 4. Unclosed Collaboration Triage Workflow
+### 5. Unclosed Collaboration Triage Workflow
 
 目标：
 

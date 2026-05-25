@@ -1,0 +1,23 @@
+{
+  "id": "A-YYYYMMDD-001",
+  "timestamp": "2026-05-25T00:00:00Z",
+  "decision": "accepted",
+  "actor": "HermesAgent",
+  "counterpart": "codex",
+  "summary": "Operational acceptance confirmed.",
+  "handoff": {
+    "path": ".omx/crazyagents/outbox/handoff-YYYYMMDDTHHMMSSZ.md",
+    "title": "Example handoff"
+  },
+  "runtimeSnapshot": {
+    "path": ".omx/crazyagents/runtime-state.json",
+    "phase": "acceptance-closeout",
+    "status": "accepted",
+    "updated_at": "2026-05-25T00:00:00Z"
+  },
+  "artifacts": [
+    "docs/roadmap/master-task-plan.md"
+  ],
+  "notes": "",
+  "repository_root": "/home/flowmind/CrazyAgentsManage"
+}

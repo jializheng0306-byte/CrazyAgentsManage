@@ -213,6 +213,19 @@ function renderEvidence(summary) {
     });
   }
 
+  if (harness.latest_acceptance) {
+    items.push({
+      type: 'acceptance',
+      name: harness.latest_acceptance.id || '最新 acceptance',
+      meta: harness.latest_acceptance.timestamp || '--',
+      desc: harness.latest_acceptance.summary || '最近一条 acceptance artifact。',
+      refs: [
+        { label: 'Tasks · acceptance context', href: '/collaboration/tasks?action=hermes-acceptance&focus=request-bus&stage=acceptance' },
+        { label: 'Harness readiness', href: '/operations#harness' },
+      ],
+    });
+  }
+
   if (harness.latest_closeout) {
     items.push({
       type: 'closeout',

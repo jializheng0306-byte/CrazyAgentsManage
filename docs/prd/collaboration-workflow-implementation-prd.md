@@ -10,7 +10,7 @@
 | 状态 | Draft |
 | Owner | Codex |
 | 继承自 | `docs/prd/technical-implementation-prd.md` |
-| 最后更新 | 2026-05-24 |
+| 最后更新 | 2026-05-25 |
 
 ## 文档目的
 
@@ -118,6 +118,8 @@
   - `reviewer / Hermes acceptance / PRD closeout` unified evidence chain
   - `next actor / next action`
   - repo-tracked evidence refs
+  - `writebackConfirmation`
+  - acceptance artifact 优先消费
 
 ### 6. Loop / Cycle Collaboration Surface
 
@@ -150,7 +152,6 @@
 ### P2
 
 - 更强的协作自动化
-- 更完整的接受 / 拒绝 / 延后状态建模
 - reviewer / acceptance 结果与 handoff contract 的更细粒度耦合
 
 ## 非目标

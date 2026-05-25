@@ -1575,6 +1575,7 @@ class TestV04ContextManagementAPIs:
         assert 'success_count' in data
         assert 'failure_count' in data
         assert 'closeout_count' in data
+        assert 'acceptance_count' in data
         assert 'pending_closeout_count' in data
 
     def test_runtime_handoffs_prefers_runtime_repo_root_when_deploy_copy_is_sparse(self, client, monkeypatch, tmp_path):
@@ -1638,6 +1639,18 @@ class TestV04ContextManagementAPIs:
             ),
             encoding='utf-8',
         )
+        (runtime_root / 'harness' / 'acceptance').mkdir(parents=True, exist_ok=True)
+        (runtime_root / 'harness' / 'acceptance' / 'A-20260524-001.json').write_text(
+            json.dumps(
+                {
+                    'id': 'A-20260524-001',
+                    'timestamp': '2026-05-24T01:03:00Z',
+                    'decision': 'deferred',
+                    'summary': 'Need more operator evidence before acceptance.',
+                }
+            ),
+            encoding='utf-8',
+        )
 
         (deploy_root / '.omx' / 'crazyagents' / 'outbox').mkdir(parents=True, exist_ok=True)
         (deploy_root / 'harness' / 'closeouts').mkdir(parents=True, exist_ok=True)
@@ -1659,6 +1672,7 @@ class TestV04ContextManagementAPIs:
         payload = summary.get_json()
         assert payload['success_count'] == 1
         assert payload['closeout_count'] == 1
+        assert payload['acceptance_count'] == 1
 
     def test_collaboration_summary_api_builds_triage_and_evidence_jumps(self, client, monkeypatch, tmp_path):
         deploy_root = tmp_path / 'deploy-copy'
@@ -1757,6 +1771,7 @@ class TestV04ContextManagementAPIs:
         assert data['evidenceChain'][0]['writebackConfirmation']['status'] == 'degraded'
         assert any(item['path'] == '.omx/crazyagents/runtime-state.json' for item in data['evidenceChain'][0]['writebackConfirmation']['items'])
         assert data['evidenceChain'][1]['writebackConfirmation']['status'] == 'degraded'
+        assert any(item['path'] == 'harness/acceptance/*.json' for item in data['evidenceChain'][1]['writebackConfirmation']['items'])
         assert any(item['path'] == 'harness/closeouts/*.json' for item in data['evidenceChain'][1]['writebackConfirmation']['items'])
         assert data['evidenceChain'][2]['playbook']['routeHref'].startswith('/operations?family=harness&action=prd-closeout')
         assert data['evidenceChain'][2]['writebackConfirmation']['status'] == 'degraded'
@@ -1823,6 +1838,91 @@ class TestV04ContextManagementAPIs:
         assert any('FlowMind' in ref['label'] for ref in prd_closeout['evidenceRefs'])
         assert prd_closeout['writebackConfirmation']['status'] == 'healthy'
         assert all(item['status'] == 'healthy' for item in prd_closeout['writebackConfirmation']['items'])
+
+    def test_collaboration_summary_prefers_acceptance_artifact_over_snapshot_status(self, client, monkeypatch, tmp_path):
+        deploy_root = tmp_path / 'deploy-copy'
+        runtime_root = tmp_path / 'runtime-root'
+        (runtime_root / '.omx' / 'crazyagents').mkdir(parents=True, exist_ok=True)
+        (runtime_root / '.omx' / 'crazyagents' / 'runtime-state.json').write_text(
+            json.dumps(
+                {
+                    'updated_at': '2026-05-25T09:00:00+08:00',
+                    'phase': 'acceptance-closeout',
+                    'status': 'completed',
+                    'actor': 'codex',
+                    'summary': 'Snapshot alone would look healthy.',
+                }
+            ),
+            encoding='utf-8',
+        )
+        (runtime_root / 'harness' / 'acceptance').mkdir(parents=True, exist_ok=True)
+        (runtime_root / 'harness' / 'acceptance' / 'A-20260525-001.json').write_text(
+            json.dumps(
+                {
+                    'id': 'A-20260525-001',
+                    'timestamp': '2026-05-25T01:10:00Z',
+                    'decision': 'deferred',
+                    'actor': 'HermesAgent',
+                    'summary': 'Acceptance deferred pending additional evidence.',
+                }
+            ),
+            encoding='utf-8',
+        )
+
+        monkeypatch.setattr(webui_api, '_get_repo_root', lambda: deploy_root)
+        monkeypatch.setattr(webui_api, '_get_runtime_repo_root', lambda: runtime_root)
+        webui_api._remote_config = {}
+
+        resp = client.get('/api/collaboration/summary')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        acceptance = next(item for item in data['evidenceChain'] if item['id'] == 'hermes-acceptance')
+        assert acceptance['status'] == 'degraded'
+        assert 'artifact=A-20260525-001' in acceptance['summary']
+        assert acceptance['nextActor'] == 'HermesAgent'
+        assert any(item['path'] == 'harness/acceptance/*.json' for item in acceptance['writebackConfirmation']['items'])
+
+    def test_write_acceptance_artifact_creates_repo_owned_artifact(self, tmp_path):
+        repo_root = tmp_path / 'repo'
+        (repo_root / '.omx' / 'crazyagents').mkdir(parents=True, exist_ok=True)
+        (repo_root / '.omx' / 'crazyagents' / 'runtime-state.json').write_text(
+            json.dumps(
+                {
+                    'updated_at': '2026-05-25T09:30:00+08:00',
+                    'phase': 'acceptance-closeout',
+                    'status': 'review-in-progress',
+                }
+            ),
+            encoding='utf-8',
+        )
+        script_path = repo_root / 'scripts' / 'write_acceptance_artifact.py'
+        script_path.parent.mkdir(parents=True, exist_ok=True)
+        script_path.write_text((Path(__file__).resolve().parents[1] / 'scripts' / 'write_acceptance_artifact.py').read_text(encoding='utf-8'), encoding='utf-8')
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(script_path),
+                '--decision',
+                'deferred',
+                '--summary',
+                'Need more evidence before acceptance.',
+                '--handoff-path',
+                '.omx/crazyagents/outbox/handoff-20260525T010000Z.md',
+            ],
+            cwd=repo_root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        assert result.returncode == 0
+        output_path = Path(result.stdout.strip())
+        assert output_path.exists()
+        payload = json.loads(output_path.read_text(encoding='utf-8'))
+        assert payload['decision'] == 'deferred'
+        assert payload['runtimeSnapshot']['phase'] == 'acceptance-closeout'
+        assert payload['handoff']['path'] == '.omx/crazyagents/outbox/handoff-20260525T010000Z.md'
 
     def test_collaboration_graph_projection_api_exposes_chain_nodes(self, client, monkeypatch, tmp_path):
         deploy_root = tmp_path / 'deploy-copy'

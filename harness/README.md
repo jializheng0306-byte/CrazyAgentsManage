@@ -45,6 +45,8 @@ CrazyAgentsManage 的 canonical harness core。
   - `successes/` 成功模式记录，供流程固化
 - `closeouts/`
   - 非平凡迭代的结构化 closeout 记录，绑定 trace / critic / governance / worktree lane
+- `acceptance/`
+  - `accept / reject / defer` 的独立 acceptance artifact，承接 reviewer / Hermes acceptance 的 durable 决策回写
 - `memory/`
   - `situational.md` 情景记忆
   - `procedural.md` 程序记忆
