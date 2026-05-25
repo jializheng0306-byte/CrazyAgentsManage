@@ -119,11 +119,21 @@ function renderEvidenceChain(summary) {
 
   list.innerHTML = chain.map(function(item) {
     var playbook = item.playbook || {};
+    var confirmation = item.writebackConfirmation || {};
     var commands = (playbook.commands || []).map(function(cmd) {
       return '<span class="cl-evidence-pill" title="' + escapeHtml(cmd) + '">' + escapeHtml(cmd) + '</span>';
     }).join('');
     var writebacks = (playbook.writebackPaths || []).map(function(path) {
       return '<span class="cl-evidence-pill" title="' + escapeHtml(path) + '">' + escapeHtml(path) + '</span>';
+    }).join('');
+    var confirmationItems = (confirmation.items || []).map(function(entry) {
+      return '<div class="cl-confirmation-item">' +
+        '<span class="cl-confirmation-dot ' + escapeHtml(entry.status || 'unknown') + '"></span>' +
+        '<div class="cl-confirmation-copy">' +
+          '<div class="cl-confirmation-label">' + escapeHtml(entry.label || entry.path || 'artifact') + '</div>' +
+          '<div class="cl-confirmation-meta">' + escapeHtml(entry.path || '') + '</div>' +
+        '</div>' +
+      '</div>';
     }).join('');
     var refs = (item.evidenceRefs || []).map(function(ref) {
       if (ref.href) {
@@ -144,6 +154,7 @@ function renderEvidenceChain(summary) {
       (playbook.routeHref ? '<a class="cl-chain-primary-link" href="' + routeHref(playbook.routeHref) + '">' + escapeHtml(playbook.routeLabel || '打开处理工作面') + '</a>' : '') +
       (commands ? '<div class="cl-chain-subtitle">Canonical commands</div><div class="cl-evidence-links">' + commands + '</div>' : '') +
       (writebacks ? '<div class="cl-chain-subtitle">Writeback paths</div><div class="cl-evidence-links">' + writebacks + '</div>' : '') +
+      (confirmationItems ? '<div class="cl-chain-subtitle">Writeback confirmation</div><div class="cl-confirmation-list"><div class="cl-confirmation-summary">' + escapeHtml(confirmation.summary || '') + '</div>' + confirmationItems + '</div>' : '') +
       '<div class="cl-chain-subtitle">Evidence refs</div>' +
       '<div class="cl-evidence-links">' + refs + '</div>' +
     '</article>';

@@ -740,6 +740,82 @@ def _build_runtime_harness_summary():
     return summary
 
 
+def _resolve_collaboration_artifact(rel_path, runtime_root=None, repo_root=None, flowmind_root=None):
+    value = str(rel_path or '').strip()
+    if not value:
+        return None
+
+    runtime_root = runtime_root or _pick_runtime_collaboration_root()
+    repo_root = repo_root or _get_repo_root()
+    flowmind_root = flowmind_root or repo_root.parent / 'FlowMindDeploy'
+
+    if value.startswith('../FlowMindDeploy/'):
+        if not flowmind_root.exists():
+            return None
+        return flowmind_root / value.replace('../FlowMindDeploy/', '', 1)
+    if value.startswith('.omx/'):
+        return runtime_root / value
+    return repo_root / value
+
+
+def _collaboration_artifact_exists(rel_path, *, runtime_root=None, repo_root=None, flowmind_root=None):
+    value = str(rel_path or '').strip()
+    if not value:
+        return False
+    if any(token in value for token in ['*', '?', '[']):
+        base_value = value
+        base_root = repo_root or _get_repo_root()
+        if value.startswith('../FlowMindDeploy/'):
+            if not flowmind_root or not flowmind_root.exists():
+                return False
+            base_root = flowmind_root
+            base_value = value.replace('../FlowMindDeploy/', '', 1)
+        elif value.startswith('.omx/'):
+            base_root = runtime_root or _pick_runtime_collaboration_root()
+        return any(base_root.glob(base_value))
+    resolved = _resolve_collaboration_artifact(
+        value,
+        runtime_root=runtime_root,
+        repo_root=repo_root,
+        flowmind_root=flowmind_root,
+    )
+    return bool(resolved and resolved.exists())
+
+
+def _build_confirmation_item(label, rel_path, *, runtime_root=None, repo_root=None, flowmind_root=None, kind='repo-artifact', note=''):
+    exists = _collaboration_artifact_exists(
+        rel_path,
+        runtime_root=runtime_root,
+        repo_root=repo_root,
+        flowmind_root=flowmind_root,
+    )
+    return {
+        'label': label,
+        'path': rel_path,
+        'kind': kind,
+        'status': 'healthy' if exists else 'degraded',
+        'note': note,
+    }
+
+
+def _build_writeback_confirmation(items):
+    normalized = [item for item in items if isinstance(item, dict) and str(item.get('path') or '').strip()]
+    if not normalized:
+        return {
+            'status': 'unknown',
+            'summary': '没有可确认的 writeback artifact。',
+            'items': [],
+        }
+    healthy = len([item for item in normalized if item.get('status') == 'healthy'])
+    degraded = len([item for item in normalized if item.get('status') == 'degraded'])
+    status = 'healthy' if degraded == 0 else 'degraded'
+    return {
+        'status': status,
+        'summary': f"ready={healthy} / missing={degraded} / total={len(normalized)}",
+        'items': normalized,
+    }
+
+
 def _read_shared_context_json(rel_path, default=None):
     if _is_remote_mode():
         remote_repo_root = _get_remote_repo_root()
@@ -2816,6 +2892,9 @@ def _build_collaboration_summary_view():
     handoffs = _collect_runtime_handoffs(limit=20)
     snapshot = _build_runtime_state_view()
     harness = _build_runtime_harness_summary()
+    runtime_root = _pick_runtime_collaboration_root()
+    repo_fact_root = _get_repo_root()
+    flowmind_root = repo_fact_root.parent / 'FlowMindDeploy'
 
     latest_closeout = harness.get('latest_closeout') if isinstance(harness.get('latest_closeout'), dict) else None
     latest_closeout_ts = _parse_iso_datetime((latest_closeout or {}).get('timestamp'))
@@ -2940,9 +3019,6 @@ def _build_collaboration_summary_view():
         acceptance_next_actor = 'Codex'
         acceptance_next_action = '先产出 handoff 与 runtime snapshot，再进入 acceptance。'
 
-    repo_root = _pick_harness_root()
-    repo_fact_root = _get_repo_root()
-    flowmind_root = repo_root.parent / 'FlowMindDeploy'
     governance_reports = latest_closeout.get('governanceReports') if isinstance(latest_closeout, dict) else []
     governance_reports = governance_reports if isinstance(governance_reports, list) else []
     has_flowmind_governance = any(
@@ -2992,6 +3068,112 @@ def _build_collaboration_summary_view():
         else '尚未形成 closeout + PRD/roadmap/tracker 的统一回写证据。'
     )
 
+    reviewer_confirmation_items = [
+        _build_confirmation_item(
+            'Runtime snapshot',
+            '.omx/crazyagents/runtime-state.json',
+            runtime_root=runtime_root,
+            repo_root=repo_fact_root,
+            flowmind_root=flowmind_root,
+            kind='runtime-local',
+            note='Reviewer 至少要有当前协作轮次的 runtime snapshot 作为 accept / reject / defer 的上下文。',
+        )
+    ]
+    for item in open_handoffs[:2]:
+        reviewer_confirmation_items.append(
+            _build_confirmation_item(
+                item.get('title') or item.get('name') or 'Open handoff',
+                item.get('relativePath') or item.get('path') or '',
+                runtime_root=runtime_root,
+                repo_root=repo_fact_root,
+                flowmind_root=flowmind_root,
+                kind='runtime-local',
+                note='Open handoff 应继续保留在 outbox 中，直到 reviewer 明确给出结论。',
+            )
+        )
+        for artifact in (item.get('artifactsToReview') or [])[:2]:
+            reviewer_confirmation_items.append(
+                _build_confirmation_item(
+                    Path(artifact).name or artifact,
+                    artifact,
+                    runtime_root=runtime_root,
+                    repo_root=repo_fact_root,
+                    flowmind_root=flowmind_root,
+                    note='Reviewer 需要能回链到 handoff 所引用的 repo artifact。',
+                )
+            )
+
+    acceptance_confirmation_items = [
+        _build_confirmation_item(
+            'Runtime snapshot',
+            '.omx/crazyagents/runtime-state.json',
+            runtime_root=runtime_root,
+            repo_root=repo_fact_root,
+            flowmind_root=flowmind_root,
+            kind='runtime-local',
+            note='Hermes acceptance 必须先有 runtime snapshot。',
+        )
+    ]
+    for artifact in (snapshot_data.get('artifacts') or [])[:3]:
+        acceptance_confirmation_items.append(
+            _build_confirmation_item(
+                Path(artifact).name or artifact,
+                artifact,
+                runtime_root=runtime_root,
+                repo_root=repo_fact_root,
+                flowmind_root=flowmind_root,
+                note='Acceptance summary 引用的 artifact 应已经成为可读的 repo fact。',
+            )
+        )
+    acceptance_confirmation_items.append({
+        'label': 'Latest closeout newer than snapshot',
+        'path': 'harness/closeouts/*.json',
+        'kind': 'repo-artifact',
+        'status': 'healthy' if latest_closeout_ts and latest_snapshot_ts and latest_closeout_ts >= latest_snapshot_ts else 'degraded',
+        'note': '若 acceptance 已完成，closeout 应不晚于当前 snapshot。',
+    })
+
+    prd_closeout_confirmation_items = [{
+        'label': 'Latest closeout artifact',
+        'path': 'harness/closeouts/*.json',
+        'kind': 'repo-artifact',
+        'status': 'healthy' if latest_closeout else 'degraded',
+        'note': 'PRD closeout 至少要有一条 closeout artifact。',
+    }, {
+        'label': 'Cross-repo governance report',
+        'path': '../FlowMindDeploy/docs/05-version-control/architecture-drift-report.md',
+        'kind': 'repo-artifact',
+        'status': 'healthy' if has_flowmind_governance else 'degraded',
+        'note': 'Published closeout 应能回链到 FlowMind governance evidence。',
+    }]
+    confirmed_crazy_doc_paths = crazy_doc_paths[:3] if should_enforce_crazy_doc_anchors else crazy_doc_hits[:3]
+    for rel_path in confirmed_crazy_doc_paths:
+        prd_closeout_confirmation_items.append(
+            _build_confirmation_item(
+                Path(rel_path).name,
+                rel_path,
+                runtime_root=runtime_root,
+                repo_root=repo_fact_root,
+                flowmind_root=flowmind_root,
+                note='Crazy 侧 PRD / roadmap 回写要与 closeout 一致。',
+            )
+        )
+    for ref in flowmind_doc_refs[:2]:
+        prd_closeout_confirmation_items.append(
+            _build_confirmation_item(
+                ref.get('label'),
+                ref.get('path'),
+                runtime_root=runtime_root,
+                repo_root=repo_fact_root,
+                flowmind_root=flowmind_root,
+                note='FlowMind canonical tracker / roadmap 需要同步这轮 published 状态。',
+            )
+        )
+
+    reviewer_writeback = _build_writeback_confirmation(reviewer_confirmation_items)
+    acceptance_writeback = _build_writeback_confirmation(acceptance_confirmation_items)
+    prd_closeout_writeback = _build_writeback_confirmation(prd_closeout_confirmation_items)
+
     evidence_chain = [
         {
             'id': 'reviewer-state',
@@ -3014,6 +3196,7 @@ def _build_collaboration_summary_view():
                     '.omx/crazyagents/outbox/*.md',
                 ],
             },
+            'writebackConfirmation': reviewer_writeback,
             'evidenceRefs': review_refs,
         },
         {
@@ -3033,6 +3216,7 @@ def _build_collaboration_summary_view():
                     'harness/closeouts/*.json',
                 ],
             },
+            'writebackConfirmation': acceptance_writeback,
             'evidenceRefs': [
                 {'label': 'Runtime snapshot', 'kind': 'runtime-local', 'path': '.omx/crazyagents/runtime-state.json'},
                 {'label': 'Task workspace', 'kind': 'route', 'href': '/collaboration/tasks'},
@@ -3066,6 +3250,7 @@ def _build_collaboration_summary_view():
                     '../FlowMindDeploy/changes/records/*.md',
                 ],
             },
+            'writebackConfirmation': prd_closeout_writeback,
             'evidenceRefs': [
                 {'label': 'Closeout artifacts', 'kind': 'repo-artifact', 'path': 'harness/closeouts/*.json'},
                 {'label': 'Master task plan', 'kind': 'repo-artifact', 'path': 'docs/roadmap/master-task-plan.md'},

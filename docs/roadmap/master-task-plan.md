@@ -357,10 +357,17 @@
   - `Operations` 可接 `family / action / focus`
   - 页面打开后会直接显示对应协作处理上下文
 
+当前已落第四切片：
+
+- `Writeback Confirmation`
+  - `reviewer-state / hermes-acceptance / prd-closeout` 三段 evidence chain 都会显式返回 `writebackConfirmation`
+  - `/collaboration` 会直接显示 object-level artifact ready / missing 状态
+  - operator 不再需要自己比对 handoff / snapshot / closeout / docs 路径
+
 下一步继续做：
 
-- 继续判断是否需要把 reviewer / acceptance 的结果进一步回写到更细粒度的 handoff contract / acceptance artifact
-- 继续把 action playbook 从“人读得懂”推进到“对象级 writeback / artifact 级确认” 
+- 继续判断是否需要把 `accept / reject / defer` 做成独立 acceptance artifact
+- 继续判断 reviewer / Hermes acceptance 是否需要更细粒度的 handoff contract writeback，而不只停留在 confirmation projection
 
 ### Phase D：页面系统与状态源收敛
 

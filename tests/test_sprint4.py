@@ -87,6 +87,12 @@ class TestSearchIntegration:
         assert "get('family')" in data
         assert "get('action')" in data
 
+    def test_collaboration_js_renders_writeback_confirmation(self, client):
+        resp = client.get('/static/js/collaboration.js')
+        data = resp.data.decode()
+        assert 'writebackConfirmation' in data
+        assert 'cl-confirmation-list' in data
+
     def test_tasks_page_has_action_panels(self, client):
         resp = client.get('/tasks?action=reviewer-state&focus=request-bus')
         body = resp.data.decode('utf-8', errors='replace')
@@ -1748,7 +1754,13 @@ class TestV04ContextManagementAPIs:
         assert data['actionItems'][0]['label'] == 'Reviewer'
         assert data['actionItems'][0]['playbook']['routeHref'].startswith('/collaboration/tasks?action=reviewer-state')
         assert '.omx/crazyagents/runtime-state.json' in data['actionItems'][0]['playbook']['writebackPaths']
+        assert data['evidenceChain'][0]['writebackConfirmation']['status'] == 'degraded'
+        assert any(item['path'] == '.omx/crazyagents/runtime-state.json' for item in data['evidenceChain'][0]['writebackConfirmation']['items'])
+        assert data['evidenceChain'][1]['writebackConfirmation']['status'] == 'degraded'
+        assert any(item['path'] == 'harness/closeouts/*.json' for item in data['evidenceChain'][1]['writebackConfirmation']['items'])
         assert data['evidenceChain'][2]['playbook']['routeHref'].startswith('/operations?family=harness&action=prd-closeout')
+        assert data['evidenceChain'][2]['writebackConfirmation']['status'] == 'degraded'
+        assert any(item['path'] == '../FlowMindDeploy/docs/03-teams/progress-tracking/sprint-tracker.md' for item in data['evidenceChain'][2]['writebackConfirmation']['items'])
         assert any(cmd.startswith('node scripts/harness-closeout-writeback.cjs') for cmd in data['evidenceChain'][2]['playbook']['commands'])
         assert any(item['href'] == '/operations#harness' for item in data['evidenceJumps'])
 
@@ -1809,6 +1821,8 @@ class TestV04ContextManagementAPIs:
         prd_closeout = next(item for item in data['evidenceChain'] if item['id'] == 'prd-closeout')
         assert prd_closeout['status'] == 'healthy'
         assert any('FlowMind' in ref['label'] for ref in prd_closeout['evidenceRefs'])
+        assert prd_closeout['writebackConfirmation']['status'] == 'healthy'
+        assert all(item['status'] == 'healthy' for item in prd_closeout['writebackConfirmation']['items'])
 
     def test_collaboration_graph_projection_api_exposes_chain_nodes(self, client, monkeypatch, tmp_path):
         deploy_root = tmp_path / 'deploy-copy'
