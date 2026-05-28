@@ -85,6 +85,19 @@
 
 - 让 Overview 成为真正的路由中枢，而不是死数据页
 
+### 5. 支持投影
+
+内容：
+
+- `overview/support-projection`
+- runtime / collaboration / operations 的支持信号收口
+- 为 Overview 提供单一可复用的 support signals payload
+
+目标：
+
+- 避免 Overview 直接拼接多个散接口造成的口径漂移
+- 让支持信号默认走统一 projection，再按需下钻到各详情页
+
 ## 页面信息架构
 
 建议页面结构自上而下为：
@@ -121,6 +134,7 @@
 - governance summary aggregation
 - collaboration summary aggregation
 - operations summary aggregation
+- overview support projection
 
 ## 非目标
 

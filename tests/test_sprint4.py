@@ -192,6 +192,27 @@ class TestOverviewEntrypointHardening:
         assert payload['active_sessions'] == []
         assert payload['tool_usage'] == []
 
+    def test_overview_support_projection_api_returns_converged_payload(self, client, monkeypatch):
+        webui_api._overview_support_cache['data'] = None
+        webui_api._overview_support_cache['timestamp'] = 0
+        monkeypatch.setattr(webui_api, '_load_cron_jobs', lambda: [{'id': 'cron-1'}])
+        monkeypatch.setattr(webui_api, '_collect_runtime_handoffs', lambda limit=20: [{'id': 'handoff-1'}])
+        monkeypatch.setattr(webui_api, '_build_runtime_harness_summary', lambda: {'success_count': 2, 'failure_count': 1})
+        monkeypatch.setattr(webui_api, '_load_host_health', lambda: {'status': 'healthy', 'disk': {'used_percent': 12}, 'memory': {'used_percent': 34}})
+        monkeypatch.setattr(webui_api, '_build_operations_summary', lambda: {'status': 'healthy', 'metrics': {'skillsCount': 3}})
+
+        resp = client.get('/api/overview/support-projection')
+        assert resp.status_code == 200
+        data = resp.get_json()
+
+        assert data['stats']['cron'] == 1
+        assert data['stats']['skills'] >= 0
+        assert data['collab']['handoffs'] == 1
+        assert data['collab']['traces'] == 3
+        assert data['collab']['failures'] == 1
+        assert data['operations']['status'] == 'healthy'
+        assert data['hostHealth']['status'] == 'healthy'
+
     def test_runtime_host_health_api_returns_shape(self, client):
         resp = client.get('/api/runtime/host-health')
         assert resp.status_code == 200
@@ -206,8 +227,7 @@ class TestOverviewEntrypointHardening:
         resp = client.get('/static/js/overview.js')
         assert resp.status_code == 200
         data = resp.data.decode('utf-8', errors='replace')
-        assert '/api/operations/summary' in data
-        assert '/api/runtime/host-health' in data
+        assert '/api/overview/support-projection' in data
         assert 'ov-briefing-label' in data or 'ov-briefing-title' in data
 
 

@@ -30,6 +30,8 @@ _overview_stats_cache = {'data': None, 'timestamp': 0}
 _overview_stats_cache_ttl = 60
 _overview_dashboard_cache = {'data': None, 'timestamp': 0}
 _overview_dashboard_cache_ttl = 60
+_overview_support_cache = {'data': None, 'timestamp': 0}
+_overview_support_cache_ttl = 60
 _dashboard_cache = {'data': None, 'timestamp': 0}
 _dashboard_cache_ttl = 30
 _local_db_cache = {}
@@ -2387,12 +2389,7 @@ def _build_derived_replay(record):
 # Overview APIs
 # ═══════════════════════════════════════════
 
-@api.route('/overview/stats')
-def overview_stats():
-    now = time.time()
-    if _overview_stats_cache['data'] is not None and (now - _overview_stats_cache['timestamp']) < _overview_stats_cache_ttl:
-        return jsonify(_overview_stats_cache['data'])
-
+def _build_overview_stats_view():
     stats = {
         'teams': 0,
         'roles': 0,
@@ -2447,7 +2444,45 @@ def overview_stats():
     skills_dirs = _list_dir(home, 'skills')
     stats['skills'] = len(skills_dirs)
     stats['roles'] = stats['skills']
+    return stats
 
+
+def _build_overview_support_projection():
+    now = time.time()
+    if _overview_support_cache['data'] is not None and (now - _overview_support_cache['timestamp']) < _overview_support_cache_ttl:
+        return _overview_support_cache['data']
+
+    stats = _build_overview_stats_view()
+    handoffs = _collect_runtime_handoffs(limit=20)
+    harness = _build_runtime_harness_summary()
+    host_health = _load_host_health() or {}
+    operations = _build_operations_summary()
+
+    result = {
+        'stats': {
+            'skills': stats.get('skills', 0) or 0,
+            'memory_files': stats.get('memory_files', 0) or 0,
+            'cron': len(_load_cron_jobs() or []),
+        },
+        'collab': {
+            'handoffs': len(handoffs),
+            'traces': (harness.get('success_count', 0) or 0) + (harness.get('failure_count', 0) or 0),
+            'failures': harness.get('failure_count', 0) or 0,
+        },
+        'operations': operations or {},
+        'hostHealth': host_health or {},
+    }
+    _overview_support_cache['data'] = result
+    _overview_support_cache['timestamp'] = now
+    return result
+
+
+@api.route('/overview/stats')
+def overview_stats():
+    now = time.time()
+    if _overview_stats_cache['data'] is not None and (now - _overview_stats_cache['timestamp']) < _overview_stats_cache_ttl:
+        return jsonify(_overview_stats_cache['data'])
+    stats = _build_overview_stats_view()
     _overview_stats_cache['data'] = stats
     _overview_stats_cache['timestamp'] = now
     return jsonify(stats)
@@ -2516,6 +2551,17 @@ def _load_overview_memories():
 @api.route('/overview/memories')
 def overview_memories():
     return jsonify(_load_overview_memories())
+
+
+@api.route('/overview/support-projection')
+def overview_support_projection():
+    now = time.time()
+    if _overview_support_cache['data'] is not None and (now - _overview_support_cache['timestamp']) < _overview_support_cache_ttl:
+        return jsonify(_overview_support_cache['data'])
+    data = _build_overview_support_projection()
+    _overview_support_cache['data'] = data
+    _overview_support_cache['timestamp'] = now
+    return jsonify(data)
 
 
 # ═══════════════════════════════════════════

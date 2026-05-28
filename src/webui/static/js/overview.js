@@ -517,28 +517,30 @@ function renderSources(sources) {
 }
 
 function loadSupportData() {
-  return Promise.all([
-    fetchJSON('/api/overview/stats').catch(function() { return {}; }),
-    fetchJSON('/api/cron/list').catch(function() { return []; }),
-    fetchJSON('/api/runtime/handoffs').catch(function() { return []; }),
-    fetchJSON('/api/runtime/harness-summary').catch(function() { return {}; }),
-    fetchJSON('/api/operations/summary').catch(function() { return {}; }),
-    fetchJSON('/api/runtime/host-health').catch(function() { return {}; })
-  ]).then(function(results) {
-    return {
-      stats: {
-        skills: results[0].skills || 0,
-        memory_files: results[0].memory_files || 0,
-        cron: Array.isArray(results[1]) ? results[1].length : 0,
-      },
-      collab: {
-        handoffs: Array.isArray(results[2]) ? results[2].length : 0,
-        traces: (results[3].success_count || 0) + (results[3].failure_count || 0),
-        failures: results[3].failure_count || 0,
-      },
-      operations: results[4] || {},
-      hostHealth: results[5] || {}
-    };
+  return fetchJSON('/api/overview/support-projection').catch(function() {
+    return Promise.all([
+      fetchJSON('/api/overview/stats').catch(function() { return {}; }),
+      fetchJSON('/api/cron/list').catch(function() { return []; }),
+      fetchJSON('/api/runtime/handoffs').catch(function() { return []; }),
+      fetchJSON('/api/runtime/harness-summary').catch(function() { return {}; }),
+      fetchJSON('/api/operations/summary').catch(function() { return {}; }),
+      fetchJSON('/api/runtime/host-health').catch(function() { return {}; })
+    ]).then(function(results) {
+      return {
+        stats: {
+          skills: results[0].skills || 0,
+          memory_files: results[0].memory_files || 0,
+          cron: Array.isArray(results[1]) ? results[1].length : 0,
+        },
+        collab: {
+          handoffs: Array.isArray(results[2]) ? results[2].length : 0,
+          traces: (results[3].success_count || 0) + (results[3].failure_count || 0),
+          failures: results[3].failure_count || 0,
+        },
+        operations: results[4] || {},
+        hostHealth: results[5] || {}
+      };
+    });
   });
 }
 
