@@ -318,7 +318,7 @@
 
 ### Phase C：Harness 与 Hermes 协作层对齐
 
-状态：进行中（third-slice landed）
+状态：进行中（fifth-slice landed）
 
 产出：
 
@@ -373,7 +373,7 @@
 
 下一步继续做：
 
-- 继续判断 reviewer / Hermes acceptance 是否需要更细粒度的 handoff contract writeback，而不只停留在 acceptance artifact 引用
+- 继续判断 reviewer / Hermes acceptance 是否需要更细粒度的 handoff contract writeback，而不只停留在 acceptance artifact 引用；当前没有新的 FlowMind contract gap
 
 ### Phase D：页面系统与状态源收敛
 

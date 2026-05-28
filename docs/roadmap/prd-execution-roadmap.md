@@ -251,6 +251,7 @@ scripts/check_cross_repo_prd_sync.sh
 - 旧功能模板的静态资源路径正在从硬编码 `/manage/static/*` 收口到 `{{ BASE }}/static/*`
 - 治理摘要与协作摘要已进入 `Overview` 入口语义，但真实聚合数据仍待后续 API 补齐
 - 2026-05-22 的双仓 control-room-first 校准已把 Phase 5 之后的默认下一跳收紧为 Crazy `Sprint 2 Control Plane Hardening`，其优先级高于继续扩更多 IA 聚合页
+- 2026-05-28 的 Phase C 收尾线已经推进到第五切片：`accept / reject / defer` 现在有独立 acceptance artifact，`writebackConfirmation` 也已在 `/collaboration` 中对象化；剩余尾部仅是 reviewer / Hermes acceptance 是否还要更细粒度 handoff contract writeback 的评估，不再是新的主产品 gap
 
 ### Phase 5 之后的当前默认顺序（2026-05-22）
 
