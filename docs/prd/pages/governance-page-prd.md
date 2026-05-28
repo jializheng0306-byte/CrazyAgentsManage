@@ -116,4 +116,3 @@
 2. 页面不再只是静态分类列表，而具备工作区语义
 3. 页面可作为 `ProductArchitecturePreviewPage` 的治理详情依托
 4. candidate / truth / review / feedback / drift 仍需通过后续真实数据面持续补强
-5. 2026-05-28 的 gap audit 未发现新的 upstream contract gap；剩余治理对象细化按 enhancement-only 继续

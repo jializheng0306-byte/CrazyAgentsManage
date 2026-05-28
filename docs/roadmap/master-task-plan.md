@@ -235,7 +235,7 @@
 2. 保持 `FlowMind` 只作为 contract/truth authority，不在 Crazy 本地重写主治理状态
 3. 将 `Loop Surface` 做成 `Collaboration` 子表面，而不是新一级 IA
 4. 如继续扩 `Operations`，下一批只进入 `recovery path / env drift / backup coverage` 深化，而不是重新打开 Sprint 2 主边界
-5. 2026-05-28 的 `Governance / Collaboration / Operations` gap audit 未发现新的 repo-tracked contract/read-surface gap，后续只按 enhancement-only 处理
+5. 2026-05-28 的 `Governance / Collaboration / Operations` gap audit 未发现新的 repo-tracked contract/read-surface gap，后续如再出现新 gap 再单独开启新工作流
 
 ### 验收标准
 
@@ -380,7 +380,7 @@
 
 ### Phase D：页面系统与状态源收敛
 
-状态：进行中（state-source convergence complete，enhancement-only）
+状态：`completed-published`
 
 产出：
 
@@ -394,13 +394,13 @@
 - `Runtime` 已切到 `runtime/summary`，把 overview dashboard 与 agent list 收口到单一投影
 - `Operations` 已切到 `operations/support-projection`，把 summary 与 provider mode 收口到单一投影
 - Phase D 的主问题不再是“是否切导航”，而是“是否把各分区的状态源收敛成稳定的 canonical projection”
-- 第一优先级是把 `Overview` / `Operations` / `Runtime` 的聚合数据口径继续收紧，避免各页各自解释同一组事实
+- 第一优先级已完成，当前阶段不再继续收紧口径
 - 旧功能页保留兼容入口，但不再作为主产品叙事
 
 下一步：
 
-- 再评估是否需要补足更细粒度的页面级跳转与细分对象卡片
-- 如果后续发现新的 contract gap，再回 FlowMind 补最小上游契约；否则当前 Phase D 只剩页面级增强项，不再是状态源收敛问题
+- Phase D 已收口，不再作为活跃维护阶段继续推进
+- 如未来再出现新的 repo-tracked contract gap，再以新的工作流单独开启，不沿用当前 Phase D
 
 ## 六、关键依赖
 

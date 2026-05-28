@@ -1,6 +1,6 @@
 # Governance / Collaboration / Operations Gap Audit Closeout（2026-05-28）
 
-> 范围: `Governance / Collaboration / Operations` enhancement candidates  
+> 范围: `Governance / Collaboration / Operations` 收口审查  
 > 状态: `completed-published`  
 > 结论: `no new repo-tracked contract gap`
 
@@ -16,16 +16,16 @@
 
 本轮 audit 结果：
 
-- `Operations` 的剩余项属于 enhancement-only
-- `Collaboration` 的剩余项属于 writeback / jump 细化增强
-- `Governance` 的剩余项属于对象细化与后续数据补强
+- `Operations` 的剩余项已收口为非活跃增强项
+- `Collaboration` 的剩余项已收口为非活跃增强项
+- `Governance` 的剩余项已收口为非活跃增强项
 - 没有发现新的 repo-tracked `contract/read-surface gap`
 
 因此：
 
 1. 不回 FlowMind 补偿开发
 2. 不重开新 sprint
-3. 继续按 enhancement-only 维护
+3. 该收口线不再作为活跃维护阶段继续推进
 
 ## 3. 已同步的事实源
 
