@@ -226,3 +226,4 @@
 2. 外部连接和内部运维对象有统一状态口径
 3. 页面具备 page-level aggregation shell，而不是只剩对象列表
 4. 页面可作为 `ProductArchitecturePreviewPage` 的 operations 详情依托
+5. 2026-05-28 的 gap audit 未发现新的 upstream contract gap；剩余对象卡片与细分跳转按 enhancement-only 继续

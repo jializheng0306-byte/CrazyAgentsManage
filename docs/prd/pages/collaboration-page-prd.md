@@ -149,3 +149,4 @@
 2. 页面能清楚区分主协作对象与 supporting evidence
 3. `Loop Surface` 作为协作子表面有明确挂载点
 4. 页面可作为 `TechArchitecturePreviewPage` 的协作详情依托
+5. 2026-05-28 的 gap audit 未发现新的 upstream contract gap；剩余 writeback / jump 细化按 enhancement-only 继续

@@ -235,6 +235,7 @@
 2. 保持 `FlowMind` 只作为 contract/truth authority，不在 Crazy 本地重写主治理状态
 3. 将 `Loop Surface` 做成 `Collaboration` 子表面，而不是新一级 IA
 4. 如继续扩 `Operations`，下一批只进入 `recovery path / env drift / backup coverage` 深化，而不是重新打开 Sprint 2 主边界
+5. 2026-05-28 的 `Governance / Collaboration / Operations` gap audit 未发现新的 repo-tracked contract/read-surface gap，后续只按 enhancement-only 处理
 
 ### 验收标准
 
