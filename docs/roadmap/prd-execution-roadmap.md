@@ -252,7 +252,7 @@ scripts/check_cross_repo_prd_sync.sh
 - 治理摘要与协作摘要已进入 `Overview` 入口语义，但真实聚合数据仍待后续 API 补齐
 - 2026-05-22 的双仓 control-room-first 校准已把 Phase 5 之后的默认下一跳收紧为 Crazy `Sprint 2 Control Plane Hardening`，其优先级高于继续扩更多 IA 聚合页
 - 2026-05-28 的 Phase C 收尾线已经推进到第五切片并完成收口：`accept / reject / defer` 现在有独立 acceptance artifact，`writebackConfirmation` 也已在 `/collaboration` 中对象化；reviewer / Hermes acceptance 不再构成新的主产品 gap，后续如需更细粒度 handoff contract writeback 仅按增强项处理
-- 2026-05-28 起 Phase D 的起手不再是新增页面，而是先把 `Overview` / `Runtime` / `Operations` 的状态源收敛成统一 canonical projection；`Overview` 已切到 `overview/support-projection`，下一步继续收紧同类 helper / projection 口径，再决定是否补更细粒度对象卡片和跳转
+- 2026-05-28 起 Phase D 的起手不再是新增页面，而是先把 `Overview` / `Runtime` / `Operations` 的状态源收敛成统一 canonical projection；`Overview` 已切到 `overview/support-projection`，`Runtime` 已切到 `runtime/summary`，`Operations` 已切到 `operations/support-projection`，状态源收口已经完成，后续只剩更细粒度对象卡片和跳转等增强项
 
 ### Phase 5 之后的当前默认顺序（2026-05-22）
 

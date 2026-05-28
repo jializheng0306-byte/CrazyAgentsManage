@@ -87,6 +87,20 @@
 - 不直接把 raw replay adapter 当成页面最终契约
 - 不在此阶段强行把三项 context 计数字段全部升级为阻塞项
 
+### 6. Runtime Summary Projection
+
+内容：
+
+- `runtime/summary`
+- overview dashboard
+- agent list
+- runtime errors / performance / active sessions 的单一投影
+
+目标：
+
+- 避免 Runtime 页面再去拼接 `overview + agents` 两条主路
+- 让 Runtime 主入口只消费一份可复用 projection，再按需下钻到 session / trace / handoff 细页
+
 ## 页面信息架构
 
 建议页面结构自上而下为：
@@ -122,6 +136,7 @@
 - trace / lineage 数据面
 - tool execution evidence
 - runtime observability 指标
+- runtime summary projection
 
 ## 非目标
 

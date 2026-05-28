@@ -86,6 +86,7 @@ class TestSearchIntegration:
         assert 'URLSearchParams' in data
         assert "get('family')" in data
         assert "get('action')" in data
+        assert '/api/operations/support-projection' in data
 
     def test_collaboration_js_renders_writeback_confirmation(self, client):
         resp = client.get('/static/js/collaboration.js')
@@ -223,12 +224,39 @@ class TestOverviewEntrypointHardening:
         assert 'used_percent' in data['disk']
         assert 'used_percent' in data['memory']
 
+    def test_runtime_summary_api_returns_projection(self, client, monkeypatch):
+        webui_api._runtime_summary_cache['data'] = None
+        webui_api._runtime_summary_cache['timestamp'] = 0
+        monkeypatch.setattr(webui_api, '_build_runtime_summary_view', lambda: {
+            'metrics': {'total_sessions': 4, 'active_sessions': 2, 'total_input': 10, 'total_output': 20, 'total_tool_calls': 3, 'error_count': 1, 'avg_tps': 2.5},
+            'active_sessions': [{'id': 's-1'}],
+            'tool_usage': [{'tool_name': 'x', 'call_count': 1}],
+            'performance': {'avg_ttft': 12, 'avg_tps': 2.5, 'avg_duration': 3, 'error_rate': 0.25},
+            'recent_errors': [{'session_id': 's-1', 'error_message': 'boom'}],
+            'agents': [{'source': 'cli', 'name': 'CLI 智能体'}],
+            'agentCount': 1,
+        })
+
+        resp = client.get('/api/runtime/summary')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['metrics']['total_sessions'] == 4
+        assert data['agentCount'] == 1
+        assert data['agents'][0]['source'] == 'cli'
+
     def test_overview_js_reuses_operations_summary_and_host_health(self, client):
         resp = client.get('/static/js/overview.js')
         assert resp.status_code == 200
         data = resp.data.decode('utf-8', errors='replace')
         assert '/api/overview/support-projection' in data
         assert 'ov-briefing-label' in data or 'ov-briefing-title' in data
+
+    def test_runtime_js_uses_runtime_summary_projection(self, client):
+        resp = client.get('/static/js/runtime.js')
+        assert resp.status_code == 200
+        data = resp.data.decode('utf-8', errors='replace')
+        assert '/api/runtime/summary' in data
+        assert '/api/agents/list' in data
 
 
 class TestOperationsCapabilityPlane:

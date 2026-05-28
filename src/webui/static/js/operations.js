@@ -130,26 +130,42 @@ var FAMILIES = {
 // ============================================================
 
 function loadMetrics() {
-  _fetch('/api/operations/summary').then(function(summary) {
+  _fetch('/api/operations/support-projection').then(function(summary) {
     OPS.summary = summary || null;
+    OPS.providerMode = summary.providerMode || 'sample';
+    OPS.capabilities = summary.capabilities || OPS.capabilities;
     applySummaryCounts(summary || {});
     renderBriefing(summary || {});
     renderSummaryGrid(summary || {});
-  }).catch(function() {
-    renderBriefing({});
-    renderSummaryGrid({});
-  });
-
-  _fetch('/api/operations/integrations/provider-mode').then(function(info) {
-    OPS.providerMode = info.mode || 'sample';
-    OPS.capabilities = info.capabilities || OPS.capabilities;
     var suffix = OPS.providerMode === 'http' ? ' · executor' : ' · sample';
     var title = document.title || '';
     if (title.indexOf(suffix) === -1 && title.indexOf('运营工作台') !== -1) {
       document.title = '运营工作台 - CrazyAgentsManage' + suffix;
     }
     updateWorkspaceActions(OPS.currentFamily);
-  }).catch(function() {});
+  }).catch(function() {
+    _fetch('/api/operations/summary').then(function(summary) {
+      OPS.summary = summary || null;
+      applySummaryCounts(summary || {});
+      renderBriefing(summary || {});
+      renderSummaryGrid(summary || {});
+      return _fetch('/api/operations/integrations/provider-mode');
+    }).then(function(info) {
+      if (info) {
+        OPS.providerMode = info.mode || 'sample';
+        OPS.capabilities = info.capabilities || OPS.capabilities;
+        var suffix = OPS.providerMode === 'http' ? ' · executor' : ' · sample';
+        var title = document.title || '';
+        if (title.indexOf(suffix) === -1 && title.indexOf('运营工作台') !== -1) {
+          document.title = '运营工作台 - CrazyAgentsManage' + suffix;
+        }
+        updateWorkspaceActions(OPS.currentFamily);
+      }
+    }).catch(function() {
+      renderBriefing({});
+      renderSummaryGrid({});
+    });
+  });
 }
 
 function _updateTreeCount(family, count) {

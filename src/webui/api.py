@@ -32,6 +32,10 @@ _overview_dashboard_cache = {'data': None, 'timestamp': 0}
 _overview_dashboard_cache_ttl = 60
 _overview_support_cache = {'data': None, 'timestamp': 0}
 _overview_support_cache_ttl = 60
+_runtime_summary_cache = {'data': None, 'timestamp': 0}
+_runtime_summary_cache_ttl = 60
+_operations_support_cache = {'data': None, 'timestamp': 0}
+_operations_support_cache_ttl = 60
 _dashboard_cache = {'data': None, 'timestamp': 0}
 _dashboard_cache_ttl = 30
 _local_db_cache = {}
@@ -2477,6 +2481,22 @@ def _build_overview_support_projection():
     return result
 
 
+def _build_runtime_summary_view():
+    now = time.time()
+    if _runtime_summary_cache['data'] is not None and (now - _runtime_summary_cache['timestamp']) < _runtime_summary_cache_ttl:
+        return _runtime_summary_cache['data']
+
+    dashboard = _build_overview_dashboard_view()
+    agents = _build_agents_list_view()
+    result = dict(dashboard)
+    result['agents'] = agents
+    result['agentCount'] = len(agents)
+    result['metrics'] = dict(dashboard.get('metrics', {}))
+    _runtime_summary_cache['data'] = result
+    _runtime_summary_cache['timestamp'] = now
+    return result
+
+
 @api.route('/overview/stats')
 def overview_stats():
     now = time.time()
@@ -4496,8 +4516,7 @@ def tokens_recent():
 # Agents APIs
 # ═══════════════════════════════════════════
 
-@api.route('/agents/list')
-def agents_list():
+def _build_agents_list_view():
     sources = _db_query(
         "SELECT source, COUNT(*) as session_count, "
         "COALESCE(SUM(input_tokens), 0) as input_tokens, "
@@ -4581,7 +4600,12 @@ def agents_list():
         else:
             existing[0]['platform_state'] = platform_state.get('state', 'unknown')
 
-    return jsonify(agents)
+    return agents
+
+
+@api.route('/agents/list')
+def agents_list():
+    return jsonify(_build_agents_list_view())
 
 
 @api.route('/agents/stats')
@@ -4595,8 +4619,7 @@ def agents_stats():
 
 @api.route('/graph/data')
 def graph_data():
-    agents_resp = agents_list()
-    agents_data = json.loads(agents_resp.get_data(as_text=True))
+    agents_data = _build_agents_list_view()
 
     nodes = []
     edges = []
@@ -4821,6 +4844,17 @@ def server_info():
 @api.route('/runtime/host-health')
 def runtime_host_health():
     return jsonify(_load_host_health())
+
+
+@api.route('/runtime/summary')
+def runtime_summary():
+    now = time.time()
+    if _runtime_summary_cache['data'] is not None and (now - _runtime_summary_cache['timestamp']) < _runtime_summary_cache_ttl:
+        return jsonify(_runtime_summary_cache['data'])
+    data = _build_runtime_summary_view()
+    _runtime_summary_cache['data'] = data
+    _runtime_summary_cache['timestamp'] = now
+    return jsonify(data)
 
 
 # ═══════════════════════════════════════════
@@ -5443,9 +5477,35 @@ def _build_operations_summary():
     }
 
 
+def _build_operations_support_projection():
+    now = time.time()
+    if _operations_support_cache['data'] is not None and (now - _operations_support_cache['timestamp']) < _operations_support_cache_ttl:
+        return _operations_support_cache['data']
+
+    summary = _build_operations_summary()
+    provider = get_executor_provider()
+    result = dict(summary)
+    result['providerMode'] = get_provider_mode()
+    result['capabilities'] = provider.get_capabilities() or {}
+    _operations_support_cache['data'] = result
+    _operations_support_cache['timestamp'] = now
+    return result
+
+
 @api.route('/operations/summary')
 def operations_summary():
     return jsonify(_build_operations_summary())
+
+
+@api.route('/operations/support-projection')
+def operations_support_projection():
+    now = time.time()
+    if _operations_support_cache['data'] is not None and (now - _operations_support_cache['timestamp']) < _operations_support_cache_ttl:
+        return jsonify(_operations_support_cache['data'])
+    data = _build_operations_support_projection()
+    _operations_support_cache['data'] = data
+    _operations_support_cache['timestamp'] = now
+    return jsonify(data)
 
 
 @api.route('/operations/integrations/sources')

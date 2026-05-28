@@ -138,6 +138,20 @@
 - next hop
 - subpage cards
 
+### 12. Operations Support Projection
+
+内容：
+
+- `operations/support-projection`
+- operations summary
+- provider mode / capabilities
+- 运营对象总览的单一投影入口
+
+目标：
+
+- 避免 `Operations` 主入口再把 summary 和 provider-mode 分开抓取
+- 让页面先消费统一 projection，再按需下钻到 integrations / family 详情
+
 目标：
 
 - 让 `Operations` 先给出 operator 该从哪个对象族继续巡检，而不是一打开就直接落入细节列表
@@ -196,6 +210,7 @@
 - team memory / shared context surface
 - platform connectivity surface
 - executor / integrations capability surface
+- operations support projection
 
 ## 非目标
 

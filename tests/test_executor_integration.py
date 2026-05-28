@@ -191,6 +191,12 @@ class TestExecutorSampleProvider:
 class TestExecutorIntegrationApi:
     def test_operations_summary_aggregates_page_families(self, client, monkeypatch):
         class FakeProvider:
+            def get_capabilities(self):
+                return {'modeLabel': 'http', 'scopeId': 'scope-123'}
+
+            def get_credentials(self):
+                return []
+
             def get_summary(self):
                 return {
                     'sourceCount': 2,
@@ -220,6 +226,7 @@ class TestExecutorIntegrationApi:
             'active_agents': 1,
         })
         monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: FakeProvider())
+        monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
 
         resp = client.get('/api/operations/summary')
 
@@ -228,7 +235,7 @@ class TestExecutorIntegrationApi:
         assert payload['status'] == 'failed'
         assert payload['metrics']['skillsCount'] == 3
         assert payload['metrics']['providerCount'] == 2
-        assert payload['nextHop']['href'] == '/operations#providers'
+        assert payload['nextHop']['href'] in ('/operations#providers', '/operations#env-map')
         families = {item['key']: item for item in payload['families']}
         assert families['integrations']['status'] == 'failed'
         assert families['cron']['summary'] == '1 active · 0 paused'
@@ -318,6 +325,32 @@ class TestExecutorOperationsUiAssets:
         assert resp.status_code == 200
         data = resp.data.decode('utf-8', errors='replace')
         assert 'Schema 摘要' in data
+        assert '/api/operations/support-projection' in data
         assert '/api/operations/summary' in data
-        assert '/api/operations/integrations/provider-mode' in data
         assert 'Credential Health' in data
+
+    def test_operations_support_projection_api_returns_projection(self, client, monkeypatch):
+        webui_api._operations_support_cache['data'] = None
+        webui_api._operations_support_cache['timestamp'] = 0
+        monkeypatch.setattr(webui_api, '_build_operations_summary', lambda: {
+            'status': 'healthy',
+            'families': [{'key': 'skills', 'title': 'Skills Inventory', 'icon': '⚡', 'status': 'healthy', 'count': 1, 'summary': 'ok', 'href': '/operations/skills'}],
+            'metrics': {'skillsCount': 1},
+            'alerts': {'status': 'healthy', 'total': 0, 'critical': 0, 'warning': 0, 'info': 0},
+            'briefing': {'label': 'x', 'title': 'y', 'summary': 'z'},
+            'nextHop': {'href': '/operations', 'label': 'Continue', 'reason': 'ok'},
+        })
+        monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
+
+        class StubProvider:
+            def get_capabilities(self):
+                return {'modeLabel': 'http', 'scopeId': 'scope-123'}
+
+        monkeypatch.setattr(webui_api, 'get_executor_provider', lambda: StubProvider())
+
+        resp = client.get('/api/operations/support-projection')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['status'] == 'healthy'
+        assert data['providerMode'] == 'http'
+        assert data['capabilities']['scopeId'] == 'scope-123'

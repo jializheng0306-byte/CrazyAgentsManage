@@ -265,26 +265,31 @@ function renderAgents(agents) {
 }
 
 function loadRuntime() {
-  fetchJSON('/api/overview').then(function(data) {
+  fetchJSON('/api/runtime/summary').then(function(data) {
     renderStatusBar(data.metrics || {});
     renderMetrics(data.metrics || {});
     renderActiveSessions(data.active_sessions);
     renderToolUsage(data.tool_usage);
     renderPerformance(data.performance || {});
+    renderErrors(data.recent_errors || []);
+    renderAgents(data.agents || []);
   }).catch(function(err) {
     console.error('Failed to load runtime summary:', err);
-  });
-
-  fetchJSON('/api/overview').then(function(data) {
-    renderErrors(data.recent_errors);
-  }).catch(function(err) {
-    console.error('Failed to load overview errors:', err);
-  });
-
-  fetchJSON('/api/agents/list').then(function(agents) {
-    renderAgents(agents);
-  }).catch(function(err) {
-    console.error('Failed to load agents:', err);
+    Promise.all([
+      fetchJSON('/api/overview'),
+      fetchJSON('/api/agents/list')
+    ]).then(function(results) {
+      var data = results[0] || {};
+      renderStatusBar(data.metrics || {});
+      renderMetrics(data.metrics || {});
+      renderActiveSessions(data.active_sessions);
+      renderToolUsage(data.tool_usage);
+      renderPerformance(data.performance || {});
+      renderErrors(data.recent_errors || []);
+      renderAgents(results[1] || []);
+    }).catch(function(fallbackErr) {
+      console.error('Failed to load runtime fallback summary:', fallbackErr);
+    });
   });
 }
 
