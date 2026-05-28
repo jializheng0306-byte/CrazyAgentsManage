@@ -318,7 +318,7 @@
 
 ### Phase C：Harness 与 Hermes 协作层对齐
 
-状态：进行中（fifth-slice landed）
+状态：完成（fifth-slice landed）
 
 产出：
 
@@ -371,9 +371,11 @@
   - `Hermes Acceptance` 会优先消费 `harness/acceptance/*.json`
   - playbook 已给出 acceptance artifact 的 canonical writeback 命令
 
-下一步继续做：
+结论：
 
-- 继续判断 reviewer / Hermes acceptance 是否需要更细粒度的 handoff contract writeback，而不只停留在 acceptance artifact 引用；当前没有新的 FlowMind contract gap
+- reviewer / Hermes acceptance 已经通过 acceptance artifact 和 `writebackConfirmation` 完成收口
+- 当前没有新的 FlowMind contract gap
+- 如果未来再细化 handoff contract writeback，归类为增强项而非 Phase C 主线继续推进项
 
 ### Phase D：页面系统与状态源收敛
 
