@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from datetime import datetime, timezone
 from typing import Optional
 
 
@@ -28,6 +29,18 @@ DEFAULT_LATEST_RUN_FILE = "/home/ubuntu/FlowMindDeploy-newhost/scripts/pilot/out
 DEFAULT_RUNS_ROOT = "/home/ubuntu/FlowMindDeploy-newhost/scripts/pilot/output/runs"
 DEFAULT_EXECUTOR_SOURCE = "flowmind-health-readonly"
 DEFAULT_SNAPSHOT_PATH = str(Path.home() / ".hermes" / "cron" / "state" / "flowmind-health-check-latest.json")
+SSH_FAILURE_MARKERS = (
+    "ssh: connect to host",
+    "Connection timed out",
+    "Connection refused",
+    "No route to host",
+    "Could not resolve hostname",
+    "Name or service not known",
+)
+PARSE_FAILURE_MARKERS = (
+    "JSON decode failed",
+    "failed to parse latest JSON block",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -301,6 +314,25 @@ def build_status_payload(report: dict) -> dict:
     }
 
 
+def classify_failure_message(errors: list[str]) -> str:
+    joined = "\n".join(errors)
+    if any(marker in joined for marker in SSH_FAILURE_MARKERS):
+        return "巡检远端 SSH 连接失败"
+    if any(marker in joined for marker in PARSE_FAILURE_MARKERS):
+        return "无法解析当前巡检报告JSON"
+    return "巡检报告读取失败"
+
+
+def build_error_payload(errors: list[str]) -> dict:
+    return {
+        "status": "ERROR",
+        "checkedAt": datetime.now(timezone.utc).astimezone().isoformat(),
+        "runId": "unknown",
+        "message": classify_failure_message(errors),
+        "errors": errors,
+    }
+
+
 def render_status_lines(payload: dict, executor_probe: Optional[dict] = None) -> list[str]:
     status = payload["status"]
     if status == "OK":
@@ -395,17 +427,13 @@ def main() -> int:
         return 1
 
     if report is None:
-        payload = {
-            "status": "ERROR",
-            "message": "无法解析当前巡检报告JSON",
-            "errors": errors,
-        }
+        payload = build_error_payload(errors)
         write_snapshot(args.snapshot_path, payload)
         if args.json:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         else:
             print("STATUS: ERROR")
-            print("无法解析当前巡检报告JSON")
+            print(payload["message"])
             if errors:
                 print("细节:")
                 for item in errors:

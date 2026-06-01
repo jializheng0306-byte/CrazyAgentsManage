@@ -127,3 +127,36 @@ def test_write_snapshot_persists_json_payload(tmp_path):
 
     assert target.exists()
     assert target.read_text(encoding="utf-8").strip().startswith("{")
+
+
+def test_classify_failure_message_prefers_ssh_failure_for_connection_timeouts():
+    message = MODULE.classify_failure_message(
+        [
+            "ssh: connect to host 111.229.194.203 port 22: Connection timed out",
+            "ssh: connect to host 111.229.194.203 port 22: Connection timed out",
+        ]
+    )
+
+    assert message == "巡检远端 SSH 连接失败"
+
+
+def test_classify_failure_message_keeps_parse_failure_for_json_decode_errors():
+    message = MODULE.classify_failure_message(
+        [
+            "JSON decode failed for /home/ubuntu/FlowMindDeploy-newhost/scripts/pilot/output/current/reports/ops-runtime-health.json: Expecting value: line 1 column 1 (char 0)",
+            "failed to parse latest JSON block from ops-health.log",
+        ]
+    )
+
+    assert message == "无法解析当前巡检报告JSON"
+
+
+def test_build_error_payload_includes_timestamp_and_classified_message():
+    payload = MODULE.build_error_payload(
+        ["ssh: connect to host 111.229.194.203 port 22: Connection timed out"]
+    )
+
+    assert payload["status"] == "ERROR"
+    assert payload["message"] == "巡检远端 SSH 连接失败"
+    assert payload["runId"] == "unknown"
+    assert isinstance(payload["checkedAt"], str) and payload["checkedAt"]
