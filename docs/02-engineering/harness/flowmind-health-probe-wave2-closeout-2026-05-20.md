@@ -208,3 +208,22 @@
 ## 7. 一句话结论
 
 > `flowmind.health-probe` 的 Wave 2 完成方式不是让 executor 接管主判断，而是把宿主已有巡检脚本收回 repo fact layer、清掉 AI cron guard、恢复并验证历史 paused job，并补上一条 readonly health endpoint probe；这一步已经在 `ALI-HERMES` 上完成。
+
+## 8. 2026-06-02 恢复备注
+
+2026-06-02 的那次巡检异常最终确认是 `TX-NEWHOST` 先前关机后恢复期内的临时不可达，不是巡检脚本回归。
+
+复核结果：
+
+- `ssh` 到 `111.229.194.203` 已恢复
+- `flowmind-newhost.service` 为 `active (running)`
+- `nginx` 为 `active (running)`
+- `http://127.0.0.1:3301/healthz` 返回 `200`
+- `http://127.0.0.1:3301/readyz` 返回 `ready`
+- `https://www.uncentury.cn/healthz` 在主机本地 SNI 复核下返回 `200 OK`
+
+因此，这次告警应归类为：
+
+- 主机停机 / 恢复窗口导致的短暂不可达
+- 不是 JSON 解析问题
+- 不是巡检脚本逻辑问题
