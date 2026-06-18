@@ -26,6 +26,24 @@ def run_remote(command: str) -> subprocess.CompletedProcess[str]:
     return run_local(["python3", str(RUN_ON_ALI), "--json", "--", command])
 
 
+def remote_executor_prefix() -> str:
+    return (
+        'EXECUTOR_BIN="$(command -v executor 2>/dev/null || true)"; '
+        'if [ -z "$EXECUTOR_BIN" ] && command -v npm >/dev/null 2>&1; then '
+        'EXECUTOR_PREFIX="$(npm prefix -g 2>/dev/null || true)"; '
+        'if [ -n "$EXECUTOR_PREFIX" ] && [ -x "$EXECUTOR_PREFIX/bin/executor" ]; then '
+        'EXECUTOR_BIN="$EXECUTOR_PREFIX/bin/executor"; fi; fi; '
+        'if [ -z "$EXECUTOR_BIN" ]; then '
+        'for candidate in /usr/local/bin/executor /usr/bin/executor /opt/homebrew/bin/executor "$HOME/.nvm/versions/node"/*/bin/executor; do '
+        'if [ -x "$candidate" ]; then EXECUTOR_BIN="$candidate"; break; fi; done; fi; '
+        'if [ -z "$EXECUTOR_BIN" ]; then echo "executor CLI not found on remote host" >&2; exit 127; fi; '
+    )
+
+
+def run_remote_executor(command: str) -> subprocess.CompletedProcess[str]:
+    return run_remote(f'{remote_executor_prefix()} "$EXECUTOR_BIN" {command}')
+
+
 def http_json(url: str, attempts: int = 4) -> dict:
     last_error = None
     for attempt in range(1, attempts + 1):
@@ -98,14 +116,14 @@ def main() -> int:
         provider = {}
     add_check("crazy-provider-mode", provider, provider.get("mode") == "http")
 
-    cli_sources = parse_json_output(run_remote("executor tools sources"))
+    cli_sources = parse_json_output(run_remote_executor("tools sources"))
     add_check(
         "executor-tools-sources-cli",
         cli_sources,
         bool(cli_sources.get("ok")) and args.namespace in (cli_sources.get("stdout") or ""),
     )
 
-    source_help = parse_json_output(run_remote(f"executor call {args.namespace} --help"))
+    source_help = parse_json_output(run_remote_executor(f"call {args.namespace} --help"))
     add_check(
         "executor-source-help",
         source_help,
@@ -113,7 +131,7 @@ def main() -> int:
     )
 
     tool_help = parse_json_output(
-        run_remote(f"executor call {args.namespace} {args.tool_group} {args.tool_name} --help")
+        run_remote_executor(f"call {args.namespace} {args.tool_group} {args.tool_name} --help")
     )
     add_check(
         "executor-tool-help",
@@ -122,7 +140,7 @@ def main() -> int:
     )
 
     tool_path = f"{args.namespace}.{args.tool_group}.{args.tool_name}"
-    describe = parse_json_output(run_remote(f"executor tools describe {tool_path}"))
+    describe = parse_json_output(run_remote_executor(f"tools describe {tool_path}"))
     describe_ok = bool(describe.get("ok"))
     if describe_ok:
         try:
@@ -136,8 +154,8 @@ def main() -> int:
     invoke_payload = None
     if not args.skip_invoke:
         invoke = parse_json_output(
-            run_remote(
-                f"executor call {args.namespace} {args.tool_group} {args.tool_name} "
+            run_remote_executor(
+                f'call {args.namespace} {args.tool_group} {args.tool_name} '
                 f"'{args.tool_args}' --log-level debug"
             )
         )

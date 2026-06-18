@@ -11,8 +11,11 @@ Auto-detects executor availability on first access.
 
 import json
 import os
+import shutil
+import subprocess
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib import request as urlrequest
 from urllib import error as urlerror
 
@@ -21,12 +24,101 @@ class ExecutorBridgeUnsupported(Exception):
     pass
 
 
+_EXECUTOR_ENV_VARS = ("EXECUTOR_BIN", "CRAZY_EXECUTOR_BIN")
+
+
 # ============================================================
 # Data models (matching the API façade spec)
 # ============================================================
 
 def _now_iso():
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
+def _is_executable(candidate):
+    path = Path(candidate).expanduser()
+    return path.is_file() and os.access(path, os.X_OK)
+
+
+def _resolve_npm_global_executor():
+    npm_bin = shutil.which("npm")
+    if not npm_bin:
+        return None
+
+    result = subprocess.run(
+        [npm_bin, "prefix", "-g"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+
+    prefix = (result.stdout or "").strip()
+    if not prefix:
+        return None
+
+    candidate = str(Path(prefix).expanduser() / "bin" / "executor")
+    return candidate if _is_executable(candidate) else None
+
+
+def resolve_executor_binary():
+    """Resolve executor CLI in service/cron environments where PATH is sparse."""
+    candidates = []
+
+    for env_var in _EXECUTOR_ENV_VARS:
+        value = os.environ.get(env_var, "").strip()
+        if value:
+            candidates.append(value)
+
+    path = shutil.which("executor")
+    if path:
+        candidates.append(path)
+
+    npm_candidate = _resolve_npm_global_executor()
+    if npm_candidate:
+        candidates.append(npm_candidate)
+
+    candidates.extend(
+        [
+            "/usr/local/bin/executor",
+            "/usr/bin/executor",
+            "/opt/homebrew/bin/executor",
+        ]
+    )
+
+    home_nvm = Path.home() / ".nvm" / "versions" / "node"
+    if home_nvm.exists():
+        candidates.extend(str(path) for path in sorted(home_nvm.glob("*/bin/executor")))
+
+    seen = set()
+    for candidate in candidates:
+        normalized = str(Path(candidate).expanduser())
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        if _is_executable(normalized):
+            return normalized
+
+    raise FileNotFoundError(
+        "executor CLI not found. Set EXECUTOR_BIN or install executor so the binary is available on PATH."
+    )
+
+
+def _executor_cli_capability():
+    try:
+        executor_bin = resolve_executor_binary()
+        return {
+            'executorCliAvailable': True,
+            'executorBinary': executor_bin,
+            'executorCliError': None,
+        }
+    except FileNotFoundError as exc:
+        return {
+            'executorCliAvailable': False,
+            'executorBinary': '',
+            'executorCliError': str(exc),
+        }
 
 
 def _schema_summary_from_schema(schema):
@@ -373,7 +465,7 @@ class SampleExecutorProvider(ExecutorProvider):
         return False
 
     def get_capabilities(self):
-        return {
+        capabilities = {
             'sourceCreate': True,
             'sourceStatusToggle': True,
             'sourceDelete': True,
@@ -381,6 +473,9 @@ class SampleExecutorProvider(ExecutorProvider):
             'credentialUnbind': True,
             'modeLabel': 'sample',
         }
+        capabilities.update(_executor_cli_capability())
+        capabilities['executorHttpReachable'] = False
+        return capabilities
 
 
 # ============================================================
@@ -850,7 +945,7 @@ class HttpExecutorProvider(ExecutorProvider):
 
     def get_capabilities(self):
         scope_id = self._ensure_scope()
-        return {
+        capabilities = {
             'sourceCreate': True,
             'sourceCreateTypes': ['openapi', 'graphql', 'mcp', 'discovery'],
             'sourceRefresh': True,
@@ -861,6 +956,9 @@ class HttpExecutorProvider(ExecutorProvider):
             'modeLabel': 'http',
             'scopeId': scope_id,
         }
+        capabilities.update(_executor_cli_capability())
+        capabilities['executorHttpReachable'] = True
+        return capabilities
 
 
 # ============================================================

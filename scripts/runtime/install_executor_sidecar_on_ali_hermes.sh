@@ -21,6 +21,36 @@ need_cmd curl
 need_cmd npm
 need_cmd systemctl
 
+resolve_executor_bin() {
+  if command -v executor >/dev/null 2>&1; then
+    command -v executor
+    return 0
+  fi
+
+  if command -v npm >/dev/null 2>&1; then
+    local npm_prefix
+    npm_prefix="$(npm prefix -g 2>/dev/null || true)"
+    if [ -n "${npm_prefix}" ] && [ -x "${npm_prefix}/bin/executor" ]; then
+      printf '%s\n' "${npm_prefix}/bin/executor"
+      return 0
+    fi
+  fi
+
+  for candidate in \
+    /usr/local/bin/executor \
+    /usr/bin/executor \
+    /opt/homebrew/bin/executor \
+    "${HOME}/.nvm/versions/node"/*/bin/executor
+  do
+    if [ -x "${candidate}" ]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 if command -v ss >/dev/null 2>&1; then
   if ss -ltn | awk '{print $4}' | grep -q ":${EXECUTOR_PORT}\$"; then
     if ! systemctl is-active --quiet "${EXECUTOR_SERVICE_NAME}"; then
@@ -36,7 +66,10 @@ if ! command -v executor >/dev/null 2>&1; then
   npm install -g executor
 fi
 
-EXECUTOR_BIN="$(command -v executor)"
+EXECUTOR_BIN="$(resolve_executor_bin)" || {
+  echo "unable to resolve executor binary after installation" >&2
+  exit 1
+}
 
 cat >"/etc/systemd/system/${EXECUTOR_SERVICE_NAME}" <<EOF
 [Unit]

@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'webui')
 
 from app import app
 import api as webui_api
+import executor_bridge
 from executor_bridge import HttpExecutorProvider, SampleExecutorProvider
 
 
@@ -18,6 +19,58 @@ def client():
 
 
 class TestExecutorHttpProvider:
+    def test_resolve_executor_binary_prefers_env_override(self, tmp_path, monkeypatch):
+        executor_bin = tmp_path / 'executor'
+        executor_bin.write_text('#!/bin/sh\nexit 0\n', encoding='utf-8')
+        executor_bin.chmod(0o755)
+
+        monkeypatch.setenv('EXECUTOR_BIN', str(executor_bin))
+        monkeypatch.delenv('CRAZY_EXECUTOR_BIN', raising=False)
+        monkeypatch.setattr(executor_bridge.shutil, 'which', lambda name: None)
+
+        assert executor_bridge.resolve_executor_binary() == str(executor_bin)
+
+    def test_resolve_executor_binary_uses_npm_prefix(self, tmp_path, monkeypatch):
+        prefix = tmp_path / 'npm-prefix'
+        executor_bin = prefix / 'bin' / 'executor'
+        executor_bin.parent.mkdir(parents=True)
+        executor_bin.write_text('#!/bin/sh\nexit 0\n', encoding='utf-8')
+        executor_bin.chmod(0o755)
+
+        monkeypatch.delenv('EXECUTOR_BIN', raising=False)
+        monkeypatch.delenv('CRAZY_EXECUTOR_BIN', raising=False)
+        monkeypatch.setattr(executor_bridge.shutil, 'which', lambda name: '/usr/bin/npm' if name == 'npm' else None)
+        monkeypatch.setattr(executor_bridge, '_is_executable', lambda candidate: candidate == str(executor_bin))
+
+        def fake_run(cmd, capture_output=True, text=True, check=False):
+            assert cmd == ['/usr/bin/npm', 'prefix', '-g']
+            return executor_bridge.subprocess.CompletedProcess(cmd, 0, stdout=f'{prefix}\n', stderr='')
+
+        monkeypatch.setattr(executor_bridge.subprocess, 'run', fake_run)
+
+        assert executor_bridge.resolve_executor_binary() == str(executor_bin)
+
+    def test_sample_provider_capabilities_expose_executor_cli_diagnostic(self, tmp_path, monkeypatch):
+        executor_bin = tmp_path / 'executor'
+        executor_bin.write_text('#!/bin/sh\nexit 0\n', encoding='utf-8')
+        executor_bin.chmod(0o755)
+
+        monkeypatch.setenv('EXECUTOR_BIN', str(executor_bin))
+        monkeypatch.setattr(executor_bridge, '_probe_executor', lambda url, timeout=2: False)
+        executor_bridge.reset_provider()
+
+        try:
+            provider = executor_bridge.get_executor_provider()
+            capabilities = provider.get_capabilities()
+            mode = executor_bridge.get_provider_mode()
+        finally:
+            executor_bridge.reset_provider()
+
+        assert mode == 'sample'
+        assert capabilities['executorHttpReachable'] is False
+        assert capabilities['executorCliAvailable'] is True
+        assert capabilities['executorBinary'] == str(executor_bin)
+
     def test_get_credentials_returns_binding_health_only(self, monkeypatch):
         provider = HttpExecutorProvider(base_url='http://executor.local', scope_id='scope-1')
 
