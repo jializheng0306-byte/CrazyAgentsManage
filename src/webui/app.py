@@ -8,6 +8,30 @@ static_folder = os.path.join(os.path.dirname(__file__), 'static')
 app = Flask(__name__, static_folder=static_folder, static_url_path='/static')
 app.register_blueprint(api)
 
+# BKN Studio fusion — v2 API blueprints (ADR-003)
+from blueprints import ALL_BLUEPRINTS as _STUDIO_BLUEPRINTS
+for _bp in _STUDIO_BLUEPRINTS:
+    app.register_blueprint(_bp)
+
+# BKN Studio React micro-app (ADR-002): serve frontend/dist + iframe routes
+_STUDIO_DIST = os.path.join(os.path.dirname(__file__), '..', '..', 'frontend', 'dist')
+
+@app.route('/studio/')
+def studio_index():
+    return render_template('studio-index.html')
+
+@app.route('/studio/graph')
+def studio_graph():
+    return render_template('studio-graph.html')
+
+@app.route('/studio/agent')
+def studio_agent():
+    return render_template('studio-agent.html')
+
+@app.route('/studio/dist/<path:filename>')
+def studio_dist(filename):
+    return send_from_directory(_STUDIO_DIST, filename)
+
 
 @app.route('/manage/static/<path:filename>')
 def serve_manage_static(filename):
