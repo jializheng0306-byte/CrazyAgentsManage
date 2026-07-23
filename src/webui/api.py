@@ -2951,3 +2951,61 @@ def agent_dashboard_events():
         })
 
     return jsonify(result)
+
+# ═══════════════════════════════════════════
+# CAM-P1 (OpenBKN absorption): Operations façade — 只读投影
+# ═══════════════════════════════════════════
+
+@api.route('/operations/integrations')
+def operations_integrations():
+    """CAM-P1: Operations façade — MCP instance + Skill registry 只读投影。
+
+    对齐 bkn-sdk skill 查询面，不内聚编排。只读，无写操作。
+    @see CR-20260723-002
+    """
+    # Skill registry projection (reuse existing skills scan, read-only)
+    if _is_remote_mode():
+        skills = _scan_remote_skills(_get_remote_config())
+    else:
+        home = _get_hermes_home()
+        skills_dir = home / 'skills'
+        if skills_dir.exists():
+            skills = _scan_local_skills(skills_dir)
+        else:
+            skills = []
+
+    # MCP instance projection (from hermes home config, read-only)
+    mcp_instances = []
+    if not _is_remote_mode():
+        home = _get_hermes_home()
+        mcp_config_path = home / 'mcp_servers.json'
+        if mcp_config_path.exists():
+            try:
+                with open(mcp_config_path, 'r', encoding='utf-8') as f:
+                    mcp_data = json.load(f)
+                if isinstance(mcp_data, dict):
+                    for name, cfg in mcp_data.items():
+                        mcp_instances.append({
+                            'id': name,
+                            'name': name,
+                            'command': cfg.get('command') if isinstance(cfg, dict) else None,
+                            'read_only': True,
+                        })
+            except (json.JSONDecodeError, OSError):
+                pass
+
+    return jsonify({
+        'mcp_instances': mcp_instances,
+        'skill_registry': {
+            'total': len(skills),
+            'skills': [
+                {
+                    'id': s.get('id') or s.get('name', ''),
+                    'name': s.get('name', ''),
+                    'category': s.get('category', 'other'),
+                }
+                for s in skills
+            ],
+        },
+        'read_only': True,
+    })
