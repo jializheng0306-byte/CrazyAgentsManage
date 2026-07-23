@@ -167,3 +167,66 @@ function renderSkillDetail(skill) {
   `;
 }
 
+
+
+// ── P2: BKN Studio fusion — enhanced skill metadata via /api/v2/skills/ ──
+// Surgical addition: augments existing skill detail with file tree + allowed_tools.
+// Does NOT modify existing loadSkillsList/selectSkill/renderSkillDetail.
+
+async function loadEnhancedSkillMeta(skillName) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const resp = await fetch(`./api/v2/skills/${encodeURIComponent(skillName)}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function renderEnhancedMeta(skillName) {
+  const meta = await loadEnhancedSkillMeta(skillName);
+  let container = document.getElementById('enhanced-meta-panel');
+  if (!container) {
+    // Inject panel into skill-detail area
+    const detail = document.querySelector('.skill-detail') || document.querySelector('.skill-content');
+    if (!detail) return;
+    const panel = document.createElement('div');
+    panel.id = 'enhanced-meta-panel';
+    panel.style.cssText = 'margin-top: 20px; padding: 12px; border-top: 1px solid #1f2937;';
+    detail.appendChild(panel);
+    container = panel;
+  }
+
+  if (!meta || meta.error) {
+    container.innerHTML = '<div style="font-size:11px;color:#64748b;padding:8px 0;">工程化元数据（v2 API）: 暂无</div>';
+    return;
+  }
+
+  const tools = (meta.allowed_tools || []).map(t => `<span style="font-size:10px;padding:2px 6px;background:#667eea22;color:#667eea;border-radius:3px;margin:2px;">${escapeHtml(t)}</span>`).join('');
+  const files = (meta.files || []).map(f => `<div style="font-size:11px;color:#94a3b8;padding:2px 0 2px 12px;position:relative;"><span style="position:absolute;left:2px;color:#475569;">📄</span>${escapeHtml(f.path)} <span style="color:#475569;">${formatSize(f.size||0)}</span></div>`).join('');
+
+  container.innerHTML = `
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;padding-top:8px;border-top:1px dashed #1f2937;">
+      <strong style="color:#667eea;">工程化视图 (v2 API)</strong>
+      ${meta.read_only ? '<span style="font-size:10px;color:#64748b;margin-left:8px;">只读投影</span>' : ''}
+    </div>
+    ${tools ? `<div style="margin-bottom:8px;"><div style="font-size:11px;color:#64748b;margin-bottom:4px;">Allowed Tools:</div>${tools}</div>` : ''}
+    ${files ? `<div><div style="font-size:11px;color:#64748b;margin-bottom:4px;">文件树 (${meta.files.length}):</div>${files}</div>` : '<div style="font-size:11px;color:#64748b;">无文件</div>'}
+  `;
+}
+
+// Hook into existing selectSkill flow: after renderSkillDetail, call renderEnhancedMeta
+const _originalRenderSkillDetail = renderSkillDetail;
+renderSkillDetail = function(skill) {
+  _originalRenderSkillDetail(skill);
+  // Remove stale panel
+  const panel = document.getElementById('enhanced-meta-panel');
+  if (panel) panel.remove();
+  // Load enhanced metadata (uses skill.name as v2 skill_id)
+  if (skill && skill.name) {
+    renderEnhancedMeta(skill.name);
+  }
+};
