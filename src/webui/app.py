@@ -2,11 +2,13 @@
 
 from flask import Flask, render_template, send_from_directory, request
 from api import api
+from api_v2 import api_v2
 import os
 
 static_folder = os.path.join(os.path.dirname(__file__), 'static')
 app = Flask(__name__, static_folder=static_folder, static_url_path='/static')
 app.register_blueprint(api)
+app.register_blueprint(api_v2)
 
 # BKN Studio fusion — v2 API blueprints (ADR-003)
 from blueprints import ALL_BLUEPRINTS as _STUDIO_BLUEPRINTS
