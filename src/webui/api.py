@@ -6510,3 +6510,169 @@ def ops_integrations_unbind_credential(credential_id):
     if not ok:
         return jsonify({'error': 'Credential not found'}), 404
     return jsonify({'success': True})
+
+
+# ═══════════════════════════════════════════════════════════════
+# FlowMind Memory Candidates 治理代理
+# 前缀 flowmind/ 避免与 /collaboration/memory-candidates（promise-review loop）冲突
+# ═══════════════════════════════════════════════════════════════
+
+_FM_MC_PREFIX = '/api/bridge/memory-candidates'
+
+
+def _fm_mc_fetch(path, query=None):
+    resp = _safe_flowmind_request(path, query=query, default=None)
+    if isinstance(resp, dict) and resp.get('success') and 'data' in resp:
+        return resp['data']
+    return None
+
+
+@api.route('/flowmind/memory-candidates')
+def flowmind_mc_list():
+    query = {}
+    if request.args.get('status'):
+        query['status'] = request.args.get('status')
+    data = _fm_mc_fetch(_FM_MC_PREFIX, query=query or None)
+    if data is None:
+        return jsonify({'error': 'flowmind upstream unavailable'}), 502
+    return jsonify({'candidates': data})
+
+
+@api.route('/flowmind/memory-candidates/<mc_id>')
+def flowmind_mc_detail(mc_id):
+    data = _fm_mc_fetch(f'{_FM_MC_PREFIX}/{urlparse.quote(mc_id)}')
+    if data is None:
+        return jsonify({'error': 'candidate not found or upstream unavailable'}), 502
+    return jsonify(data)
+
+
+@api.route('/flowmind/memory-candidates/<mc_id>/alignment')
+def flowmind_mc_alignment(mc_id):
+    data = _fm_mc_fetch(f'{_FM_MC_PREFIX}/{urlparse.quote(mc_id)}/alignment')
+    if data is None:
+        return jsonify({'error': 'alignment unavailable'}), 502
+    return jsonify(data)
+
+
+@api.route('/flowmind/memory-candidates/<mc_id>/review-log')
+def flowmind_mc_review_log(mc_id):
+    data = _fm_mc_fetch(f'{_FM_MC_PREFIX}/{urlparse.quote(mc_id)}/review-log')
+    if data is None:
+        return jsonify({'error': 'review-log unavailable'}), 502
+    return jsonify({'entries': data})
+
+
+@api.route('/flowmind/memory-candidates/<mc_id>/session-excerpt')
+def flowmind_mc_session_excerpt(mc_id):
+    data = _fm_mc_fetch(f'{_FM_MC_PREFIX}/{urlparse.quote(mc_id)}/session-excerpt')
+    if data is None:
+        return jsonify({'error': 'session excerpt unavailable'}), 502
+    return jsonify(data)
+
+
+@api.route('/flowmind/memory-candidates/<mc_id>/review', methods=['POST'])
+def flowmind_mc_review(mc_id):
+    payload = request.get_json(silent=True) or {}
+    resp = _safe_flowmind_request(
+        f'{_FM_MC_PREFIX}/{urlparse.quote(mc_id)}/review',
+        method='POST', data=payload, default=None,
+    )
+    if not isinstance(resp, dict) or not resp.get('success'):
+        message = resp.get('error') if isinstance(resp, dict) else 'flowmind upstream unavailable'
+        return jsonify({'error': message or 'review failed'}), 502
+    return jsonify(resp.get('data') or {'ok': True}), 201
+
+
+@api.route('/flowmind/memory-candidates/<mc_id>/graph')
+def flowmind_mc_graph(mc_id):
+    detail = _fm_mc_fetch(f'{_FM_MC_PREFIX}/{urlparse.quote(mc_id)}')
+    if detail is None:
+        return jsonify({'error': 'candidate not found or upstream unavailable'}), 502
+    alignment = _fm_mc_fetch(f'{_FM_MC_PREFIX}/{urlparse.quote(mc_id)}/alignment') or {}
+    review_log = _fm_mc_fetch(f'{_FM_MC_PREFIX}/{urlparse.quote(mc_id)}/review-log') or []
+
+    nodes = {}
+    links = []
+
+    def add_node(node_id, node_type, label, meta=None):
+        if node_id not in nodes:
+            nodes[node_id] = {'id': node_id, 'type': node_type, 'label': label, 'meta': meta or {}}
+
+    add_node(mc_id, 'candidate', mc_id, {
+        'status': detail.get('status'),
+        'confidence': detail.get('confidence'),
+        'candidate_type': detail.get('candidate_type'),
+        'evidence_class': detail.get('evidence_class'),
+        'created_at': detail.get('created_at'),
+        'agent': detail.get('agent'),
+        'tags': detail.get('tags') or [],
+    })
+
+    matched = set(alignment.get('matched') or [])
+    for dsl_id in (detail.get('related_dsl_ids') or []):
+        add_node(dsl_id, 'dsl_object', dsl_id, {'matched': dsl_id in matched})
+        links.append({'source': mc_id, 'target': dsl_id,
+                      'kind': 'ALIGNED_WITH' if dsl_id in matched else 'REFERENCES'})
+    for dsl_id in matched:
+        if dsl_id not in nodes:
+            add_node(dsl_id, 'dsl_object', dsl_id, {'matched': True})
+            links.append({'source': mc_id, 'target': dsl_id, 'kind': 'ALIGNED_WITH'})
+
+    session = detail.get('session') or {}
+    if session.get('session_id'):
+        sid = str(session['session_id'])
+        session_node_id = f'session:{sid}'
+        add_node(session_node_id, 'session', sid, {
+            'transcript': session.get('transcript'),
+            'line_range': session.get('line_range'),
+        })
+        links.append({'source': mc_id, 'target': session_node_id, 'kind': 'ANCHORED_IN'})
+
+    if isinstance(review_log, list):
+        for index, entry in enumerate(review_log):
+            if not isinstance(entry, dict):
+                continue
+            node_id = f'decision:{mc_id}:{index}'
+            add_node(node_id, 'decision', entry.get('decision') or 'review', {
+                'reviewer': entry.get('reviewer'),
+                'timestamp': entry.get('timestamp'),
+                'reason': entry.get('reason'),
+                'scores': entry.get('scores'),
+            })
+            links.append({'source': mc_id, 'target': node_id, 'kind': 'REVIEWED_AS'})
+
+    fm = detail.get('frontmatter') or {}
+    commitment_id = fm.get('related_commitment_id') or fm.get('relatedCommitmentId')
+    if commitment_id:
+        add_node(str(commitment_id), 'commitment', str(commitment_id), {})
+        links.append({'source': mc_id, 'target': str(commitment_id), 'kind': 'REFERENCES'})
+
+    return jsonify({'nodes': list(nodes.values()), 'links': links, 'center': mc_id})
+
+
+@api.route('/flowmind/memory-candidates/<mc_id>/chat', methods=['POST'])
+def flowmind_mc_chat(mc_id):
+    from flask import Response
+
+    payload = request.get_json(silent=True) or {}
+    url = f"{_get_flowmind_base_url()}{_FM_MC_PREFIX}/{urlparse.quote(mc_id)}/chat"
+    body = json.dumps(payload).encode('utf-8')
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'Authorization': f"Bearer {_get_flowmind_api_key()}",
+    }
+    upstream_req = urlrequest.Request(url, method='POST', data=body, headers=headers)
+
+    def generate():
+        try:
+            with urlrequest.urlopen(upstream_req, timeout=120) as upstream:
+                for raw in upstream:
+                    yield raw.decode('utf-8', errors='replace')
+        except (urlerror.URLError, urlerror.HTTPError, TimeoutError, OSError) as exc:
+            yield 'data: ' + json.dumps(
+                {'error': f'flowmind chat upstream failed: {exc}'}, ensure_ascii=False
+            ) + '\n\n'
+
+    return Response(generate(), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})

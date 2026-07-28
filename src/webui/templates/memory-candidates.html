@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>记忆候选治理 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/governance.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/memory-candidates.css">
+</head>
+<body>
+  {% set active_nav = 'collaboration' %}
+  {% include 'ia-nav.html' %}
+
+  <main id="mc-app" class="container mc-container">
+    <header class="gv-page-head mc-page-head">
+      <div>
+        <p class="gv-kicker">FlowMind Memory Governance</p>
+        <h1 class="gv-page-title">记忆候选治理 · Memory Candidate Console</h1>
+        <p class="gv-page-subtitle">AI 助手对话 + 上下文图谱 + 决策痕迹三栏工作面。数据源自 FlowMind Layer C（harness/memory-candidates），evidence_class: INFERRED。</p>
+      </div>
+      <div class="mc-head-controls">
+        <select id="mc-status-filter" class="mc-select">
+          <option value="">全部状态</option>
+          <option value="candidate">candidate 待评审</option>
+          <option value="accepted">accepted 已接受</option>
+          <option value="rejected">rejected 已拒绝</option>
+          <option value="deferred">deferred 已推迟</option>
+        </select>
+        <select id="mc-candidate-select" class="mc-select mc-select-wide">
+          <option value="">加载候选中...</option>
+        </select>
+      </div>
+    </header>
+
+    <div class="mc-workspace">
+      <!-- 左栏: AI Assistant -->
+      <section class="mc-col mc-col-left">
+        <div class="mc-panel mc-panel-fill">
+          <div class="mc-panel-head">
+            <h2 class="mc-panel-title">AI Assistant</h2>
+            <span class="mc-badge mc-badge-muted">R14 守卫</span>
+          </div>
+
+          <details class="mc-expander" id="mc-agent-context" open>
+            <summary>Agent Context <span class="mc-expander-hint" id="mc-context-hint">未选择候选</span></summary>
+            <div class="mc-expander-body" id="mc-context-body">
+              <p class="mc-empty">选择候选后加载摘要、详情与 session anchor。</p>
+            </div>
+          </details>
+
+          <details class="mc-expander" id="mc-tool-calls">
+            <summary>Tool Calls <span class="mc-expander-hint" id="mc-toolcalls-hint">(0)</span></summary>
+            <div class="mc-expander-body" id="mc-toolcalls-body">
+              <p class="mc-empty">E5.3 四层对齐步骤将显示在这里。</p>
+            </div>
+          </details>
+
+          <div class="mc-chat-wrap" id="mc-chat-wrap">
+            <deep-chat id="mc-chat" class="mc-chat"></deep-chat>
+          </div>
+        </div>
+      </section>
+
+      <!-- 中栏: Context Graph -->
+      <section class="mc-col mc-col-mid">
+        <div class="mc-panel mc-panel-fill">
+          <div class="mc-panel-head">
+            <h2 class="mc-panel-title">Context Graph</h2>
+            <div class="mc-legend" id="mc-legend">
+              <span class="mc-legend-item"><i style="background:#3B82F6"></i>candidate</span>
+              <span class="mc-legend-item"><i style="background:#8B5CF6"></i>dsl_object</span>
+              <span class="mc-legend-item"><i style="background:#F59E0B"></i>session</span>
+              <span class="mc-legend-item"><i style="background:#22C55E"></i>decision</span>
+              <span class="mc-legend-item"><i style="background:#EF4444"></i>commitment</span>
+            </div>
+          </div>
+          <div class="mc-graph-container" id="mc-graph">
+            <div class="mc-empty mc-empty-center">选择候选后加载图谱。<br><small>拖拽平移 · 滚轮缩放 · 单击查看 · 双击展开</small></div>
+          </div>
+          <div class="mc-node-inspector" id="mc-node-inspector" hidden>
+            <div class="mc-inspector-head">
+              <span id="mc-inspector-title">节点</span>
+              <button type="button" id="mc-inspector-close" class="mc-btn-icon">×</button>
+            </div>
+            <pre id="mc-inspector-body"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右栏: Decision Trace -->
+      <section class="mc-col mc-col-right">
+        <div class="mc-panel mc-panel-fill">
+          <div class="mc-panel-head">
+            <h2 class="mc-panel-title">Decision Trace</h2>
+            <span class="mc-badge mc-badge-muted" id="mc-trace-count">0 条</span>
+          </div>
+          <div class="mc-trace-list" id="mc-trace-list">
+            <p class="mc-empty">选择候选后加载决策痕迹。</p>
+          </div>
+
+          <div class="mc-review-form">
+            <h3 class="mc-review-title">提交裁定</h3>
+            <div class="mc-review-row">
+              <select id="mc-review-decision" class="mc-select">
+                <option value="accepted">accepted 接受</option>
+                <option value="rejected">rejected 拒绝</option>
+                <option value="deferred">deferred 推迟</option>
+              </select>
+              <input type="text" id="mc-review-reviewer" class="mc-input" placeholder="reviewer（必填）">
+            </div>
+            <textarea id="mc-review-reason" class="mc-textarea" placeholder="裁定理由（必填）"></textarea>
+            <button type="button" id="mc-review-submit" class="mc-btn mc-btn-primary">提交 Review</button>
+            <p class="mc-review-msg" id="mc-review-msg"></p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>window.BASE = "{{ BASE }}";</script>
+  <script src="{{ BASE }}/static/vendor/force-graph.min.js"></script>
+  <script type="module">
+    import "{{ BASE }}/static/vendor/deep-chat.bundle.js";
+  </script>
+  <script src="{{ BASE }}/static/js/memory-candidates.js" defer></script>
+</body>
+</html>

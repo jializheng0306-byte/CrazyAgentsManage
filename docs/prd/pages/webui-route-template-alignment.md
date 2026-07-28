@@ -36,6 +36,7 @@
 - `/collaboration` -> `collaboration.html`
 - `/collaboration/tasks` -> `tasks.html`
 - `/collaboration/loops` -> `loop-surface.html`
+- `/collaboration/memory-candidates` -> `memory-candidates.html`
 - `/architecture/philosophy` -> `architecture-philosophy.html`
 - `/architecture/product` -> `architecture-product.html`
 - `/architecture/tech` -> `architecture-tech.html`
@@ -53,6 +54,7 @@
 - `governance.html`
 - `collaboration.html`
 - `loop-surface.html`
+- `memory-candidates.html`
 - `operations.html`
 - `overview.html`
 - `runtime.html`
@@ -145,6 +147,7 @@
 - 已有 `collaboration.html` 作为协作一级分区模板
 - `tasks.html` 继续作为协作主工作台子表面
 - 已有 `loop-surface.html` 作为 Sprint 2 第一条 vertical slice 的协作子表面
+- 已有 `memory-candidates.html` 作为记忆候选治理子表面（`/collaboration/memory-candidates`，2026-07-28 跨仓接入，数据来自 FlowMind `/api/bridge/memory-candidates`，页面级 PRD 见 `memory-candidates-page-prd.md`）
 
 建议：
 
@@ -183,6 +186,7 @@
 - `/operations/cron`
 - `/operations/team-memory`
 - `/collaboration/loops`
+- `/collaboration/memory-candidates`
 
 架构页建议路由：
 

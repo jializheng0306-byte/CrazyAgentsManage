@@ -180,6 +180,11 @@ def collaboration_tasks():
     return render_template('tasks.html')
 
 
+@app.route('/collaboration/memory-candidates')
+def collaboration_memory_candidates():
+    return render_template('memory-candidates.html')
+
+
 @app.route('/architecture/philosophy')
 def architecture_philosophy():
     return render_template('architecture-philosophy.html')
