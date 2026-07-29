@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flowmind.dev/contracts/crazy.promise.schema.json",
+  "title": "Promise",
+  "description": "Generated from FMD DSL crazy.promise. evidence_class: INFERRED (Invariant 2: passed through). Direction: FMD generates, Crazy consumes (irreversible).",
+  "type": "object",
+  "properties": {
+    "promise_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "in_progress",
+        "blocked",
+        "done",
+        "completed",
+        "expired",
+        "rejected"
+      ]
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ]
+    },
+    "flowmind_candidate_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "promise_id",
+    "status"
+  ],
+  "additionalProperties": false
+}

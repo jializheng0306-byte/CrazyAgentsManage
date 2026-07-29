@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flowmind.dev/contracts/crazy.trace_event.schema.json",
+  "title": "Crazy Trace Event",
+  "description": "Generated from FMD DSL crazy.trace_event. evidence_class: EXTRACTED (Invariant 2: passed through). Direction: FMD generates, Crazy consumes (irreversible).",
+  "type": "object",
+  "properties": {
+    "trace_id": {
+      "type": "string"
+    },
+    "promise_id": {
+      "type": "string"
+    },
+    "flowmind_module": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "trace_id",
+    "promise_id",
+    "flowmind_module",
+    "timestamp"
+  ],
+  "additionalProperties": false
+}

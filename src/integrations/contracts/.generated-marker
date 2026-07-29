@@ -1,0 +1,3 @@
+GENERATED — DO NOT EDIT MANUALLY
+Regenerate via: pnpm --filter @flowmind/ontology build && pnpm --filter @flowmind/ontology generate:contracts
+Source: packages/ontology/semantic-dsl/objects/crazy.*.md
