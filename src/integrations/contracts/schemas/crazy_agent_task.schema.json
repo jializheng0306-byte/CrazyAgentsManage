@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flowmind.dev/contracts/crazy.agent_task.schema.json",
+  "title": "Agent Task",
+  "description": "Generated from FMD DSL crazy.agent_task. evidence_class: INFERRED (Invariant 2: passed through). Direction: FMD generates, Crazy consumes (irreversible).",
+  "type": "object",
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "assignedTo": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "running",
+        "completed",
+        "suspended",
+        "archived",
+        "deleted"
+      ]
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "contextTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dueDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "targetStart": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actualStart": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "targetCompletion": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actualCompletion": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "relatedCandidateId": {
+      "type": "string"
+    },
+    "relatedPromiseId": {
+      "type": "string"
+    },
+    "accessPolicy": {
+      "type": "object",
+      "properties": {
+        "allowDistribution": {
+          "type": "boolean"
+        },
+        "allowSubscribers": {
+          "type": "boolean"
+        },
+        "allowModifications": {
+          "type": "boolean"
+        },
+        "allowStateDecision": {
+          "type": "boolean"
+        },
+        "allowCopying": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "allowDistribution",
+        "allowSubscribers",
+        "allowModifications",
+        "allowStateDecision",
+        "allowCopying"
+      ],
+      "additionalProperties": false
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "taskId",
+    "assignedTo",
+    "status",
+    "accessPolicy",
+    "createdAt",
+    "updatedAt"
+  ],
+  "additionalProperties": false
+}
