@@ -10,7 +10,7 @@
     "api_key": "flowmind-dev-token"
   },
   "webui": {
-    "timeline_base_url": "http://47.99.217.1/manage/timeline"
+    "timeline_base_url": "http://111.229.194.203/manage/timeline"
   },
   "feishu": {
     "chat_id": "oc_bbde428675a7c267d55c3f0663ca701d"

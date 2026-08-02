@@ -85,7 +85,7 @@
     "flowmind-health-check.py": {
       "repo_root": "/root/CrazyAgentsManage",
       "source_relpath": "scripts/flowmind-health-check.py",
-      "purpose": "Repo-tracked FlowMind health probe wrapper authority for ALI-HERMES"
+      "purpose": "Repo-tracked FlowMind health probe wrapper authority for TX-NEWHOST"
     },
     "flowmind-health-notify.py": {
       "repo_root": "/root/CrazyAgentsManage",

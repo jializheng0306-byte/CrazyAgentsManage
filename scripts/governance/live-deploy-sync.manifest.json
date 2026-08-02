@@ -3,9 +3,9 @@
   "profiles": [
     {
       "id": "crazy-webui-live",
-      "description": "CrazyAgentsManage live WebUI deployment copy on ALI-HERMES",
+      "description": "CrazyAgentsManage live WebUI deployment copy on TX-NEWHOST",
       "sourceRepoRoot": ".",
-      "host": "47.99.217.1",
+      "host": "111.229.194.203",
       "user": "root",
       "passwordEnv": "CRAZY_LIVE_WEBUI_PASSWORD",
       "deployRoot": "/opt/crazyagentsmanage",
@@ -36,9 +36,9 @@
     },
     {
       "id": "crazy-runtime-live",
-      "description": "CrazyAgentsManage live runtime helper copy on ALI-HERMES",
+      "description": "CrazyAgentsManage live runtime helper copy on TX-NEWHOST",
       "sourceRepoRoot": ".",
-      "host": "47.99.217.1",
+      "host": "111.229.194.203",
       "user": "root",
       "passwordEnv": "CRAZY_LIVE_WEBUI_PASSWORD",
       "deployRoot": "/root/CrazyAgentsManage",

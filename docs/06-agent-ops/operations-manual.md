@@ -3,6 +3,12 @@
 ## 概述
 本手册提供CrazyAgentsManage项目的运维指南，包括系统监控、故障处理、性能优化等内容。
 
+## 当前部署拓扑
+
+- `TX-NEWHOST`：当前正式主控制面，承载 HermesAgent runtime、Hermes-Webui、Graphify 与 cron
+- `TX-PRIMARY`：已退役，不再作为当前 OpenClaw / FlowMind 生产面
+- `ALI-HERMES`：辅助/验证位，仅保留非生产用途和回归检查
+
 ## 系统架构
 
 ### 核心组件

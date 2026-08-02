@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sync repo-tracked Hermes mirror scripts into ~/.hermes/scripts on ALI-HERMES."""
+"""Sync repo-tracked Hermes mirror scripts into ~/.hermes/scripts on the live host."""
 
 from __future__ import annotations
 

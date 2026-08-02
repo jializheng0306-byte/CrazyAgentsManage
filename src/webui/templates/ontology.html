@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>本体语义层 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/governance.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/ontology.css">
+</head>
+<body>
+  {% set active_nav = 'governance' %}
+  {% include 'ia-nav.html' %}
+
+  <main id="gv-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+    <header class="gv-page-head">
+      <div>
+        <p class="gv-kicker">FlowMind Semantic Foundation</p>
+        <h1 class="gv-page-title">本体语义层 · Ontology &amp; OKF System</h1>
+        <p class="gv-page-subtitle">五领域 DSL 体系、OKF 投影、语义优先读取协议与 Agent 嵌入机制全景可视化。</p>
+      </div>
+      <button class="gv-ont-refresh-btn" id="gv-ont-refresh" title="刷新数据">⟳ 刷新</button>
+    </header>
+
+    <section class="gv-metrics-strip">
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-ont-dsl-count">--</div>
+        <div class="gv-metric-label">DSL 条目</div>
+        <div class="gv-metric-desc">canonical semantic-dsl</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-ont-okf-count">--</div>
+        <div class="gv-metric-label">OKF 投影</div>
+        <div class="gv-metric-desc">只读投影条目</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-ont-domain-count">--</div>
+        <div class="gv-metric-label">语义领域</div>
+        <div class="gv-metric-desc">D1-D5 + 横向机制</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-ont-agent-count">--</div>
+        <div class="gv-metric-label">Agent 消费者</div>
+        <div class="gv-metric-desc">开发/运营智能体</div>
+      </div>
+    </section>
+
+    <section class="gv-workbench">
+      <aside class="gv-column gv-column-left">
+        <div class="gv-panel gv-panel-main">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">领域总览</p>
+              <h2 class="gv-panel-title">五领域雷达图</h2>
+            </div>
+            <span class="gv-panel-badge">DSL by domain</span>
+          </div>
+          <div class="gv-ont-radar-container" id="gv-ont-radar">
+            <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+          </div>
+        </div>
+
+        <div class="gv-panel">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">条目类型</p>
+              <h2 class="gv-panel-title">DSL 类型分布</h2>
+            </div>
+          </div>
+          <div class="gv-ont-type-chart" id="gv-ont-type-chart">
+            <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="gv-column gv-column-center">
+        <div class="gv-panel gv-panel-main">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">数据流</p>
+              <h2 class="gv-panel-title">DSL → Agent 数据流</h2>
+            </div>
+            <span class="gv-panel-badge">semantic pipeline</span>
+          </div>
+          <div class="gv-ont-flow-container" id="gv-ont-flow">
+            <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+          </div>
+        </div>
+
+        <div class="gv-panel">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">读取协议</p>
+              <h2 class="gv-panel-title">语义优先 4 层读取协议</h2>
+            </div>
+            <span class="gv-panel-badge">E5.3</span>
+          </div>
+          <div class="gv-ont-protocol" id="gv-ont-protocol">
+            <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="gv-column gv-column-right">
+        <div class="gv-panel">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">消费矩阵</p>
+              <h2 class="gv-panel-title">Agent 嵌入点</h2>
+            </div>
+            <span class="gv-panel-badge">4 类消费者</span>
+          </div>
+          <div class="gv-ont-agent-matrix" id="gv-ont-agent-table">
+            <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+          </div>
+        </div>
+
+        <div class="gv-panel">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">快速跳转</p>
+              <h2 class="gv-panel-title">治理面入口</h2>
+            </div>
+          </div>
+          <div class="gv-reference-list">
+            <a class="gv-reference-card" href="{{ BASE }}/governance/harvest">
+              <span class="gv-reference-title">知识采收管线</span>
+              <span class="gv-reference-desc">Session Knowledge Harvest 工作流与触发配置</span>
+            </a>
+            <a class="gv-reference-card" href="{{ BASE }}/governance/graph">
+              <span class="gv-reference-title">治理图谱</span>
+              <span class="gv-reference-desc">关系拓扑与治理连接</span>
+            </a>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/ontology.js"></script>
+</body>
+</html>

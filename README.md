@@ -29,6 +29,7 @@
 - **UI 重构**：把 Crazy 收敛为统一 shell，并固定一级 IA：Overview / Runtime / Operations / Governance / Collaboration
 - **Executor 融合**：把 executor 作为外部 capability plane 接入 Operations，承接 integrations / sources / tools / credentials / provider health
 - **运行端规划**：保持 Hermes 作为 runtime host、FlowMind 作为治理真相层，并为后续 external orchestration delegation 留出结构位
+- **当前宿主**：`TX-NEWHOST` 已收敛为 HermesAgent runtime / WebUI / Graphify / cron 的统一主机，`TX-PRIMARY` 已退役，`ALI-HERMES` 仅保留为辅助/验证位
 
 ### 这一版的关键判断
 

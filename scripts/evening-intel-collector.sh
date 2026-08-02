@@ -94,5 +94,5 @@ for item in items:
 } >> "$REPORT_FILE" 2>&1
 
 echo "=== 晚间趋势采集完成 ===" | tee -a "$LOG_FILE"
-echo "REPORT_FILE=$REPORT_FILE"
-cat "$REPORT_FILE"
+echo "REPORT_FILE=$REPORT_FILE" | tee -a "$LOG_FILE"
+tee -a "$LOG_FILE" < "$REPORT_FILE"

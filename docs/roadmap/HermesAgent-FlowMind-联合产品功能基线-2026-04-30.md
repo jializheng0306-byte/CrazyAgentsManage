@@ -47,6 +47,12 @@
 - `FlowMindDeploy` 继续是 governance kernel / canonical truth / contract authority
 - Phase 6 在 Sprint 1 之后的默认下一跳不再是“继续扩更多聚合页”，而是 Crazy `Sprint 2 Control Plane Hardening`
 
+当前运行宿主也已同步收敛为：
+
+- `TX-NEWHOST`：当前唯一主生产/控制宿主
+- `TX-PRIMARY`：已退役，仅保留历史事实
+- `ALI-HERMES`：辅助/验证宿主，不再承担主运行面
+
 ---
 
 ## 三、Crazy 侧当前最重要的 4 个方向

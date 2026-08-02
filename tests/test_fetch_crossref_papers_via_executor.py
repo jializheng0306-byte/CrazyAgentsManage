@@ -66,3 +66,30 @@ def test_format_markdown_contains_core_fields():
     assert "### A Demo Paper" in markdown
     assert "- DOI: 10.1000/demo" in markdown
     assert "- 作者: Ada Lovelace" in markdown
+
+
+def test_fetch_crossref_items_gracefully_falls_back_when_executor_is_missing(monkeypatch):
+    args = type(
+        "Args",
+        (),
+        {
+            "source": "crossref-readonly",
+            "query": "AI agent",
+            "rows": 5,
+            "sort": "published",
+            "order": "desc",
+            "filter": "",
+            "mailto": "",
+            "max_abstract_chars": 280,
+        },
+    )()
+
+    def raise_runtime_error(*_args, **_kwargs):
+        raise RuntimeError("executor CLI not found. Set EXECUTOR_BIN or install executor so the binary is available on PATH.")
+
+    monkeypatch.setattr(MODULE, "call_executor_tool", raise_runtime_error)
+
+    items, fallback_text = MODULE.fetch_crossref_items(args)
+
+    assert items == []
+    assert "executor CLI not found" in fallback_text

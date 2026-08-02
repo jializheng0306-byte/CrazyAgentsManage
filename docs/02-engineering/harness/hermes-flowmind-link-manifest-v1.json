@@ -10,8 +10,8 @@
         "ref": "PR#11"
       },
       "primaryHost": {
-        "alias": "ALI-HERMES",
-        "ip": "47.99.217.1"
+        "alias": "TX-NEWHOST",
+        "ip": "111.229.194.203"
       }
     },
     "flowminddeploy": {
@@ -25,7 +25,7 @@
         "alias": "TX-NEWHOST",
         "ip": "111.229.194.203"
       },
-      "rollbackHost": {
+      "retiredHost": {
         "alias": "TX-PRIMARY",
         "ip": "49.232.158.82"
       }
@@ -92,7 +92,9 @@
     "candidateToTruth": "human_review_required"
   },
   "knownConditions": [
-    "CrazyAgentsManage flowmind_capture.py is not yet fully aligned with direct-path ingress contract",
+    "CrazyAgentsManage live WebUI/runtime now runs on TX-NEWHOST",
+    "TX-PRIMARY is retired and no longer an active rollback target",
+    "ALI-HERMES is validation-only",
     "FlowMindDeploy issue #27 public domain instability remains separate from direct-path compatibility"
   ]
 }

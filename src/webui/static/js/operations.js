@@ -1352,7 +1352,7 @@ function boundaryCard(title, icon, count, status) {
 function buildBoundaryDetail(boundary, allowed, completed, forbidden) {
   return '<div class="ops-detail-header">' +
       '<h3 class="ops-detail-name">Readonly Capability Boundary</h3>' +
-      '<div class="ops-detail-sub">' + (boundary.host || 'ALI-HERMES') + ' · mode=' + (boundary.providerMode || 'unknown') + '</div>' +
+      '<div class="ops-detail-sub">' + (boundary.host || 'TX-NEWHOST') + ' · mode=' + (boundary.providerMode || 'unknown') + '</div>' +
     '</div>' +
     '<div class="ops-detail-section">' +
       '<div class="ops-detail-section-title">Execution Boundary</div>' +

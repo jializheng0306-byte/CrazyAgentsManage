@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repo-tracked FlowMind health probe wrapper for ALI-HERMES."""
+"""Repo-tracked FlowMind health probe wrapper for the current live host."""
 
 from __future__ import annotations
 

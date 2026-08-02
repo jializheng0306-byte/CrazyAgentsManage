@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Probe Hermes-host read-only delegation readiness against executor on ALI-HERMES."""
+"""Probe Hermes-host read-only delegation readiness against executor on the live host."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from urllib import error as urlerror
 
 
 ROOT = Path(__file__).resolve().parents[2]
-RUN_ON_ALI = ROOT / "scripts" / "runtime" / "run_on_ali_hermes.py"
+RUN_ON_LIVE_HOST = ROOT / "scripts" / "runtime" / "run_on_ali_hermes.py"
 ENSURE_SOURCE = ROOT / "scripts" / "runtime" / "ensure_executor_validation_source.py"
 
 
@@ -23,7 +23,7 @@ def run_local(cmd: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def run_remote(command: str) -> subprocess.CompletedProcess[str]:
-    return run_local(["python3", str(RUN_ON_ALI), "--json", "--", command])
+    return run_local(["python3", str(RUN_ON_LIVE_HOST), "--json", "--", command])
 
 
 def remote_executor_prefix() -> str:
@@ -82,7 +82,7 @@ def parse_json_output(result: subprocess.CompletedProcess[str]) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base-url", default="http://47.99.217.1/manage")
+    parser.add_argument("--base-url", default="http://111.229.194.203/manage")
     parser.add_argument("--namespace", default="petstore-readonly-validation")
     parser.add_argument("--tool-group", default="pet")
     parser.add_argument("--tool-name", default="getPetById")
@@ -94,7 +94,7 @@ def main() -> int:
         "ok": False,
         "baseUrl": args.base_url,
         "namespace": args.namespace,
-        "host": "ALI-HERMES",
+        "host": "TX-NEWHOST",
         "toolPath": f"{args.namespace}.{args.tool_group}.{args.tool_name}",
         "checks": [],
     }

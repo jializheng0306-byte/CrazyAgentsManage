@@ -248,6 +248,20 @@
               <span class="fm-tree-desc">关系拓扑与治理连接</span>
             </span>
           </a>
+          <a href="{{ BASE }}/governance/ontology" class="fm-tree-item level-1{% if request.path.endswith('/governance/ontology') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">本体语义层</span>
+              <span class="fm-tree-desc">DSL/OKF 体系与 Agent 嵌入机制</span>
+            </span>
+          </a>
+          <a href="{{ BASE }}/governance/harvest" class="fm-tree-item level-1{% if request.path.endswith('/governance/harvest') %} active{% endif %}">
+            <span class="fm-tree-bullet"></span>
+            <span class="fm-tree-content">
+              <span class="fm-tree-title">知识采收管线</span>
+              <span class="fm-tree-desc">Session Knowledge Harvest 工作流与触发配置</span>
+            </span>
+          </a>
         {% elif active_nav == 'collaboration' %}
           <a href="{{ BASE }}/collaboration" class="fm-tree-item level-0{% if request.path.endswith('/collaboration') or request.path.endswith('/collaboration/') %} active{% endif %}">
             <span class="fm-tree-bullet"></span>

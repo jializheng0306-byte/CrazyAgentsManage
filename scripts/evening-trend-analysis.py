@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 import subprocess
@@ -57,21 +58,56 @@ def pull_repo() -> bool:
         return False
 
 
-def get_today_digest():
-    today = datetime.now().strftime("%Y-%m-%d")
-    day_name = datetime.now().strftime("%a")
+def get_today_digest(today: str | None = None):
+    today = today or datetime.now().strftime("%Y-%m-%d")
+    try:
+        day_name = datetime.strptime(today, "%Y-%m-%d").strftime("%a")
+    except ValueError:
+        day_name = datetime.now().strftime("%a")
     filename = f"ai-digest-{today}-{day_name}.md"
     filepath = os.path.join(REPO_DIR, "zh", "daily", filename)
 
     if os.path.exists(filepath):
-        return Path(filepath).read_text(encoding="utf-8"), filepath
+        text = Path(filepath).read_text(encoding="utf-8")
+        if text.strip():
+            return text, filepath
 
     zh_daily = Path(REPO_DIR) / "zh" / "daily"
     files = sorted(zh_daily.glob("ai-digest-*.md"), reverse=True)
     if files:
         filepath = files[0]
-        return filepath.read_text(encoding="utf-8"), str(filepath)
+        text = filepath.read_text(encoding="utf-8")
+        if text.strip():
+            return text, str(filepath)
     return None, None
+
+
+def resolve_report_source(today: str, collector_stdout: str = "") -> tuple[str | None, str | None]:
+    content, filepath = get_today_digest(today)
+    if content:
+        return content, filepath
+
+    collector_report = Path(INTEL_DIR) / f"evening-intel-{today}.md"
+    if collector_report.exists():
+        text = collector_report.read_text(encoding="utf-8")
+        if text.strip():
+            return text, str(collector_report)
+
+    stdout_text = collector_stdout.strip()
+    if stdout_text:
+        return stdout_text, f"collector-stdout-{today}"
+
+    return None, None
+
+
+def extract_digest_date(filepath: str | None, default_date: str) -> str:
+    if not filepath:
+        return default_date
+
+    match = re.match(r"ai-digest-(\d{4}-\d{2}-\d{2})(?:-[^.]+)?\.md$", Path(filepath).name)
+    if match:
+        return match.group(1)
+    return default_date
 
 
 def extract_summary(content: str, max_chars: int = 1500) -> str:
@@ -89,7 +125,46 @@ def extract_summary(content: str, max_chars: int = 1500) -> str:
             summary_lines.append(line.strip("- ").strip())
             if sum(len(item) for item in summary_lines) > max_chars:
                 break
-    return "\n".join(summary_lines)
+    if summary_lines:
+        return "\n".join(summary_lines)
+
+    fallback_lines = []
+    in_section = False
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("## "):
+            if in_section and fallback_lines:
+                break
+            in_section = True
+            continue
+        if not in_section:
+            continue
+        if line.startswith("# ") or line.startswith("===") or line.startswith("REPORT_FILE=") or line.startswith("采集时间:"):
+            continue
+        if len(line) >= 3 and line[0].isdigit() and line[1:3] == ". ":
+            continue
+        if line.startswith("### "):
+            line = line[4:].strip()
+        elif line.startswith("- "):
+            line = line[2:].strip()
+        if line:
+            fallback_lines.append(line)
+        if sum(len(item) for item in fallback_lines) > max_chars:
+            break
+
+    if fallback_lines:
+        return "\n".join(fallback_lines)
+
+    return "\n".join(
+        line.strip()
+        for line in lines
+        if line.strip()
+        and not line.strip().startswith("# ")
+        and not line.strip().startswith("===")
+        and not line.strip().startswith("REPORT_FILE=")
+    )[:max_chars]
 
 
 def extract_topics(content: str) -> list[tuple[str, str]]:
@@ -109,6 +184,40 @@ def extract_topics(content: str) -> list[tuple[str, str]]:
 
     if current_person and current_summary:
         topics.append((current_person, " ".join(current_summary)[:120]))
+    if topics:
+        return topics[:6]
+
+    topics = []
+    current_title = None
+    current_summary = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("### "):
+            if current_title and current_summary:
+                topics.append((current_title, " ".join(current_summary)[:120]))
+            current_title = stripped[4:].strip()
+            current_summary = []
+            continue
+        if not current_title:
+            continue
+        if (
+            stripped.startswith("## ")
+            or stripped.startswith("===")
+            or stripped.startswith("REPORT_FILE=")
+            or stripped.startswith("http://")
+            or stripped.startswith("https://")
+            or (len(stripped) >= 3 and stripped[0].isdigit() and stripped[1:3] == ". ")
+        ):
+            continue
+        if stripped.startswith("- "):
+            current_summary.append(stripped[2:].strip())
+        else:
+            current_summary.append(stripped)
+
+    if current_title and current_summary:
+        topics.append((current_title, " ".join(current_summary)[:120]))
     return topics[:6]
 
 
@@ -190,16 +299,19 @@ def main():
         print("  ⚠️ git pull 失败，使用本地缓存")
 
     print("3. 读取 digest...")
-    content, filepath = get_today_digest()
+    content, filepath = resolve_report_source(today, collector_result.stdout)
     if not content:
         print("  ❌ 无可用日报")
         return
-    print(f"  📄 {os.path.basename(filepath)}")
+    if filepath and filepath.endswith(".md"):
+        print(f"  📄 {os.path.basename(filepath)}")
+    else:
+        print("  📄 collector stdout fallback")
 
     print("4. 提取关键信息...")
     summary = extract_summary(content)
     topics = extract_topics(content)
-    digest_date = Path(filepath).stem.replace("ai-digest-", "").rsplit("-", 1)[0]
+    digest_date = extract_digest_date(filepath, today)
 
     report_file = os.path.join(TREND_DIR, f"trend-{today}.md")
     collector_report = os.path.join(INTEL_DIR, f"evening-intel-{today}.md")

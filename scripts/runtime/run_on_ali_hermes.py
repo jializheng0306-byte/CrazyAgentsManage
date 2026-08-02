@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run a command on ALI-HERMES using the repo's tracked remote config."""
+"""Run a command on the tracked live host using the repo's remote config."""
 
 from __future__ import annotations
 
@@ -21,9 +21,18 @@ def load_remote_config() -> dict:
         raise FileNotFoundError(f"remote config not found: {REMOTE_CONFIG_PATH}")
     data = json.loads(REMOTE_CONFIG_PATH.read_text(encoding="utf-8"))
     return {
-        "host": os.environ.get("ALI_HERMES_HOST", data.get("host", "")),
-        "user": os.environ.get("ALI_HERMES_USER", data.get("user", "root")),
-        "password": os.environ.get("ALI_HERMES_PASSWORD")
+        "host": (
+            os.environ.get("TX_NEWHOST_HOST")
+            or os.environ.get("ALI_HERMES_HOST")
+            or data.get("host", "")
+        ),
+        "user": (
+            os.environ.get("TX_NEWHOST_USER")
+            or os.environ.get("ALI_HERMES_USER")
+            or data.get("user", "root")
+        ),
+        "password": os.environ.get("TX_NEWHOST_PASSWORD")
+        or os.environ.get("ALI_HERMES_PASSWORD")
         or os.environ.get("CRAZY_LIVE_WEBUI_PASSWORD")
         or data.get("password", ""),
     }

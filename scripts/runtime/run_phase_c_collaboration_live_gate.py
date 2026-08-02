@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the focused Phase C live gate through a managed ALI-HERMES SSH tunnel."""
+"""Run the focused Phase C live gate through a managed SSH tunnel to the live host."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from run_on_ali_hermes import build_askpass, load_remote_config
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT_DIR = Path("/tmp/phase-c-live-gate")
-DEFAULT_PUBLIC_URL = "http://47.99.217.1/manage"
+DEFAULT_PUBLIC_URL = "http://111.229.194.203/manage"
 
 
 def port_in_use(host: str, port: int) -> bool:

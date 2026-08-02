@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>知识采收管线 - CrazyAgentsManage</title>
+  <link rel="stylesheet" href="{{ BASE }}/static/css/design-system.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/nav.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/overview.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/governance.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/components.css">
+  <link rel="stylesheet" href="{{ BASE }}/static/css/harvest.css">
+</head>
+<body>
+  {% set active_nav = 'governance' %}
+  {% include 'ia-nav.html' %}
+
+  <main id="gv-app" class="container" style="padding-top: var(--spacing-lg); padding-bottom: var(--spacing-xl);">
+    <header class="gv-page-head">
+      <div>
+        <p class="gv-kicker">FlowMind Memory Pipeline</p>
+        <h1 class="gv-page-title">知识采收管线 · Session Knowledge Harvest</h1>
+        <p class="gv-page-subtitle">会话知识吸收管道的完整工作流可视化、候选统计分析、触发条件开关配置与人类裁定审计面。</p>
+      </div>
+    </header>
+
+    <section class="gv-metrics-strip">
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-hv-total">--</div>
+        <div class="gv-metric-label">候选总数</div>
+        <div class="gv-metric-desc">mc-*.md 文件数</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-hv-accepted">--</div>
+        <div class="gv-metric-label">已接受</div>
+        <div class="gv-metric-desc">status: accepted</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-hv-pending">--</div>
+        <div class="gv-metric-label">待评审</div>
+        <div class="gv-metric-desc">status: candidate</div>
+      </div>
+      <div class="gv-metric-card">
+        <div class="gv-metric-value" id="gv-hv-reviews">--</div>
+        <div class="gv-metric-label">评审记录</div>
+        <div class="gv-metric-desc">review-log.jsonl 行数</div>
+      </div>
+    </section>
+
+    <div class="gv-hv-split">
+      <section class="gv-hv-left">
+        <div class="gv-panel">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">采收流程</p>
+              <h2 class="gv-panel-title">管线工作流</h2>
+            </div>
+            <span class="gv-panel-badge">Capture → Extract → Resolve → Review → WriteGate</span>
+          </div>
+          <div class="gv-hv-pipeline-container" id="gv-hv-pipeline">
+            <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+          </div>
+        </div>
+
+        <div class="gv-panel">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">统计分析</p>
+              <h2 class="gv-panel-title">候选统计</h2>
+            </div>
+          </div>
+          <div class="gv-hv-charts" id="gv-hv-charts">
+            <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="gv-hv-right">
+        <div class="gv-panel">
+          <div class="gv-panel-head">
+            <div>
+              <p class="gv-panel-eyebrow">触发配置</p>
+              <h2 class="gv-panel-title">触发条件开关</h2>
+            </div>
+            <span class="gv-panel-badge">4 个条件</span>
+          </div>
+          <p class="gv-panel-copy">控制 session-knowledge-harvest skill 在何种场景下触发知识采收。</p>
+          <div class="gv-hv-triggers" id="gv-hv-triggers">
+            <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="gv-panel" style="margin-top: 24px;">
+      <div class="gv-panel-head">
+        <div>
+          <p class="gv-panel-eyebrow">候选清单</p>
+          <h2 class="gv-panel-title">Memory Candidates</h2>
+        </div>
+        <span class="gv-panel-badge" id="gv-hv-table-count">--</span>
+      </div>
+      <div class="gv-hv-table-wrap" id="gv-hv-table">
+        <div class="gv-empty"><div class="gv-empty-icon"></div><p>加载中...</p></div>
+      </div>
+    </section>
+
+    <div class="gv-hv-detail-panel" id="gv-hv-detail" style="display:none;">
+      <div class="gv-hv-detail-inner" id="gv-hv-detail-inner"></div>
+    </div>
+  </main>
+
+  <script src="{{ BASE }}/static/js/common.js"></script>
+  <script src="{{ BASE }}/static/js/harvest.js"></script>
+</body>
+</html>

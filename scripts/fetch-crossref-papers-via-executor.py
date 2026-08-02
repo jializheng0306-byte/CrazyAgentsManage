@@ -89,6 +89,26 @@ def render_item(item: dict) -> list[str]:
     ]
 
 
+def fetch_crossref_items(args: argparse.Namespace) -> tuple[list[dict], str | None]:
+    try:
+        payload = call_executor_tool(
+            source=args.source,
+            group="works",
+            tool="searchWorks",
+            payload={
+                "query": args.query,
+                "rows": args.rows,
+                "sort": args.sort,
+                "order": args.order,
+                **({"filter": args.filter} if args.filter else {}),
+                **({"mailto": args.mailto} if args.mailto else {}),
+            },
+        )
+    except RuntimeError as exc:
+        return [], f"（Crossref via executor 不可用：{exc}）"
+    return normalize_items(payload, args.max_abstract_chars), None
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", default="crossref-readonly")
@@ -106,20 +126,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    payload = call_executor_tool(
-        source=args.source,
-        group="works",
-        tool="searchWorks",
-        payload={
-            "query": args.query,
-            "rows": args.rows,
-            "sort": args.sort,
-            "order": args.order,
-            **({"filter": args.filter} if args.filter else {}),
-            **({"mailto": args.mailto} if args.mailto else {}),
-        },
-    )
-    items = normalize_items(payload, args.max_abstract_chars)
+    items, fallback_text = fetch_crossref_items(args)
     if args.json:
         print(json.dumps({"query": args.query, "items": items}, ensure_ascii=False, indent=2))
     else:
@@ -128,7 +135,7 @@ def main() -> int:
                 heading=args.heading,
                 items=items,
                 render_item=render_item,
-                empty_text="（未返回论文结果）",
+                empty_text=fallback_text or "（未返回论文结果）",
             )
         )
     return 0

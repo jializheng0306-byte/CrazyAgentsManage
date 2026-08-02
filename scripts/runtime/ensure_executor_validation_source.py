@@ -64,7 +64,7 @@ def find_existing(base_url: str, namespace: str):
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base-url", default="http://47.99.217.1/manage")
+    parser.add_argument("--base-url", default="http://111.229.194.203/manage")
     parser.add_argument("--namespace", default="petstore-readonly-validation")
     parser.add_argument("--name", default="Petstore Readonly Validation")
     args = parser.parse_args()

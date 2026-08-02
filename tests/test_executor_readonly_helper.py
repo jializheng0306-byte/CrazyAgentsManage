@@ -48,13 +48,14 @@ def test_call_executor_tool_uses_resolved_executor_binary(monkeypatch):
 
     monkeypatch.setattr(MODULE, "resolve_executor_binary", lambda: "/opt/executor/bin/executor")
 
-    def fake_run(cmd, capture_output=True, text=True, check=False):
+    def fake_run(cmd, capture_output=True, text=True, check=False, timeout=None):
         calls.append(
             {
                 "cmd": cmd,
                 "capture_output": capture_output,
                 "text": text,
                 "check": check,
+                "timeout": timeout,
             }
         )
         return subprocess.CompletedProcess(cmd, 0, stdout='{"status":"ok"}', stderr="")
@@ -82,5 +83,6 @@ def test_call_executor_tool_uses_resolved_executor_binary(monkeypatch):
             "capture_output": True,
             "text": True,
             "check": False,
+            "timeout": 60,
         }
     ]

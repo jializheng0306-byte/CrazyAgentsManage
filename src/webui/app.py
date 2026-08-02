@@ -200,5 +200,15 @@ def architecture_tech():
     return render_template('architecture-tech.html')
 
 
+@app.route('/governance/ontology')
+def governance_ontology():
+    return render_template('ontology.html')
+
+
+@app.route('/governance/harvest')
+def governance_harvest():
+    return render_template('harvest.html')
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False, port=5002)

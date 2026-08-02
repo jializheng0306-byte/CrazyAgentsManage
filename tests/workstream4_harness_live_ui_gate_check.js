@@ -31,7 +31,7 @@ function shouldIgnoreConsoleError(message) {
 }
 
 (async() => {
-  const base = (process.env.BASE_URL || 'http://47.99.217.1/manage').replace(/\/$/, '');
+  const base = (process.env.BASE_URL || 'http://111.229.194.203/manage').replace(/\/$/, '');
   const outputDir = process.env.OUTPUT_DIR || '/tmp';
   const screenshotPath = path.join(outputDir, 'workstream4-harness-live-ui.png');
   const outputPath = path.join(outputDir, 'workstream4-harness-live-ui.json');

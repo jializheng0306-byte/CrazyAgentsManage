@@ -77,7 +77,7 @@ class GenerateHermesHandoffTests(unittest.TestCase):
                     "evidenceSourceType": "OPERATOR_ACCEPTANCE",
                     "refs": [
                         "bitable:EpeXbhpF9a0s0wsh6axce9PknFg",
-                        "timeline:http://47.99.217.1/timeline/",
+                        "timeline:http://111.229.194.203/timeline/",
                     ],
                 },
                 "semanticContext": {

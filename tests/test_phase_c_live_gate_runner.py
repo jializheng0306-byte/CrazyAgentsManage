@@ -58,7 +58,7 @@ def test_main_uses_tunnel_as_canonical_gate_and_public_probe_is_non_blocking(mon
             '--output-dir',
             str(tmp_path),
             '--probe-public-url',
-            'http://47.99.217.1/manage',
+            'http://111.229.194.203/manage',
         ],
     )
 
@@ -68,7 +68,7 @@ def test_main_uses_tunnel_as_canonical_gate_and_public_probe_is_non_blocking(mon
     assert rc == 0
     assert ('start', 58080, 80, '127.0.0.1') in calls
     assert ('gate', 'http://127.0.0.1:58080/manage', tmp_path / 'tunnel') in calls
-    assert ('gate', 'http://47.99.217.1/manage', tmp_path / 'public') in calls
+    assert ('gate', 'http://111.229.194.203/manage', tmp_path / 'public') in calls
     assert any(item[0] == 'stop' for item in calls)
     assert '[public-probe]' in out
     assert '[canonical-gate] http://127.0.0.1:58080/manage' in out

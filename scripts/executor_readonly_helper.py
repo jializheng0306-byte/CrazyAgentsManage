@@ -83,7 +83,7 @@ def resolve_executor_binary() -> str:
     )
 
 
-def call_executor_tool(source: str, group: str, tool: str, payload: dict) -> dict:
+def call_executor_tool(source: str, group: str, tool: str, payload: dict, timeout: int = 60) -> dict:
     try:
         executor_bin = resolve_executor_binary()
     except FileNotFoundError as exc:
@@ -101,6 +101,7 @@ def call_executor_tool(source: str, group: str, tool: str, payload: dict) -> dic
         capture_output=True,
         text=True,
         check=False,
+        timeout=timeout,
     )
     if result.returncode != 0:
         raise RuntimeError((result.stderr or result.stdout or "executor call failed").strip())

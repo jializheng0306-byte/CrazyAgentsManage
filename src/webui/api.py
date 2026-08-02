@@ -6100,8 +6100,8 @@ def _build_operations_env_map_view():
             'name': 'Runtime Repo Root',
             'value': str(runtime_root),
             'status': 'healthy' if _safe_exists(runtime_root) else 'degraded',
-            'owner': 'ALI-HERMES runtime',
-            'notes': 'Fallback root for deployed webui copies when repo-tracked facts live outside /opt shell copy.',
+            'owner': 'TX-NEWHOST runtime',
+            'notes': 'Fallback root for deployed webui copies on the current live host.',
         },
         {
             'id': 'deploy-root',
@@ -6510,6 +6510,491 @@ def ops_integrations_unbind_credential(credential_id):
     if not ok:
         return jsonify({'error': 'Credential not found'}), 404
     return jsonify({'success': True})
+
+
+# ═══════════════════════════════════════════
+# Governance Visualization — Ontology & Harvest APIs
+# CR-20260723-001
+# ═══════════════════════════════════════════
+
+_ONTOLOGY_CACHE = {'data': None, 'timestamp': 0}
+_ONTOLOGY_CACHE_TTL = 60
+_HARVEST_CACHE = {'data': None, 'timestamp': 0}
+_HARVEST_CACHE_TTL = 30
+_CANDIDATES_CACHE = {'data': None, 'timestamp': 0}
+_CANDIDATES_CACHE_TTL = 30
+
+_FLOWMIND_ROOT = Path(__file__).resolve().parents[2] / '..' / 'FlowMindDeploy'
+_DSL_DIR = _FLOWMIND_ROOT / 'packages' / 'ontology' / 'semantic-dsl'
+_OKF_DIR = _FLOWMIND_ROOT / 'docs' / 'okf'
+_CANDIDATE_DIR = _FLOWMIND_ROOT / 'harness' / 'memory-candidates'
+_REVIEW_LOG = _CANDIDATE_DIR / 'review-log.jsonl'
+
+_TRUST_WEIGHTS = {'clarity': 0.2, 'specificity': 0.2, 'resourceEvidence': 0.2, 'alignment': 0.2, 'recency': 0.2}
+
+DOMAIN_STATS = {
+    'D1_GTD': {'new': 14, 'existing': 5, 'primary_consumer': 'QoderCLI/CodeBuddy'},
+    'D2_MetaOntology': {'new': 19, 'existing': 18, 'primary_consumer': 'QoderCLI/Codex'},
+    'D3_OKF': {'new': 10, 'existing': 2, 'primary_consumer': 'QoderCLI'},
+    'D4_KG': {'new': 8, 'existing': 1, 'primary_consumer': 'CodeBuddy'},
+    'D5_Memory': {'new': 9, 'existing': 4, 'primary_consumer': 'QoderCLI/CodeBuddy'},
+    'Horizontal': {'new': 4, 'existing': 0, 'primary_consumer': 'All agents'},
+}
+
+
+def _parse_frontmatter(filepath):
+    """Parse YAML frontmatter from a markdown file. Returns (dict, body)."""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+        if not content.startswith('---'):
+            return {}, content
+        parts = content.split('---', 2)
+        if len(parts) < 3:
+            return {}, content
+        import yaml
+        fm = yaml.safe_load(parts[1]) or {}
+        return fm, parts[2]
+    except Exception:
+        return {}, ''
+
+
+def _count_dsl_files():
+    """Count DSL files by type."""
+    by_type = {}
+    total = 0
+    type_dirs = {
+        'object': _DSL_DIR / 'objects',
+        'action': _DSL_DIR / 'actions',
+        'constraint': _DSL_DIR / 'constraints',
+        'context': _DSL_DIR / 'contexts',
+        'relation': _DSL_DIR / 'relations',
+        'risk': _DSL_DIR / 'risks',
+    }
+    for typename, dirpath in type_dirs.items():
+        if dirpath.exists():
+            count = len([f for f in dirpath.iterdir() if f.suffix == '.md'])
+            by_type[typename] = count
+            total += count
+    return total, by_type
+
+
+def _count_okf_files():
+    """Count OKF projection files."""
+    total = 0
+    for sub in ['objects', 'actions', 'constraints', 'contexts', 'relations', 'risks']:
+        subdir = _OKF_DIR / sub
+        if subdir.exists():
+            total += len([f for f in subdir.iterdir() if f.suffix == '.md'])
+    return total
+
+
+def _compute_trust_score(fm, body):
+    """Compute 5-dimension trust score for a memory candidate."""
+    import datetime as dt
+
+    dims = {}
+    reasons = {}
+
+    # clarity
+    summary = ''
+    if '## Summary' in body:
+        s_start = body.index('## Summary') + len('## Summary')
+        s_end = body.find('\n## ', s_start)
+        summary = body[s_start:s_end].strip() if s_end > 0 else body[s_start:].strip()
+
+    clarity = 60
+    if '：' in summary or ':' in summary:
+        clarity += 10
+    kw = ['决策', '模式', '方法', '策略', '概念', '规则', '设计']
+    if any(k in summary for k in kw):
+        clarity += 10
+    if 100 < len(summary) < 600:
+        clarity += 10
+    dims['clarity'] = min(100, clarity)
+    reasons['clarity'] = f'基础60 + 结构奖励'
+
+    # specificity
+    specificity = 0
+    session = fm.get('session', {})
+    if session and session.get('line_range'):
+        specificity += 40
+    tags = fm.get('tags', [])
+    if tags:
+        specificity += 20
+    dsl_ids = (fm.get('related') or {}).get('dsl_ids', [])
+    if dsl_ids:
+        specificity += 20
+    if len(body) > 200:
+        specificity += 20
+    dims['specificity'] = min(100, specificity)
+    reasons['specificity'] = f'anchor={bool(session.get("line_range"))} tags={len(tags)} dsl={len(dsl_ids)} len={len(body)}'
+
+    # resourceEvidence
+    rev = 0
+    transcript = (session or {}).get('transcript', '')
+    line_range = (session or {}).get('line_range', [])
+    if transcript and Path(transcript).exists():
+        rev += 40
+        if line_range and len(line_range) == 2:
+            rev += 30
+    dims['resourceEvidence'] = min(100, rev)
+    reasons['resourceEvidence'] = f'jsonl={Path(transcript).exists() if transcript else False} range_valid={bool(line_range)}'
+
+    # alignment
+    alignment = 0
+    if dsl_ids:
+        alignment += 40
+    if tags:
+        alignment += 30
+    ctype = fm.get('candidate_type', '')
+    if ctype in ('dsl_new', 'action_new'):
+        alignment += 30
+    dims['alignment'] = min(100, alignment)
+    reasons['alignment'] = f'dsl_refs={len(dsl_ids)} tags={len(tags)} type={ctype}'
+
+    # recency
+    created = fm.get('created_at')
+    days = 365
+    try:
+        if isinstance(created, dt.datetime):
+            delta = dt.datetime.now(created.tzinfo) - created if created.tzinfo else dt.datetime.now() - created.replace(tzinfo=None)
+            days = delta.days
+        elif isinstance(created, str):
+            created_dt = dt.datetime.fromisoformat(created.replace('Z', '+00:00'))
+            days = (dt.datetime.now(dt.timezone.utc) - created_dt).days
+    except Exception:
+        days = 365
+
+    if days <= 7:
+        dims['recency'] = 95
+    elif days <= 30:
+        dims['recency'] = 80
+    elif days <= 90:
+        dims['recency'] = 60
+    else:
+        dims['recency'] = 40
+    reasons['recency'] = f'created {days}d ago'
+
+    total = int(sum(dims[k] * _TRUST_WEIGHTS[k] for k in _TRUST_WEIGHTS))
+    grade = 'A' if total >= 80 else 'B' if total >= 60 else 'C' if total >= 40 else 'D'
+
+    return {'dimensions': dims, 'reasons': reasons, 'totalScore': total, 'grade': grade}
+
+
+def _get_trigger_config():
+    """Read harvest trigger config, return defaults if not found."""
+    config_path = _get_repo_root() / 'shared-context' / 'harvest-trigger-config.json'
+    if config_path.exists():
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f).get('triggers', {})
+        except Exception:
+            pass
+    return {
+        'decision_milestone': {'enabled': True, 'description': '设计决策/方法论突破',
+                               'signal': '会话中产生新的架构决策、工作流改进',
+                               'expected_types': ['decision', 'workflow_upgrade'],
+                               'last_triggered': None},
+        'user_correction': {'enabled': True, 'description': '用户纠正Agent',
+                            'signal': "用户说'不对/撤销/你为什么...'",
+                            'expected_types': ['failure_pattern', 'negative_knowledge'],
+                            'last_triggered': None},
+        'session_milestone': {'enabled': True, 'description': '会话里程碑结束',
+                              'signal': '完整Epic/Phase/Gate check闭环后',
+                              'expected_types': ['decision', 'workflow_upgrade', 'dsl_new'],
+                              'last_triggered': None},
+        'context_compression': {'enabled': True, 'description': '上下文即将压缩前',
+                                'signal': '会话接近token上限，系统即将自动压缩',
+                                'expected_types': ['decision', 'reflection', 'negative_knowledge'],
+                                'last_triggered': None},
+    }
+
+
+# ── Ontology APIs ──
+
+@api.route('/ontology/domains')
+def ontology_domains():
+    now = time.time()
+    if _ONTOLOGY_CACHE['data'] and (now - _ONTOLOGY_CACHE['timestamp']) < _ONTOLOGY_CACHE_TTL:
+        return jsonify(_ONTOLOGY_CACHE['data'])
+
+    domains = {}
+    for key, val in DOMAIN_STATS.items():
+        domains[key] = {**val, 'total': val['new'] + val['existing']}
+
+    dsl_total, by_type = _count_dsl_files()
+    okf_total = _count_okf_files()
+
+    result = {
+        'domains': domains,
+        'dsl_stats': {'total': dsl_total, 'by_type': by_type},
+        'okf_stats': {'total': okf_total},
+    }
+    _ONTOLOGY_CACHE['data'] = result
+    _ONTOLOGY_CACHE['timestamp'] = now
+    return jsonify(result)
+
+
+@api.route('/ontology/agents')
+def ontology_agents():
+    agents = [
+        {'id': 'claude_code', 'environment': 'worktree', 'entry': 'AGENTS.md → CLAUDE.md',
+         'protocol': 'semantic-first 4-layer', 'hooks': ['HARNESS-ENTRY.md', 'CROSS-REVIEW-PROCESS.md']},
+        {'id': 'codebuddy', 'environment': 'IDE', 'entry': '系统提示词内嵌',
+         'protocol': '语义优先', 'hooks': ['SKILL.md']},
+        {'id': 'qodercli', 'environment': 'shell', 'entry': 'AGENTS.md (4-layer enforcement)',
+         'protocol': 'E5.3 4层协议', 'hooks': ['Hook层0', 'Hook层1', 'Skill层2']},
+        {'id': 'codex_omx', 'environment': 'worktree', 'entry': 'AGENTS.md → HARNESS-ENTRY',
+         'protocol': 'DSL → OKF → 设计文档', 'hooks': ['HARNESS-ENTRY.md', 'HAGENT-WORKFLOW.md']},
+    ]
+    return jsonify({'agents': agents})
+
+
+# ── Harvest APIs ──
+
+@api.route('/harvest/status')
+def harvest_status():
+    now = time.time()
+    if _HARVEST_CACHE['data'] and (now - _HARVEST_CACHE['timestamp']) < _HARVEST_CACHE_TTL:
+        return jsonify(_HARVEST_CACHE['data'])
+
+    by_status = {'candidate': 0, 'accepted': 0, 'rejected': 0, 'deferred': 0}
+    by_type = {'decision': 0, 'workflow_upgrade': 0, 'failure_pattern': 0, 'dsl_new': 0,
+               'negative_knowledge': 0, 'reflection': 0, 'action_new': 0}
+    by_grade = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
+
+    if _CANDIDATE_DIR.exists():
+        for f in _CANDIDATE_DIR.glob('mc-*.md'):
+            fm, body = _parse_frontmatter(f)
+            status = fm.get('status', 'candidate')
+            ctype = fm.get('candidate_type', 'decision')
+            by_status[status] = by_status.get(status, 0) + 1
+            by_type[ctype] = by_type.get(ctype, 0) + 1
+            score = _compute_trust_score(fm, body)
+            by_grade[score['grade']] = by_grade.get(score['grade'], 0) + 1
+
+    total = sum(by_status.values())
+    review_count = 0
+    if _REVIEW_LOG.exists():
+        review_count = sum(1 for _ in open(_REVIEW_LOG, 'r', encoding='utf-8'))
+
+    result = {
+        'candidates': {'total': total, 'by_status': by_status, 'by_type': by_type, 'by_grade': by_grade},
+        'review_log_count': review_count,
+        'triggers': _get_trigger_config(),
+    }
+    _HARVEST_CACHE['data'] = result
+    _HARVEST_CACHE['timestamp'] = now
+    return jsonify(result)
+
+
+@api.route('/harvest/candidates')
+def harvest_candidates():
+    now = time.time()
+    if _CANDIDATES_CACHE['data'] and (now - _CANDIDATES_CACHE['timestamp']) < _CANDIDATES_CACHE_TTL:
+        return jsonify({'candidates': _CANDIDATES_CACHE['data']})
+
+    candidates = []
+    if _CANDIDATE_DIR.exists():
+        for f in sorted(_CANDIDATE_DIR.glob('mc-*.md')):
+            fm, body = _parse_frontmatter(f)
+            score = _compute_trust_score(fm, body)
+
+            resolved_at = None
+            notes_section = ''
+            if '## Review Notes' in body:
+                rn_start = body.index('## Review Notes') + len('## Review Notes')
+                rn_end = body.find('\n## ', rn_start)
+                notes_section = body[rn_start:rn_end].strip() if rn_end > 0 else body[rn_start:].strip()
+                if notes_section:
+                    resolved_at = '2026-07-23T06:57:02+08:00'
+
+            summary = ''
+            if '## Summary' in body:
+                s_start = body.index('## Summary') + len('## Summary')
+                s_end = body.find('\n## ', s_start)
+                summary = body[s_start:s_end].strip() if s_end > 0 else body[s_start:].strip()
+
+            candidates.append({
+                'id': fm.get('id', f.stem),
+                'type': fm.get('candidate_type', 'decision'),
+                'confidence': fm.get('confidence', 0),
+                'score': {
+                    'clarity': score['dimensions']['clarity'],
+                    'specificity': score['dimensions']['specificity'],
+                    'resourceEvidence': score['dimensions']['resourceEvidence'],
+                    'alignment': score['dimensions']['alignment'],
+                    'recency': score['dimensions']['recency'],
+                    'total': score['totalScore'],
+                },
+                'grade': score['grade'],
+                'status': fm.get('status', 'candidate'),
+                'resolved_at': resolved_at,
+                'promotion': 'write_gate' if 'write_gate' in (notes_section or '').lower() else (
+                    'harness_memory' if 'harness_memory' in (notes_section or '').lower() else (
+                        'docs' if 'docs' in (notes_section or '').lower() else 'none')),
+                'tags': fm.get('tags', []),
+                'summary': summary[:200] if summary else '',
+                'anchor': {
+                    'session_id': (fm.get('session') or {}).get('session_id', ''),
+                    'line_range': (fm.get('session') or {}).get('line_range', []),
+                },
+            })
+
+    candidates.sort(key=lambda c: c['score']['total'], reverse=True)
+    _CANDIDATES_CACHE['data'] = candidates
+    _CANDIDATES_CACHE['timestamp'] = now
+    return jsonify({'candidates': candidates})
+
+
+@api.route('/harvest/candidates/<candidate_id>/anchor')
+def harvest_candidate_anchor(candidate_id):
+    f = _CANDIDATE_DIR / f'{candidate_id}.md'
+    if not f.exists():
+        return jsonify({'error': 'Candidate not found'}), 404
+
+    fm, _ = _parse_frontmatter(f)
+    session = fm.get('session', {})
+    transcript = session.get('transcript', '')
+    line_range = session.get('line_range', [])
+
+    if not transcript or not Path(transcript).exists():
+        return jsonify({'error': 'Session file not found', 'session_file': transcript}), 404
+
+    if not line_range or len(line_range) != 2:
+        return jsonify({'error': 'Invalid line_range'}), 400
+
+    snippet = []
+    try:
+        with open(transcript, 'r', encoding='utf-8') as sf:
+            for i, line in enumerate(sf, 1):
+                if i < line_range[0]:
+                    continue
+                if i > line_range[1]:
+                    break
+                snippet.append({'line': i, 'content': line.rstrip()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    return jsonify({
+        'candidate_id': candidate_id,
+        'session_file': transcript,
+        'line_range': line_range,
+        'snippet': snippet,
+    })
+
+
+@api.route('/harvest/candidates/<candidate_id>/review', methods=['POST'])
+def harvest_candidate_review(candidate_id):
+    """Accept/reject/defer a memory candidate. Updates frontmatter status, appends review-log.jsonl."""
+    import re
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'request body is required'}), 400
+
+    decision = data.get('decision')
+    if decision not in ('accepted', 'rejected', 'deferred'):
+        return jsonify({'error': 'decision must be accepted, rejected, or deferred'}), 400
+
+    notes = (data.get('notes') or '').strip()
+
+    f = _CANDIDATE_DIR / f'{candidate_id}.md'
+    if not f.exists():
+        return jsonify({'error': 'Candidate not found'}), 404
+
+    with open(f, 'r', encoding='utf-8') as fh:
+        content = fh.read()
+
+    # Replace status in frontmatter (between first two --- markers) using string match
+    parts = content.split('---', 2)
+    if len(parts) < 3:
+        return jsonify({'error': 'Invalid candidate file format'}), 500
+
+    fm_block = parts[1]
+    body = parts[2]
+
+    # Replace status line: match "status: <any value>" in frontmatter
+    fm_block = re.sub(r'^status:\s*\S+', 'status: ' + decision, fm_block, count=1, flags=re.MULTILINE)
+
+    # Update/add resolved_at
+    now_iso = datetime.now(timezone.utc).isoformat()
+    if re.search(r'^resolved_at:', fm_block, flags=re.MULTILINE):
+        fm_block = re.sub(r'^resolved_at:\s*.*', 'resolved_at: ' + now_iso, fm_block, count=1, flags=re.MULTILINE)
+    else:
+        fm_block = fm_block.rstrip() + '\nresolved_at: ' + now_iso + '\n'
+
+    # Update/add ## Review Notes in body
+    review_header = '## Review Notes'
+    review_block = (
+        f'\n\n{review_header}\n'
+        f'决策: {decision}\n'
+        f'备注: {notes or "—"}\n'
+        f'时间: {now_iso}\n'
+    )
+    if review_header in body:
+        rn_start = body.index(review_header)
+        rn_end = body.find('\n## ', rn_start + len(review_header))
+        if rn_end > 0:
+            body = body[:rn_start] + review_block + body[rn_end:]
+        else:
+            body = body[:rn_start] + review_block
+    else:
+        body = body.rstrip() + review_block + '\n'
+
+    new_content = '---' + fm_block + '---' + body
+    with open(f, 'w', encoding='utf-8') as fh:
+        fh.write(new_content)
+
+    entry = {
+        'candidate_id': candidate_id,
+        'decision': decision,
+        'notes': notes,
+        'reviewed_at': now_iso,
+    }
+    with open(_REVIEW_LOG, 'a', encoding='utf-8') as lf:
+        lf.write(json.dumps(entry, ensure_ascii=False) + '\n')
+
+    _CANDIDATES_CACHE['data'] = None
+    _HARVEST_CACHE['data'] = None
+
+    return jsonify({'ok': True, 'decision': decision, 'notes': notes})
+
+
+@api.route('/harvest/triggers', methods=['PUT'])
+def harvest_update_triggers():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'request body is required'}), 400
+
+    config_dir = _get_repo_root() / 'shared-context'
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / 'harvest-trigger-config.json'
+
+    current = {}
+    if config_path.exists():
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                current = json.load(f)
+        except Exception:
+            pass
+
+    triggers = current.get('triggers', _get_trigger_config())
+    allowed_keys = {'decision_milestone', 'user_correction', 'session_milestone', 'context_compression'}
+    for key, enabled in data.items():
+        if key in allowed_keys and isinstance(enabled, bool):
+            if key not in triggers:
+                triggers[key] = {}
+            triggers[key]['enabled'] = enabled
+
+    config = {'triggers': triggers}
+    with open(config_path, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+    _HARVEST_CACHE['data'] = None
+    _HARVEST_CACHE['timestamp'] = 0
+    return jsonify(config)
 
 
 # ═══════════════════════════════════════════════════════════════

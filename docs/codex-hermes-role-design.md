@@ -15,6 +15,14 @@
 
 两者不是平行开发关系，而是“开发实现 + 运营编排”的上下游关系。
 
+### 当前部署基线
+
+当前真实运行拓扑已重新收敛为：
+
+- `TX-NEWHOST`：HermesAgent runtime、Hermes-Webui、Graphify、cron 与当前控制面统一主机
+- `TX-PRIMARY`：已退役，不再承载 OpenClaw 或任何当前生产面
+- `ALI-HERMES`：低规格辅助/验证位，仅保留非生产用途
+
 ## 2. 从现有 demo 提炼出的核心数据对象
 
 根据当前 demo 文档和适配层实现，CrazyAgentsManage 已经围绕 Hermes-Agent 暴露出 5 类核心数据面：
@@ -191,6 +199,43 @@
 - `~/.hermes/shared-context/`
 
 这些目前不应被视为“缺失”，而应被视为后续产品化能力。
+
+### 3.5 应用角色 / 系统职责矩阵
+
+这层不是“人/智能体角色”，而是“应用/系统在整体体系里的职责分工”。
+
+| 应用 / 系统 | 当前角色 | 主要职责 | 不负责 |
+|---|---|---|---|
+| `HermesAgent` | 运行时宿主 / 运营执行面 | 承载运行态、Cron、技能、网关、会话与巡检信号 | 代码实现决策、治理真值裁定 |
+| `CrazyAgentsManage` | 运营编排 / Operator Product | 提供观测、协作、handoff、closeout、运营入口与 UI 壳 | 替代 Hermes 运行时、替代 FlowMind 真值层 |
+| `FlowMind` | 下游治理真值层 | 承接 candidate / promise / truth / trace / review / feedback 的治理与回写 | 承担 Hermes 运行态、承担 Crazy 前台编排 |
+
+这层信息最适合继续保存在本文件，因为这里同时定义了：
+
+- 当前部署基线
+- 产品定位
+- 运行边界
+- 应用职责分工
+
+如果后续只保留一份 canonical 文档，这一层也应该继续以本文件为准；`docs/06-agent-ops/operations-manual.md` 更适合作为运维侧的短引用入口，而不是主定义处。
+
+### 3.6 应用 / 部署机器 / 角色
+
+这层是“部署映射”，不是“职责定义”。
+
+| 应用 | 部署机器 | 角色 |
+|---|---|---|
+| `HermesAgent runtime` | `TX-NEWHOST (111.229.194.203)` | 运行时宿主 / 运营执行面 |
+| `CrazyAgentsManage` | `TX-NEWHOST (111.229.194.203)` | 运营编排 / Operator Product |
+| `FlowMindDeploy / FlowMind host-mode` | `TX-NEWHOST (111.229.194.203)` | 下游治理真值层 / canonical truth |
+| `TX-PRIMARY` | 已退役 | 历史位 / 不承载当前生产面 |
+| `ALI-HERMES` | `47.99.217.1` | 辅助 / 验证位 |
+
+说明：
+
+- `CrazyAgentsManage` 和 `FlowMind` 现在是同机协同，不是分散在不同主机上
+- 如果只看“当前生产面”，真正承载现行应用的主机只有 `TX-NEWHOST`
+- `TX-PRIMARY` 和 `ALI-HERMES` 仍保留，是为了历史事实、验证和回归语义，不是当前主运行面
 
 ## 4. `Codex` 与 `HermesAgent` 的职责边界
 

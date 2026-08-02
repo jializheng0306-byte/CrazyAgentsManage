@@ -1,0 +1,46 @@
+{
+  "triggers": {
+    "decision_milestone": {
+      "enabled": true,
+      "description": "设计决策/方法论突破",
+      "signal": "会话中产生新的架构决策、工作流改进",
+      "expected_types": [
+        "decision",
+        "workflow_upgrade"
+      ],
+      "last_triggered": null
+    },
+    "user_correction": {
+      "enabled": true,
+      "description": "用户纠正Agent",
+      "signal": "用户说'不对/撤销/你为什么...'",
+      "expected_types": [
+        "failure_pattern",
+        "negative_knowledge"
+      ],
+      "last_triggered": null
+    },
+    "session_milestone": {
+      "enabled": true,
+      "description": "会话里程碑结束",
+      "signal": "完整Epic/Phase/Gate check闭环后",
+      "expected_types": [
+        "decision",
+        "workflow_upgrade",
+        "dsl_new"
+      ],
+      "last_triggered": null
+    },
+    "context_compression": {
+      "enabled": true,
+      "description": "上下文即将压缩前",
+      "signal": "会话接近token上限，系统即将自动压缩",
+      "expected_types": [
+        "decision",
+        "reflection",
+        "negative_knowledge"
+      ],
+      "last_triggered": null
+    }
+  }
+}

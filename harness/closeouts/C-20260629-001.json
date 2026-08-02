@@ -1,0 +1,51 @@
+{
+  "id": "C-20260629-001",
+  "timestamp": "2026-06-29T13:43:45.411Z",
+  "status": "success",
+  "nonTrivial": true,
+  "message": "Fixed evening-intel fallback and executor timeout to prevent stalls and zero-output reports",
+  "trace": {
+    "kind": "success",
+    "id": "S-20260629-001"
+  },
+  "critic": null,
+  "criticWriteBackApplied": false,
+  "governance": null,
+  "governanceReports": [
+    {
+      "path": "docs/02-engineering/harness/harness-governance-report.md",
+      "absolutePath": "/home/flowmind/CrazyAgentsManage/docs/02-engineering/harness/harness-governance-report.md",
+      "title": "Harness Governance Report",
+      "repo": "CrazyAgentsManage",
+      "status": "PASS",
+      "passCount": 5,
+      "failCount": 0,
+      "summary": "No harness governance drift detected in the current minimal scan."
+    },
+    {
+      "path": "../FlowMindDeploy/docs/05-version-control/architecture-drift-report.md",
+      "absolutePath": "/home/flowmind/FlowMindDeploy/docs/05-version-control/architecture-drift-report.md",
+      "title": "Architecture Drift Report",
+      "repo": "FlowMindDeploy",
+      "status": "PASS",
+      "passCount": 9,
+      "failCount": 0,
+      "summary": "No architecture/code drift detected in the current minimal scan."
+    }
+  ],
+  "context": {
+    "agent": "codex",
+    "branch": "feat/auto-capture-trace-reconciled-20260518",
+    "worktree": "/home/flowmind/CrazyAgentsManage",
+    "lane": "feat",
+    "laneSource": "branch-prefix",
+    "topic": "",
+    "worktreeContextPath": "",
+    "steps": [],
+    "type": "",
+    "file": "",
+    "stage": "verification",
+    "command": "",
+    "fatal": false
+  }
+}

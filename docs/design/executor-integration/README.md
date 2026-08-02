@@ -121,6 +121,7 @@
 - [operations-integrations-ui-ia-spec.md](operations-integrations-ui-ia-spec.md)
 - [aliyun-deployment-assessment-2026-05-18.md](aliyun-deployment-assessment-2026-05-18.md)
 - [real-capability-validation-runbook-2026-05-18.md](real-capability-validation-runbook-2026-05-18.md)
+- [tx-newhost-runtime-environment-test-plan-2026-06-28.md](tx-newhost-runtime-environment-test-plan-2026-06-28.md)
 - [hermes-executor-readonly-delegation-readiness-2026-05-18.md](hermes-executor-readonly-delegation-readiness-2026-05-18.md)
 - [hermes-executor-readonly-delegation-spec-v1-2026-05-19.md](hermes-executor-readonly-delegation-spec-v1-2026-05-19.md)
 - [tech-radar-review-wave2-evaluation-2026-05-19.md](tech-radar-review-wave2-evaluation-2026-05-19.md)

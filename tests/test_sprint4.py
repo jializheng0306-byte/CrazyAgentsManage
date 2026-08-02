@@ -806,7 +806,7 @@ class TestOperationsCapabilityPlane:
         monkeypatch.setenv('FLOWMIND_API_BASE_URL', 'http://127.0.0.1:3001')
         monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
         webui_api._hermes_home = None
-        webui_api._remote_config = {'host': '47.99.217.1'}
+        webui_api._remote_config = {'host': '111.229.194.203'}
 
         resp = client.get('/api/operations/env-map')
         assert resp.status_code == 200
@@ -878,7 +878,7 @@ class TestOperationsCapabilityPlane:
         monkeypatch.setenv('FLOWMIND_API_BASE_URL', 'http://127.0.0.1:3001')
         monkeypatch.setattr(webui_api, 'get_provider_mode', lambda: 'http')
         webui_api._hermes_home = None
-        webui_api._remote_config = {'host': '47.99.217.1'}
+        webui_api._remote_config = {'host': '111.229.194.203'}
 
         resp = client.get('/api/operations/recovery-paths')
         assert resp.status_code == 200

@@ -1,0 +1,229 @@
+/* ============================================================
+   CrazyAgentsManage — Ontology Semantic Layer Page CSS
+   gv- namespace, dark theme
+   ============================================================ */
+
+.gv-ont-refresh-btn {
+  background: var(--gv-bg-surface);
+  border: 1px solid var(--gv-border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--gv-text-primary);
+  cursor: pointer;
+  transition: all 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.gv-ont-refresh-btn:hover {
+  border-color: var(--gv-color-blue);
+  color: var(--gv-color-blue);
+}
+
+/* Radar chart */
+.gv-ont-radar-container {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  max-width: 500px;
+  margin: 0 auto;
+}
+.gv-ont-radar-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Type distribution chart */
+.gv-ont-type-chart {
+  padding: 12px;
+}
+.gv-ont-type-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.gv-ont-type-bar-label {
+  font-size: 11px;
+  color: var(--gv-text-secondary);
+  width: 70px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.gv-ont-type-bar-fill {
+  height: 18px;
+  border-radius: 4px;
+  transition: width 300ms ease;
+  min-width: 2px;
+}
+.gv-ont-type-bar-count {
+  font-size: 12px;
+  color: var(--gv-text-primary);
+  font-variant-numeric: tabular-nums;
+  margin-left: 4px;
+}
+
+/* Flow diagram */
+.gv-ont-flow-container {
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+}
+.gv-ont-flow-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Protocol cards */
+.gv-ont-protocol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px;
+}
+.gv-ont-protocol-card {
+  background: var(--gv-bg-surface-2);
+  border-left: 4px solid var(--gv-color-blue);
+  border-radius: 0 8px 8px 0;
+  padding: 14px 16px;
+  transition: border-color 200ms ease;
+}
+.gv-ont-protocol-card.l2 { border-left-color: var(--gv-color-green); }
+.gv-ont-protocol-card.l3 { border-left-color: var(--gv-color-orange); }
+.gv-ont-protocol-card.l4 { border-left-color: var(--gv-color-purple); }
+.gv-ont-protocol-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gv-text-primary);
+  margin-bottom: 4px;
+}
+.gv-ont-protocol-card-desc {
+  font-size: 12px;
+  color: var(--gv-text-secondary);
+  line-height: 1.5;
+}
+.gv-ont-protocol-card-meta {
+  font-size: 11px;
+  color: var(--gv-text-muted);
+  margin-top: 6px;
+  display: flex;
+  gap: 16px;
+}
+
+/* Agent matrix table */
+.gv-ont-agent-matrix {
+  padding: 8px;
+  overflow-x: auto;
+}
+.gv-ont-agent-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.gv-ont-agent-table th,
+.gv-ont-agent-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--gv-border);
+}
+.gv-ont-agent-table th {
+  color: var(--gv-text-muted);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.gv-ont-agent-table td {
+  color: var(--gv-text-primary);
+}
+.gv-ont-agent-table tr:hover td {
+  background: var(--gv-bg-surface-2);
+}
+.gv-ont-agent-name {
+  font-weight: 600;
+  color: var(--gv-color-blue);
+}
+.gv-ont-hook-tag {
+  display: inline-block;
+  background: var(--gv-bg-surface-3);
+  color: var(--gv-text-secondary);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-right: 3px;
+  margin-bottom: 2px;
+}
+
+/* Page head */
+.gv-page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+.gv-kicker {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gv-text-muted);
+  margin: 0 0 4px;
+}
+.gv-page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--gv-text-primary);
+  margin: 0 0 6px;
+}
+.gv-page-subtitle {
+  font-size: 14px;
+  color: var(--gv-text-secondary);
+  margin: 0;
+  max-width: 640px;
+  line-height: 1.5;
+}
+.gv-primary-link {
+  display: inline-block;
+  background: var(--gv-color-blue);
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 150ms ease;
+  flex-shrink: 0;
+}
+.gv-primary-link:hover {
+  background: #2563EB;
+}
+
+/* Reference cards (reuse governance pattern) */
+.gv-reference-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+.gv-reference-card {
+  background: var(--gv-bg-surface);
+  border: 1px solid var(--gv-border);
+  border-radius: 8px;
+  padding: 12px;
+  text-decoration: none;
+  transition: all 150ms ease;
+}
+.gv-reference-card:hover {
+  border-color: var(--gv-color-blue);
+}
+.gv-reference-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gv-text-primary);
+  margin-bottom: 2px;
+}
+.gv-reference-desc {
+  display: block;
+  font-size: 12px;
+  color: var(--gv-text-secondary);
+}

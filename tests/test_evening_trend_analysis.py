@@ -39,3 +39,43 @@ Focus on memory systems and workflow safety.
         ("Alice", "Build agent platforms with better evaluation."),
         ("Bob", "Focus on memory systems and workflow safety."),
     ]
+
+
+def test_resolve_report_source_falls_back_to_collector_report(tmp_path, monkeypatch):
+    repo_dir = tmp_path / "digest-repo"
+    intel_dir = tmp_path / "intel"
+    (repo_dir / "zh" / "daily").mkdir(parents=True)
+    intel_dir.mkdir(parents=True)
+
+    report_file = intel_dir / "evening-intel-2026-06-29.md"
+    report_file.write_text(
+        """# 晚间趋势原始数据 2026-06-29
+
+采集时间: 2026-06-29 20:00:00
+
+## Hacker News Agent / Builder Trends（via executor）
+
+### Agents hit a new quality bar
+- 作者: Alice
+- 日期: 2026-06-29
+- 简介: The collector produced a meaningful fallback report.
+- 链接: https://example.com/story
+""",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(MODULE, "REPO_DIR", str(repo_dir))
+    monkeypatch.setattr(MODULE, "INTEL_DIR", str(intel_dir))
+
+    content, filepath = MODULE.resolve_report_source("2026-06-29")
+
+    assert content == report_file.read_text(encoding="utf-8")
+    assert filepath == str(report_file)
+    assert MODULE.extract_digest_date(filepath, "2026-06-29") == "2026-06-29"
+
+    summary = MODULE.extract_summary(content)
+    topics = MODULE.extract_topics(content)
+
+    assert "Agents hit a new quality bar" in summary
+    assert topics[0][0] == "Agents hit a new quality bar"
+    assert "collector produced a meaningful fallback report" in topics[0][1]

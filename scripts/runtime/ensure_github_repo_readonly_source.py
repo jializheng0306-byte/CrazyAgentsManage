@@ -77,7 +77,7 @@ def delete_existing(base_url: str, namespace: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base-url", default="http://47.99.217.1/manage")
+    parser.add_argument("--base-url", default="http://111.229.194.203/manage")
     parser.add_argument("--namespace", default="github-repo-readonly")
     parser.add_argument("--name", default="GitHub Repository Readonly")
     parser.add_argument("--spec-path", default=str(DEFAULT_SPEC_PATH))
